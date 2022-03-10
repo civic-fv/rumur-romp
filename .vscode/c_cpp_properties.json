@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/librumur/include",
+                "${workspaceFolder}/romp/src",
+                "${workspaceFolder}/romp/resources"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc-9",
+            "intelliSenseMode": "linux-clang-x64",
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        }
+    ],
+    "version": 4
+}

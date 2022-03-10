@@ -1,0 +1,298 @@
+{
+    "cmake.configureOnOpen": true,
+    "files.associations": {
+        "known_hosts": "plaintext",
+        "*.tcc": "cpp",
+        "*.C": "cpp",
+        "*.c": "c",
+        "*.m": "murphi",
+        "*.D": "c",
+        "stdexcept": "cpp",
+        "functional": "cpp"
+    },
+    //<<================================================================================================>>//
+    //<<                                           (LANG):                                              >>//
+    //<<                                            C/C++                                               >>//
+    //<<                                          Settings                                              >>//
+    //<<================================================================================================>>//
+    // - General Settings ----
+    "taskExplorer.pathToMake": "make",
+    // - Code Formatter Settings ----
+    "C_Cpp.formatting": "vcFormat",
+    "C_Cpp.vcFormat.newLine.beforeWhileInDoWhile": false,
+    "C_Cpp.vcFormat.newLine.beforeOpenBrace.block": "newLine",
+    "C_Cpp.vcFormat.newLine.beforeOpenBrace.function": "newLine",
+    "C_Cpp.vcFormat.newLine.beforeOpenBrace.lambda": "sameLine",
+    "C_Cpp.vcFormat.newLine.beforeOpenBrace.namespace": "newLine",
+    "C_Cpp.vcFormat.newLine.closeBraceSameLine.emptyFunction": true,
+    "C_Cpp.vcFormat.newLine.closeBraceSameLine.emptyType": true,
+    "C_Cpp.vcFormat.newLine.scopeBracesOnSeparateLines": true,
+    // - C specific  settings ----
+    "[c]": {
+        // "editor.insertSpaces": false,
+        "editor.tabSize": 2,
+        "editor.useTabStops": true,
+        // "editor.detectIndentation": false,
+        "editor.wordBasedSuggestions": true,
+        "editor.suggest.insertMode": "replace",
+        "editor.semanticHighlighting.enabled": true
+    },
+    // - C++ specific Settings ----
+    "[cpp]": {
+        // "editor.insertSpaces": false,
+        "editor.tabSize": 2,
+        "editor.useTabStops": true,
+        // "editor.detectIndentation": false,
+        "editor.wordBasedSuggestions": true,
+        "editor.suggest.insertMode": "replace",
+        "editor.semanticHighlighting.enabled": true
+    },
+    //<<================================================================================================>>//
+    //<<                                            (EXT):                                              >>//
+    //<<                                       Better Comments                                          >>//
+    //<<                                          Settings                                              >>//
+    //<<================================================================================================>>//
+    //- Better Comments Settings:
+    "better-comments.multilineComments": true,
+    "better-comments.highlightPlainText": true,
+    //- Better Comments Tag Settings:
+    "better-comments.tags": [
+        {
+            "tag": "-",
+            "color": "#029727",
+            // "underline": true,
+            "strikethrough": false,
+            "backgroundColor": "#1A2337C2"
+        },
+        // {
+        //   "tag": "//",
+        //   "color": "#029727aa",
+        //   "italic": true,
+        //   "strikethrough": true,
+        //   "backgroundColor": "transparent"
+        // },
+        {
+            "tag": "todo",
+            "color": "#FF8C00",
+            "bold": true,
+            "italic": true,
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "note",
+            "color": "#02972798",
+            "bold": true,
+            "italic": true,
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "?note",
+            "color": "#02972798",
+            "bold": true,
+            "italic": true,
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "? note",
+            "color": "#02972798",
+            "bold": true,
+            "italic": true,
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "?",
+            "color": "#02972780",
+            "italic": true,
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "<<",
+            "color": "#FF8C00",
+            "bold": true,
+            "strikethrough": false,
+            "backgroundColor": "#1A2327D8"
+        },
+        {
+            "tag": ">>",
+            "color": "#FF8C00",
+            "bold": true,
+            "strikethrough": false,
+            "backgroundColor": "#1A2327D8"
+        },
+        {
+            "tag": "*",
+            "color": "#98C379",
+            "bold": true,
+            "italic": true,
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "DEBUG",
+            "color": "#AAAAAA",
+            "bold": true,
+            "italic": true,
+            "strikethrough": false,
+            "backgroundColor": "#FF290f7a"
+        },
+        {
+            "tag": "!DEBUG",
+            "color": "#a0c1fd63",
+            "italic": true,
+            "strikethrough": true,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "DEBUG!",
+            "italic": true,
+            "color": "#a0c1fd63",
+            "strikethrough": true,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "\/\/DEBUG",
+            "color": "#a0c1fd63",
+            "italic": true,
+            "strikethrough": true,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "\/\/ DEBUG",
+            "color": "#a0c1fd63",
+            "italic": true,
+            "strikethrough": true,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "DEBUG:!",
+            "color": "#a0c1fd63",
+            "italic": true,
+            "strikethrough": true,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "X!",
+            "color": "#a0c1fd63",
+            "italic": true,
+            "strikethrough": true,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "!X",
+            "color": "#a0c1fd63",
+            "italic": true,
+            "strikethrough": true,
+            "backgroundColor": "transparent"
+        },
+        {
+            "tag": "!",
+            "color": "#FF290f",
+            "bold": true,
+            "strikethrough": false,
+            "backgroundColor": "transparent"
+        }
+    ],
+    // - cSpell words ---- 
+    "cSpell.words": [
+        "acsii",
+        "ADHD",
+        "Ajantha",
+        "Algo",
+        "assgn",
+        "Assgn",
+        "bigram",
+        "checkmark",
+        "clrmagic",
+        "colorstr",
+        "conda",
+        "Consolas",
+        "cuda",
+        "cycel",
+        "dafny",
+        "dataset",
+        "dependee",
+        "diagonalization",
+        "disp",
+        "displaystyle",
+        "elytra",
+        "emsp",
+        "ensp",
+        "everytime",
+        "Galifrax",
+        "Ganesh",
+        "gibbins",
+        "gitignore",
+        "Gradescope",
+        "graphicx",
+        "GUIs",
+        "hotbar",
+        "hyperfocus",
+        "indeterminates",
+        "Initializable",
+        "ipynb",
+        "ipython",
+        "isalnum",
+        "isdigit",
+        "Junit",
+        "jupyter",
+        "mergesort",
+        "Minecraft",
+        "monospace",
+        "multithreading",
+        "Multivariable",
+        "oster",
+        "Oster",
+        "OSTER",
+        "Osterhout",
+        "osterhoutan",
+        "Osterhoutan",
+        "OSTERHOUTAN",
+        "Parameterize",
+        "pgfplot",
+        "pgfplots",
+        "pgfplotstable",
+        "phanon",
+        "Prioritizable",
+        "Proto",
+        "pycache",
+        "pycharm",
+        "pycharm's",
+        "pylint",
+        "pythonic",
+        "randint",
+        "Randomizer",
+        "realated",
+        "rebalance",
+        "repr",
+        "Respawn",
+        "Roleplay",
+        "scatterplot",
+        "Schneiter",
+        "scriptcs",
+        "sencond",
+        "setx",
+        "sety",
+        "snipits",
+        "spedo",
+        "strftime",
+        "struct",
+        "subfile",
+        "subproblems",
+        "Symb",
+        "sympy",
+        "tcolorbox",
+        "themeing",
+        "unessisary",
+        "vals",
+        "Varadharaaj",
+        "vscode",
+        "vscode's",
+        "Wireshark",
+        "zotero"
+    ]
+}

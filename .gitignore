@@ -1,0 +1,96 @@
+# general directories
+bin/**
+build/**
+CMakeFiles/**
+
+# murphi generated c files
+*.m.c
+*.m.C
+*.m.cc
+*.m.cpp
+*.m.h
+*.m.H
+*.m.hh
+*.m.hpp
+*.mu.c
+*.mu.C
+*.mu.cc
+*.mu.cpp
+*.mu.h
+*.mu.H
+*.mu.hh
+*.mu.hpp
+*.romp.c
+*.romp.C
+*.romp.cc
+*.romp.cpp
+*.romp.h
+*.romp.H
+*.romp.hh
+*.romp.hpp
+
+/*.c
+/*.C
+/*.cc
+/*.cpp
+/*.h
+/*.H
+/*.hh
+/*.hpp
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+
+# yacc & lex/flex output files
+*.yy.c
+*.output
+*.tab.c
+*.tab.h
+
+
+# vscode excludes
+.vscode/*.log
+
+# CMake ignores
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
