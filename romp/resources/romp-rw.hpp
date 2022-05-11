@@ -15,11 +15,10 @@
 #ifndef INVARIANTS_SIZE
 #define RULE_COUNT 0
 #endif
+namespace romp
+{
 
-
-namespace romp {
-
-// << =================================== Type Declarations ==================================== >> 
+  // << =================================== Type Declarations ==================================== >> 
 
   class ProtoState {
   public:
@@ -35,54 +34,65 @@ namespace romp {
     int history[STATE_HISTORY_SIZE];
 
     /**
-     * @brief call if rule is applied to store what rule made the change in the history circular buffer. 
+     * @brief call if rule is applied to store what rule made the change in the history circular buffer.
      * @param id the id of the rule that was applied.
      */
     void rule_applied(int id) final
     {
-      history[true_level%STATE_HISTORY_SIZE] = id;
+      history[true_level % STATE_HISTORY_SIZE] = id;
       true_level++;
     }
   };
 
+  extern class ::State : public ProtoState;
+  extern enum ::RuleAction;
 
-  // template<class S>
+
+  template<class SIG>
   class Rule {
   public:
-    std::function<bool(State)> Guard;
-    std::function<void(State)> Run; 
+    std::function<bool(S)> Guard;
+    std::function<void(S)> Run;
   };
 
 
 
 
 
-// << ================================ Extern Predeclarations ================================== >> 
-  extern romp::Rule RULES[];
+  // << ================================ Extern Predeclarations ================================== >> 
+  extern Rule RULES[];
   extern std::function<bool(ProtoState)> INVARIANTS[];
   extern std::function<bool(ProtoState)> ASSERTIONS[];
-
-  
-
+  extern ::State* ::GenStartStates();
 
 
+  // stuct RS {
+  //   function<bool(State,Params)> guard;
+  //   function<void(State,Params)> action;
+  //   Param_t **params;
+  //   Type Param_t;
+  // };
 
-// << ========================================================================================== >> 
-// <<                                         ROMP CODE                                          >> 
-// << ========================================================================================== >> 
 
-  // template<class S, class R>
-  void Sim1Step(ProtoState states[], Rule rule, size_t state_count) 
+
+
+  // << ========================================================================================== >> 
+  // <<                                         ROMP CODE                                          >> 
+  // << ========================================================================================== >> 
+
+    // template<class S, class R>
+  void Sim1Step(State state, Rule rule, size_t state_count)
   {
-    for (int s=0; s<state_count; s++)
+    for (int s = 0; s < state_count; s++)
       if (rule.Guard(states[s]))
       {
         rule.Run(states[s]);
         states[i].rule_applied(rule.id); // this keeps track of history and other overhead
         // These could possibly be parrallelized even better for GPU using shared memory. (not implimented here, could introduce data races)
-        for (int i=0;i<INVARIANTS_SIZE;i++)
+        for (int i = 0;i < INVARIANTS_SIZE;i++)
           states[s].valid |= INVARIANTS[i](states[i]); // this will need to change after we figure shit out
-        for (int a=0;a<ASSERTIONS_SIZE;a++)
+        for (int a = 0;a < ASSERTIONS_SIZE;a++)
           states[s].valid |= ASSERTIONS[a](states[i]); // this will need to change after we figure shit out
       }
+  }
 }
