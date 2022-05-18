@@ -7,6 +7,11 @@
 #include <rumur/rumur.h>
 #include <string>
 #include <vector>
+// #include <streambuf>
+#include <strstream>
+#include <fstream>
+
+#include "romp_def.hpp"
 
 using namespace rumur;
 
@@ -45,7 +50,9 @@ public:
   }
 
   void visit_function(const Function &n) final {
-    *this << indentation();
+    // scope_level++;
+    *this << indentation() << romp::CODEGEN_CONFIG::M_FUNCTION__FUNC_ATTRS << "\n"
+          << indentation();
     if (n.return_type == nullptr) {
       *this << "void";
     } else {
@@ -68,6 +75,7 @@ public:
       }
     }
     *this << ") {\n";
+    enter_scope();
     indent();
     for (const Ptr<Decl> &d : n.decls) {
       emit_leading_comments(*d);
@@ -78,13 +86,16 @@ public:
       *this << *s;
     }
     dedent();
+    leave_scope();
     *this << "}\n";
+    // scope_level--;
   }
 
   void visit_propertyrule(const PropertyRule &n) final {
-
+    // scope_level++;
     // function prototype
-    *this << indentation() << "bool " << n.name << "(";
+    *this << indentation() << romp::CODEGEN_CONFIG::M_RULE_GUARD__FUNC_ATTRS << "\n"
+          << indentation() << "bool " << n.name << "(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -104,6 +115,7 @@ public:
     }
 
     *this << ") {\n";
+    enter_scope();
     indent();
 
     // any aliases this property uses
@@ -120,9 +132,12 @@ public:
 
     dedent();
     *this << "}\n";
+    leave_scope();
+    // scope_level--;
   }
 
   void visit_simplerule(const SimpleRule &n) final {
+    // scope_level++;
     *this << indentation() << "bool guard_" << n.name << "(";
 
     // parameters
@@ -143,6 +158,7 @@ public:
     }
 
     *this << ") {\n";
+    enter_scope();
     indent();
 
     // any aliases that are defined in an outer scope
@@ -164,6 +180,7 @@ public:
     }
 
     dedent();
+    leave_scope();
     *this << indentation() << "}\n\n";
 
     *this << indentation() << "void rule_" << n.name << "(";
@@ -186,6 +203,7 @@ public:
     }
 
     *this << ") {\n";
+    enter_scope();
     indent();
 
     // aliases, variables, local types, etc.
@@ -214,10 +232,13 @@ public:
     }
 
     dedent();
+    leave_scope();
     *this << indentation() << "}\n";
+    // scope_level--;
   }
 
   void visit_startstate(const StartState &n) final {
+    // scope_level++;
     *this << indentation() << "void startstate_" << n.name << "(";
 
     // parameters
@@ -238,6 +259,7 @@ public:
     }
 
     *this << ") {\n";
+    enter_scope();
     indent();
 
     // aliases, variables, local types, etc.
@@ -266,13 +288,14 @@ public:
     }
 
     dedent();
+    leave_scope();
     *this << indentation() << "}\n\n";
   }
 
   void visit_vardecl(const VarDecl &n) final {
-    *this << indentation() << *n.type << " " << n.name << ";";
-    emit_trailing_comments(n);
-    *this << "\n";
+      *this << indentation() << *n.type << " " << n.name << ";";
+      emit_trailing_comments(n);
+      *this << "\n";
   }
 
   virtual ~CGenerator() = default;
@@ -287,6 +310,15 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
   for (size_t i = 0; i < resources_c_prefix_c_len; i++)
     out << (char)resources_c_prefix_c[i];
 
-  CGenerator gen(comments, out, pack);
+  // std::streambuf buffer;
+  std::fstream buffer;
+  buffer.open("./~__romp__codegen_temp.tmp", 
+              std::fstream::in | std::fstream::out | std::fstream::app);
+
+  CGenerator gen(comments, buffer, pack);
   gen.dispatch(n);
+
+
+
+  // out << buffer.rdbuf() << "\n\n";
 }

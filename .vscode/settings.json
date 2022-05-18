@@ -8,8 +8,30 @@
         "*.m": "murphi",
         "*.D": "c",
         "stdexcept": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "streambuf": "cpp",
+        "iosfwd": "cpp",
+        "string": "cpp"
     },
+    "doxdocgen.file.fileOrder": [
+        "custom",
+        "file",
+        "empty",
+        "brief",
+        "empty",
+        "date",
+        "version",
+    ],
+    "doxdocgen.generic.dateFormat": "YYYY/MM/DD",
+    "doxdocgen.file.customTag": [
+        "@proj romp",
+        "@author Andrew Osterhout",
+        "@author Ajantha Varadharaaj",
+        "@org University of Utah (UofU) School of Computing (SoC)",
+        "@org Center for Parallel compute at Utah (CPU)",
+        "@org <a href=\"https://civic-fv.github.io\">Civic-fv NSF Grant</a>",
+        "@org Ganesh Gopalakrishnan's Research Group",
+    ],
     //<<================================================================================================>>//
     //<<                                           (LANG):                                              >>//
     //<<                                            C/C++                                               >>//
@@ -18,15 +40,15 @@
     // - General Settings ----
     "taskExplorer.pathToMake": "make",
     // - Code Formatter Settings ----
-    "C_Cpp.formatting": "vcFormat",
-    "C_Cpp.vcFormat.newLine.beforeWhileInDoWhile": false,
-    "C_Cpp.vcFormat.newLine.beforeOpenBrace.block": "newLine",
-    "C_Cpp.vcFormat.newLine.beforeOpenBrace.function": "newLine",
-    "C_Cpp.vcFormat.newLine.beforeOpenBrace.lambda": "sameLine",
-    "C_Cpp.vcFormat.newLine.beforeOpenBrace.namespace": "newLine",
-    "C_Cpp.vcFormat.newLine.closeBraceSameLine.emptyFunction": true,
-    "C_Cpp.vcFormat.newLine.closeBraceSameLine.emptyType": true,
-    "C_Cpp.vcFormat.newLine.scopeBracesOnSeparateLines": true,
+    // "C_Cpp.formatting": "vcFormat",
+    // "C_Cpp.vcFormat.newLine.beforeWhileInDoWhile": false,
+    // "C_Cpp.vcFormat.newLine.beforeOpenBrace.block": "newLine",
+    // "C_Cpp.vcFormat.newLine.beforeOpenBrace.function": "newLine",
+    // "C_Cpp.vcFormat.newLine.beforeOpenBrace.lambda": "sameLine",
+    // "C_Cpp.vcFormat.newLine.beforeOpenBrace.namespace": "newLine",
+    // "C_Cpp.vcFormat.newLine.closeBraceSameLine.emptyFunction": true,
+    // "C_Cpp.vcFormat.newLine.closeBraceSameLine.emptyType": true,
+    // "C_Cpp.vcFormat.newLine.scopeBracesOnSeparateLines": true,
     // - C specific  settings ----
     "[c]": {
         // "editor.insertSpaces": false,
@@ -232,12 +254,14 @@
         "GUIs",
         "hotbar",
         "hyperfocus",
+        "ifclause",
         "indeterminates",
         "Initializable",
         "ipynb",
         "ipython",
         "isalnum",
         "isdigit",
+        "isundefined",
         "Junit",
         "jupyter",
         "mergesort",
@@ -257,6 +281,7 @@
         "pgfplots",
         "pgfplotstable",
         "phanon",
+        "PREBUILD",
         "Prioritizable",
         "Proto",
         "pycache",
@@ -271,6 +296,7 @@
         "repr",
         "Respawn",
         "Roleplay",
+        "rumur",
         "scatterplot",
         "Schneiter",
         "scriptcs",
@@ -294,5 +320,6 @@
         "vscode's",
         "Wireshark",
         "zotero"
-    ]
+    ],
+    "C_Cpp.formatting": "clangFormat"
 }

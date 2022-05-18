@@ -1,42 +1,93 @@
-#pragma once
+/**
+ * @proj romp
+ * @author Andrew Osterhout
+ * @author Ajantha Varadharaaj
+ * @org University of Utah (UofU) School of Computing (SoC)
+ * @org Center for Parallel compute at Utah (CPU)
+ * @org <a href="https://civic-fv.github.io">Civic-fv NSF Grant</a>
+ * @org Ganesh Gopalakrishnan's Research Group
+ * @file Model.hpp
+ *
+ * @brief   A Class that is a intermediary representation of the model,
+ *        used to allow for generating the Cpp romp tools
+ *        in a way that allows full context of the model.
+ *
+ * @date 2022/05/13
+ * @version 0.1
+ */
 
-#include "CodeGenerator.h"
-#include <cstddef>
-#include <iostream>
 #include <rumur/rumur.h>
+
 #include <string>
+#include <stack>
+#include <vector>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 
-// generator for C-like code
-class __attribute__((visibility("hidden"))) CLikeGenerator
-    : public romp::CodeGenerator,
-      public rumur::ConstBaseTraversal {
+namespace romp {
 
-protected:
-  std::ostream &out;
-  bool pack;
+/**
+ * @brief   A Class that is a intermediary representation of the model,
+ *        used to allow for generating the Cpp romp tools
+ *        in a way that allows full context of the model.
+ *          It allows the following:
+ *        \li Keeping track of all types (generating names for anonymous types)
+ *        \li Keeping track of all "variables" respecting scope.
+ *        \li Keeping track of all functions, procedures, & rules.
+ *        \li allowing lookup of all above mentioned items.
+ *        \li preserving a notion of scope.
+ */
+class IModel : public rumur::ConstBaseTraversal {
 
-  // mapping of Enum unique_ids to the name of a TypeDecl to them
-  std::unordered_map<size_t, std::string> enum_typedefs;
+  // << ===================================== Class Members ====================================== >> 
+public: // ---- Public Class Members ---- //
 
-  // collection of unique_ids that were emitted as pointers instead of standard
-  // variables
-  std::unordered_set<size_t> is_pointer;
 
-  // list of comments from the original source
-  std::vector<rumur::Comment> comments;
+private: // ---- Private Class Members ---- //
 
-  // whether each comment has been written to the output yet
-  std::vector<bool> emitted;
+  int scope_level = 0; // keep track of what level of scope we are in durring processing
+  std::stack<std::string> scope_str;
+  const rumur::Node& root;
+  const rumur::Model* _model = nullptr;
 
+  std::vector<rumur::VarDecl&> state_vars;
+  std::unordered_set<std::string> typeIds;
+  std::unordered_map<std::string,rumur::TypeExpr&> typeExprs;
+
+
+  // << ============================= Constructors & Deconstructors ============================== >> 
 public:
-  CLikeGenerator(const std::vector<rumur::Comment> &comments_,
-                 std::ostream &out_, bool pack_)
-      : out(out_), pack(pack_), comments(comments_),
-        emitted(comments_.size(), false) {}
+  IModel(const rumur::Node& root) : root(root) { scope_str.push(""); }
+  ~IModel();
 
+
+  // << ========================== Public/External Function Functions ============================ >> 
+public:
+
+
+
+
+  // << =========================== Internal/Private Helper Functions ============================ >> 
+private:
+
+  void add_new_type(std::string& name, rumur::TypeExpr& value);
+  void add_new_anon_type(rumur::TypeExpr& value);
+
+
+  // << =========================== Model Processing Helper Functions ============================ >> 
+public:
+  // - most useful ---- 
+  void visit_model(const rumur::Model &n) final;
+  void visit_constdecl(const ConstDecl &n) final;
+  void visit_typedecl(const rumur::TypeDecl &n) final;
+  void visit_typeexprid(const rumur::TypeExprID &n) final;
+  void visit_vardecl(const VarDecl &n) final;
+  void visit_function(const Function &n) final;
+  void visit_propertyrule(const PropertyRule &n) final;
+  void visit_simplerule(const SimpleRule &n) final;
+  void visit_startstate(const StartState &n) final;
+
+  // - mostly ignored ---- 
   void visit_add(const rumur::Add &n) final;
   void visit_aliasdecl(const rumur::AliasDecl &n) final;
   void visit_aliasrule(const rumur::AliasRule &) final;
@@ -69,7 +120,6 @@ public:
   void visit_lsh(const rumur::Lsh &n) final;
   void visit_lt(const rumur::Lt &n) final;
   void visit_mod(const rumur::Mod &n) final;
-  void visit_model(const rumur::Model &n) final;
   void visit_mul(const rumur::Mul &n) final;
   void visit_negative(const rumur::Negative &n) final;
   void visit_neq(const rumur::Neq &n) final;
@@ -91,32 +141,12 @@ public:
   void visit_switch(const rumur::Switch &n) final;
   void visit_switchcase(const rumur::SwitchCase &n) final;
   void visit_ternary(const rumur::Ternary &n) final;
-  void visit_typedecl(const rumur::TypeDecl &n) final;
-  void visit_typeexprid(const rumur::TypeExprID &n) final;
   void visit_undefine(const rumur::Undefine &n) final;
   void visit_while(const rumur::While &n) final;
   void visit_xor(const rumur::Xor &n) final;
 
-  // helpers to make output more natural
-  CLikeGenerator &operator<<(const std::string &s);
-  CLikeGenerator &operator<<(const rumur::Node &n);
 
-  // make this class abstract
-  virtual ~CLikeGenerator() = 0;
-
-private:
-  // generate a print statement of the given expression and (possibly
-  // not-terminal) type
-  void print(const std::string &suffix, const rumur::TypeExpr &t,
-             const rumur::Expr &e, size_t counter);
-
-protected:
-  // output comments preceding the given node
-  size_t emit_leading_comments(const rumur::Node &n);
-
-  // discard any un-emitted comments preceding the given position
-  size_t drop_comments(const rumur::position &pos);
-
-  // output single line comments following the given node
-  size_t emit_trailing_comments(const rumur::Node &n);
+  
 };
+
+} // namespace romp

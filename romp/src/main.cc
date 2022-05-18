@@ -2,7 +2,7 @@
 #include "check.h"
 #include "compares_complex_values.h"
 #include "generate_c.h"
-#include "generate_h.h"
+// #include "generate_h.h"
 #include "options.h"
 #include "resources.h"
 #include <cassert>
@@ -63,7 +63,7 @@ static void parse_args(int argc, char **argv) {
       break;
 
     case 'h': // --help
-      help(doc_murphi2c_1, doc_murphi2c_1_len);
+      help(doc_romp_1, doc_romp_1_len);
       exit(EXIT_SUCCESS);
 
     case 'o': {
@@ -181,11 +181,11 @@ int main(int argc, char **argv) {
   std::vector<rumur::Comment> comments = rumur::parse_comments(*in.second);
 
   // output code
-  if (source) {
+  // if (source) {
     generate_c(*m, comments, pack, out == nullptr ? std::cout : *out);
-  } else {
-    generate_h(*m, comments, pack, out == nullptr ? std::cout : *out);
-  }
+  // } else {
+  //   generate_h(*m, comments, pack, out == nullptr ? std::cout : *out);
+  // }
 
   return EXIT_SUCCESS;
 }

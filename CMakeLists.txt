@@ -44,6 +44,7 @@ endif()
 
 add_subdirectory(librumur)
 add_subdirectory(murphi2c)
+add_subdirectory(romp)
 add_subdirectory(murphi2murphi)
 add_subdirectory(murphi2uclid)
 add_subdirectory(murphi2xml)
