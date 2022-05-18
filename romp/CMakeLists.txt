@@ -18,31 +18,31 @@ add_custom_command(
 #   DEPENDS ../misc/xxd.py
 #   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_custom_command(# our main definition file for rw
-  OUTPUT resources_romp-rw.cc
-  COMMAND ../misc/xxd.py resources/romp-rw.hpp ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw.cc
-  MAIN_DEPENDENCY resources/romp-main.hpp
+  OUTPUT resources_romp-rw-sim.cc
+  COMMAND ../misc/xxd.py resources/romp-rw-sim.hpp ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-sim.ccm.cc
+  MAIN_DEPENDENCY resources/romp-rw-sim.hpp
   DEPENDS ../misc/xxd.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_custom_command(# file with our main function 
-  OUTPUT resources_romp-main.cc
-  COMMAND ../misc/xxd.py resources/romp-main.hpp ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-main.cc
-  MAIN_DEPENDENCY resources/romp-main.hpp
+  OUTPUT resources_romp-rw-main.cc
+  COMMAND ../misc/xxd.py resources/romp-rw-main.hpp ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-main.cc
+  MAIN_DEPENDENCY resources/romp-rw-main.hpp
   DEPENDS ../misc/xxd.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-# add_custom_command(# file with CLI config options
-#   OUTPUT resources_romp-options-rw.cc
-#   COMMAND ../misc/xxd.py resources/romp-options-rw.h ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-options-rw.cc
-#   MAIN_DEPENDENCY resources/romp-options-rw.h
-#   DEPENDS ../misc/xxd.py
-#   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_custom_command(# file with CLI config options
+  OUTPUT resources_romp-rw-options.cc
+  COMMAND ../misc/xxd.py resources/romp-rw-options.hpp ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-options.cc
+  MAIN_DEPENDENCY resources/romp-rw-options.hpp
+  DEPENDS ../misc/xxd.py
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(romp
   ${CMAKE_CURRENT_BINARY_DIR}/resources_c_prefix.cc
   # ${CMAKE_CURRENT_BINARY_DIR}/resources_h_prefix.cc
   ${CMAKE_CURRENT_BINARY_DIR}/resources_manpage.cc
-  ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw.cc
-  ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-main.cc
-  # ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-options-rw.cc
+  ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-sim.cc
+  ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-main.cc
+  ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-options.cc
   ../common/escape.cc
   ../common/help.cc
   src/check.cc

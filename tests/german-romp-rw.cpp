@@ -11,7 +11,7 @@
 
 #ifndef __romp__GENERATED_CODE
 #include "../romp/resources/romp-rw.hpp"
-#include "../romp/resources/romp-options.hpp"
+#include "../romp/resources/romp-rw-options.hpp"
 #endif
 
 /* built-in boolean type */
