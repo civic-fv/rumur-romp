@@ -9,8 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef __romp__PREBUILD
-#include <romp-rw.hpp>
+#ifndef __romp__GENERATED_CODE
+#include "../romp/resources/romp-rw.hpp"
+#include "../romp/resources/romp-options.hpp"
 #endif
 
 /* built-in boolean type */
@@ -129,6 +130,9 @@ typedef struct {
 
 // state variables --
 class romp::Sim::State {
+
+  // static Rules[RULE_COUNT];
+  // static Invariants[INVARIANTS_SIZE];
   struct {
     CACHE data[4];
   } Cache; // Caches
@@ -432,3 +436,7 @@ class romp::Sim::State {
         }));
   }
 };
+
+#ifndef __romp__GENERATED_CODE
+#include "../romp/resources/romp-main.hpp"
+#endif

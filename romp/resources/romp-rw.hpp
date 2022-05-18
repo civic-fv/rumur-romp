@@ -14,7 +14,7 @@
  * @version 0.1
  */
 
-#ifdef __romp__PREBUILD
+#ifndef __romp__GENERATED_CODE
 #include <cstddef>
 #include <functional>
 #include <string>
@@ -27,13 +27,18 @@
 #ifndef RULES_SIZE
 #define RULES_SIZE 0
 #endif
-#ifndef INVARIANTS_SIZE
+#ifndef INVARIANTS_SIZE 2
 #define RULE_COUNT 0
 #endif
 namespace romp {
 
 // << =================================== Type Declarations
 // ==================================== >>
+class Param {
+  std::function<void*(void*)> caller;
+
+};
+
 
 class Sim {
 public:
@@ -85,27 +90,8 @@ public:
 
 Sim::next_id = 0;
 
-template <class SIG> class Rule {
-public:
-  std::function<bool(S)> Guard;
-  std::function<void(S)> Run;
-};
 
-// << ================================ Extern Predeclarations
-// ================================== >>
-#ifdef __romp__PREBUILD
-extern Rule RULES[];
-extern std::function<bool(ProtoState)> INVARIANTS[];
-extern std::function<bool(ProtoState)> ASSERTIONS[];
-extern ::State * ::GenStartStates();
-#endif
 
-// stuct RS {
-//   function<bool(State,Params)> guard;
-//   function<void(State,Params)> action;
-//   Param_t **params;
-//   Type Param_t;
-// };
 
 // <<
 // ==========================================================================================

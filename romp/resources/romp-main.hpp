@@ -17,7 +17,7 @@
 
 #include <string.h>
 
-#ifdef __romp__PREBUILD
+#ifdef __romp__GENERATED_CODE
 #include "romp-rw.hpp"
 #include "romp-rse.hpp"
 #endif
