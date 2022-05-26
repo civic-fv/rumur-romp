@@ -20,66 +20,55 @@
 #include <float.h>
 #include <math.h>
 
-#define __FILE_defined
-struct _IO_FILE;
-typedef struct _IO_FILE FILE;
+class Error_handler /* error-reporting mechanism. */
+{
+  int numerrors;
+  int numwarnings;
 
+ private:
+  void vError(const char *fmt, va_list argp);
+  void vWarning(const char *fmt, va_list argp);
 
-/* Extern Variables */
+ public:
+  // initializer
+  Error_handler(void);
 
-extern argclass *args;
-extern char *gFileName;		/* file support. */
-extern FILE *codefile;
+ /* as of now printing the errors directly*/
 
-extern int yyparse(void);	
+}
+extern char *gFileName;  /* file support. */
+extern char *codefile;
+extern char *in; 
+/*---------------------------------------------------------------------------*/
+/* class argclass                                                            */
+/*---------------------------------------------------------------------------*/
 class argclass 
+{
+ class argclass
 {
   int argc;
   char **argv;
+
 public:
   // variables
+  char *filename;	// name of the input file
+  bool print_license;   // will do for future 
+  bool help;		// whether to print option
+  const bool checking;	/* runtime checking? */
+  int threadcount;
+  bool randomwalk;
+  //bool trace;//can be avoided
+  int threadcount;
   
-
   // initializer
-   argclass(int ac, char **av);
+  argclass(int ac, char** av);
 
-  // supporting routines
-  void PrintOptions(void);
-}
-
-
-argclass::argclass(int ac, char **av)
-:
-argc(ac), argv(av), print_license(FALSE), help(FALSE)
-{
-  bool initialized_filename = FALSE;
-  int i;
-
-  if (ac == 1) {		// if there is no argument, print help
-    help = TRUE;
-    PrintInfo();
-    exit(1);
-  }
-
-  if (strcmp(av[i], "-h") == 0) {
-      help = TRUE;
-      PrintInfo();
-      exit(1);
-    }
-
-void argclass::PrintInfo(void)
-{
   
-  if (!help)
-    printf("Run this program with \"-h\" for the list of options.\n");
-
-  if (help)
-    PrintOptions();
-  fflush(stdout);
-}
-
-void argclass::PrintOptions(void)
-{
-  printf("The options are shown as follows:\n\
------ to be filled------------");
-}
+  void PrintInfo( void ); 
+  void PrintOptions( void );
+  void PrintLicense( void ); 
+};
+/********************
+  variable declarations
+  ********************/
+argclass *args;
