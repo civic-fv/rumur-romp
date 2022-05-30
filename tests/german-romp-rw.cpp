@@ -129,7 +129,7 @@ typedef struct {
 } MSG;
 
 // state variables --
-class romp::Sim::State {
+class romp::RandWalker::State {
 
   // static Rules[RULE_COUNT];
   // static Invariants[INVARIANTS_SIZE];

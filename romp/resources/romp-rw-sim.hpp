@@ -32,15 +32,14 @@
 #endif
 namespace romp {
 
-// << =================================== Type Declarations
-// ==================================== >>
+// << =================================== Type Declarations ==================================== >>
 class Param {
   std::function<void*(void*)> caller;
 
 };
 
 
-class Sim {
+class RandWalker {
 public:
   static id_t next_id;
   const id_t id;
@@ -67,21 +66,22 @@ public:
     history[true_level % STATE_HISTORY_SIZE] = id;
     true_level++;
   }
-  Sim() : id(Sim::next_id++) {}
+  RandWalker() : id(RandWalker::next_id++) {}
 
-  void Sim1Step(Sim::State state, Rule rule, size_t state_count) {
+
+  void Sim1Step(RandWalker::State state, Rule rule, size_t state_count) {
     for (int s = 0; s < state_count; s++)
       if (rule.Guard(states[s])) {
         rule.Run(states[s]);
         states[i].rule_applied(
             rule.id); // this keeps track of history and other overhead
-        // These could possibly be parrallelized even better for GPU using
-        // shared memory. (not implimented here, could introduce data races)
+        // These could possibly be parallelized even better for GPU using
+        // shared memory. (not implemented here, could introduce data races)
         for (int i = 0; i < INVARIANTS_SIZE; i++)
-          states[s].valid |= INVARIANTS[i](
+          states[s].valid |= State::INVARIANTS[i](
               states[i]); // this will need to change after we figure shit out
         for (int a = 0; a < ASSERTIONS_SIZE; a++)
-          states[s].valid |= ASSERTIONS[a](
+          states[s].valid |= State::ASSERTIONS[a](
               states[i]); // this will need to change after we figure shit out
       }
   }
