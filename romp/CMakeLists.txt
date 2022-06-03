@@ -18,9 +18,9 @@ add_custom_command(
 #   DEPENDS ../misc/xxd.py
 #   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_custom_command(# our main definition file for rw
-  OUTPUT resources_romp-rw-sim.cc
-  COMMAND ../misc/xxd.py resources/romp-rw-sim.hpp ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-sim.ccm.cc
-  MAIN_DEPENDENCY resources/romp-rw-sim.hpp
+  OUTPUT resources_romp-rw.cc
+  COMMAND ../misc/xxd.py resources/romp-rw.hpp ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw.ccm.cc
+  MAIN_DEPENDENCY resources/romp-rw.hpp
   DEPENDS ../misc/xxd.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_custom_command(# file with our main function 
@@ -40,7 +40,7 @@ add_executable(romp
   ${CMAKE_CURRENT_BINARY_DIR}/resources_c_prefix.cc
   # ${CMAKE_CURRENT_BINARY_DIR}/resources_h_prefix.cc
   ${CMAKE_CURRENT_BINARY_DIR}/resources_manpage.cc
-  ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-sim.cc
+  ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw.cc
   ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-main.cc
   ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-options.cc
   ../common/escape.cc

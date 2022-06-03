@@ -438,5 +438,5 @@ class romp::RandWalker::State {
 };
 
 #ifndef __romp__GENERATED_CODE
-#include "../romp/resources/romp-main.hpp"
+#include "../romp/resources/romp-rw-main.hpp"
 #endif

@@ -17,9 +17,10 @@
 
 #include <string.h>
 
-#ifdef __romp__GENERATED_CODE
+#ifndef __romp__GENERATED_CODE
 #include "romp-rw.hpp"
-#include "romp-rse.hpp"
+// #include "romp-rse.hpp"
+#include "romp-rw-options.hpp"
 #endif
 
 
@@ -50,7 +51,7 @@
 #include <string.h>
 #include <new>
 #include <cstdlib>
-#include "cli.hpp"
+
 
 using namespace std;
 
