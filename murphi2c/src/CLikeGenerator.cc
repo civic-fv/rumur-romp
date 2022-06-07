@@ -732,9 +732,9 @@ void CLikeGenerator::visit_typedecl(const TypeDecl &n) {
   if (auto e = dynamic_cast<const Enum *>(n.value.get()))
     enum_typedefs[e->unique_id] = n.name;
 
-  *this << indentation() << "typedef " << *n.value << " " << n.name << ";";
-  emit_trailing_comments(n);
-  *this << "\n";
+  // *this << indentation() << "typedef " << *n.value << " " << n.name << ";";
+  // emit_trailing_comments(n);
+  // *this << "\n";
 }
 
 void CLikeGenerator::visit_typeexprid(const TypeExprID &n) { *this << n.name; }

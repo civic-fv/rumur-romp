@@ -21,8 +21,11 @@
 #include <string>
 #include <stack>
 #include <vector>
+#include <iostream>
 #include <unordered_map>
 #include <unordered_set>
+
+#include "../CodeGenerator.h"
 
 namespace romp {
 
@@ -37,28 +40,38 @@ namespace romp {
  *        \li allowing lookup of all above mentioned items.
  *        \li preserving a notion of scope.
  */
-class IModel : public rumur::ConstBaseTraversal {
+class TModel : public rumur::ConstBaseTraversal,
+               public romp::CodeGenerator {
 
   // << ===================================== Class Members ====================================== >> 
 public: // ---- Public Class Members ---- //
 
 
 private: // ---- Private Class Members ---- //
-
+  std::ostream &out;
+  bool pack;
   int scope_level = 0; // keep track of what level of scope we are in durring processing
   std::stack<std::string> scope_str;
   const rumur::Node& root;
   const rumur::Model* _model = nullptr;
 
   std::vector<rumur::VarDecl&> state_vars;
-  std::unordered_set<std::string> typeIds;
-  std::unordered_map<std::string,rumur::TypeExpr&> typeExprs;
+  // std::unordered_set<size_t> typeIds;
+  std::unordered_map<size_t,std::string> cTypeName;
+
+  id_t anon_id = 0;
+
+
+  // list of comments from the original source
+  std::vector<rumur::Comment> comments;
+  // whether each comment has been written to the output yet
+  std::vector<bool> emitted;
 
 
   // << ============================= Constructors & Deconstructors ============================== >> 
 public:
-  IModel(const rumur::Node& root) : root(root) { scope_str.push(""); }
-  ~IModel();
+  TModel(const rumur::Node& root) : root(root) { }
+  ~TModel();
 
 
   // << ========================== Public/External Function Functions ============================ >> 
@@ -70,8 +83,7 @@ public:
   // << =========================== Internal/Private Helper Functions ============================ >> 
 private:
 
-  void add_new_type(std::string& name, rumur::TypeExpr& value);
-  void add_new_anon_type(rumur::TypeExpr& value);
+  const std::string gen_new_anon_name();
 
 
   // << =========================== Model Processing Helper Functions ============================ >> 
@@ -145,7 +157,18 @@ public:
   void visit_while(const rumur::While &n) final;
   void visit_xor(const rumur::Xor &n) final;
 
+  TModel &operator<<(const std::string &s);
+  TModel &operator<<(const rumur::Node &n);
 
+protected:
+  // output comments preceding the given node
+  size_t emit_leading_comments(const rumur::Node &n);
+
+  // discard any un-emitted comments preceding the given position
+  size_t drop_comments(const rumur::position &pos);
+
+  // output single line comments following the given node
+  size_t emit_trailing_comments(const rumur::Node &n);
   
 };
 

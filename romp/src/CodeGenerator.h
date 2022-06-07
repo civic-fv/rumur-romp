@@ -56,16 +56,6 @@ namespace romp {
     // // decrease the current scope level
     // romp::Scope pop_scope();
 
-    void add_type_decl(const std::string &name,
-                       const rumur::
-                       const std::vector<std::string> elements);
-
-    void add_var_to_state(const std::string &n);
-
-    void add_rule_ref(guard_ref* g_ref, action_ref* a_ref);
-    void add_invariant_ref(invariant_ref* g_ref);
-    void add_startstate_ref(startstate_ref* ss_ref);
-
   public:
     // make this class abstract
     virtual ~CodeGenerator() = 0;

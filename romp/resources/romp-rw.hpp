@@ -14,11 +14,12 @@
  * @version 0.1
  */
 
-#ifndef __romp__GENERATED_CODE
+// #ifndef __romp__GENERATED_CODE
 #include <cstddef>
 #include <functional>
 #include <string>
-#endif
+#include <iterator>
+// #endif
 
 // << =============================== Preprocessor DEclarations
 // ================================ >>
@@ -33,9 +34,62 @@
 namespace romp {
 
 // << =================================== Type Declarations ==================================== >>
-class Param {
-  std::function<void*(void*)> caller;
 
+
+class Param {
+  id_t id;
+
+};
+
+class IterParam : public Param {
+
+    //TODO: Figure this out later
+
+};
+
+/**
+ * @brief Abstract parent of all Param class objects.
+ *        Implements the base ideas of programmatic permutations for enabling us to track and call 
+ *        the various parametric changes rulesets effect onto Murphi generated functions 
+ *        for rules, invariants & start-state expressions. 
+ */
+class RuleSet {
+protected:
+  uint32_t max_hash;
+public:
+  RuleSet(int* signature, int param_c) {
+    max_hash = 1;
+    for (int i=0; i<2*param_c; i+=2)
+      max_hash *= signature[i+1] - signature[i];
+  }
+};
+
+
+/**
+ * @brief an Abstract Param object for working with the parameters for the rules of a Murphi Model.
+ *        It (will later) hold the functionality for performing Ganesh's pseudo symmetric reduction.
+ */
+class RuleSet_Rule : public RuleSet {
+
+
+};
+
+
+/**
+ * @brief An Abstract Param object for working with the parameters 
+ *        of Murphi model \c Invariant and \c StartState functions.
+ *        It differs from that of rules in that it is iterable, and is meant to 
+ *        allow you to go through all the options easily in a for-range loop.
+ * 
+ *        FLAWED AND CURRENTLY NON-FUNCTIONAL
+ */
+class IterRuleSet : public RuleSet {
+private: 
+  uint32_t iter = 0;
+public:
+  IterRuleSet* begin() { iter=0; return this; }
+  IterRuleSet* end() { return NULL; }
+  IterRuleSet* operator++() { iter++; return ((iter<max_hash) ? this : NULL); }
 };
 
 
