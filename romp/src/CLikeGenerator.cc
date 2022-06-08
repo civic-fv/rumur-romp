@@ -51,28 +51,28 @@ void CLikeGenerator::visit_and(const And &n) {
 }
 
 void CLikeGenerator::visit_array(const Array &n) {
-  // mpz_class count = n.index_type->count();
+  mpz_class count = n.index_type->count();
 
-  // assert(count > 0 && "index type of array does not include undefined");
-  // count--;
+  assert(count > 0 && "index type of array does not include undefined");
+  count--;
 
-  // // wrap the array in a struct so that we do not have the awkwardness of
-  // // having to emit its type and size on either size of another node
-  // *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{ "
-  //       << *n.element_type << " data[" << count.get_str() << "];";
+  // wrap the array in a struct so that we do not have the awkwardness of
+  // having to emit its type and size on either size of another node
+  *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{ "
+        << *n.element_type << " data[" << count.get_str() << "];";
 
-  // // The index for this array may be an enum declared inline:
-  // //
-  // //   array [enum {A, B}] of foo
-  // //
-  // // If so, we need to emit it somehow so that the enum’s members can be
-  // // referenced later. We define it within this struct to avoid any awkward
-  // // lexical issues.
-  // if (auto e = dynamic_cast<const Enum *>(n.index_type.get())) {
-  //   *this << " " << *e << ";";
-  // }
+  // The index for this array may be an enum declared inline:
+  //
+  //   array [enum {A, B}] of foo
+  //
+  // If so, we need to emit it somehow so that the enum’s members can be
+  // referenced later. We define it within this struct to avoid any awkward
+  // lexical issues.
+  if (auto e = dynamic_cast<const Enum *>(n.index_type.get())) {
+    *this << " " << *e << ";";
+  }
 
-  // *this << " }";
+  *this << " }";
 }
 
 void CLikeGenerator::visit_assignment(const Assignment &n) {
@@ -124,11 +124,11 @@ void CLikeGenerator::visit_element(const Element &n) {
 }
 
 void CLikeGenerator::visit_enum(const Enum &n) {
-  // *this << "enum { ";
-  // for (const std::pair<std::string, location> &m : n.members) {
-  //   *this << m.first << ", ";
-  // }
-  // *this << "}";
+  *this << "enum { ";
+  for (const std::pair<std::string, location> &m : n.members) {
+    *this << m.first << ", ";
+  }
+  *this << "}";
 }
 
 void CLikeGenerator::visit_eq(const Eq &n) {
@@ -614,16 +614,16 @@ void CLikeGenerator::visit_quantifier(const Quantifier &n) {
   assert(!"missing case in visit_quantifier()");
 }
 
-void CLikeGenerator::visit_range(const Range &) { /* *this << value_type; */ }
+void CLikeGenerator::visit_range(const Range &) { *this << value_type; }
 
 void CLikeGenerator::visit_record(const Record &n) {
-  // *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{\n";
-  // indent();
-  // for (const Ptr<VarDecl> &f : n.fields) {
-  //   *this << *f;
-  // }
-  // dedent();
-  // *this << indentation() << "}";
+  *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{\n";
+  indent();
+  for (const Ptr<VarDecl> &f : n.fields) {
+    *this << *f;
+  }
+  dedent();
+  *this << indentation() << "}";
 }
 
 void CLikeGenerator::visit_return(const Return &n) {
@@ -647,7 +647,7 @@ void CLikeGenerator::visit_ruleset(const Ruleset &) {
   __builtin_unreachable();
 }
 
-void CLikeGenerator::visit_scalarset(const Scalarset &) { /* *this << value_type; */ }
+void CLikeGenerator::visit_scalarset(const Scalarset &) { *this << value_type; }
 
 void CLikeGenerator::visit_sub(const Sub &n) {
   *this << "(" << *n.lhs << " - " << *n.rhs << ")";
@@ -732,9 +732,9 @@ void CLikeGenerator::visit_typedecl(const TypeDecl &n) {
   if (auto e = dynamic_cast<const Enum *>(n.value.get()))
     enum_typedefs[e->unique_id] = n.name;
 
-  // *this << indentation() << "typedef " << *n.value << " " << n.name << ";";
-  // emit_trailing_comments(n);
-  // *this << "\n";
+  *this << indentation() << "typedef " << *n.value << " " << n.name << ";";
+  emit_trailing_comments(n);
+  *this << "\n";
 }
 
 void CLikeGenerator::visit_typeexprid(const TypeExprID &n) { *this << n.name; }

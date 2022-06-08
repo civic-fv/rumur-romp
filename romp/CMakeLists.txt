@@ -54,7 +54,7 @@ add_executable(romp
   src/main.cc
   src/options.cc
   src/romp_def.cpp
-  src/model/IModel.cpp
+  src/model/TModel.cpp
   )
 
 target_include_directories(romp
