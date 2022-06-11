@@ -43,7 +43,20 @@ using namespace rumur;
 // <<                               CONSTRUCTORS & DECONSTRUCTORS                                >> 
 // << ========================================================================================== >> 
 
-TModel::~TModel() {}
+ModelSplitter::~ModelSplitter() {}
+
+
+// << ========================================================================================== >> 
+// <<                               SPLIT MODEL FACTORY FUNCTION                                 >> 
+// << ========================================================================================== >> 
+
+SplitModel ModelSplitter::split_model() {
+  dispatch(root);
+  return (SplitModel){Model(global_decls, root.loc),
+                      Model(state_var_decls, root.loc),
+                      Model(funct_decls, root.loc),
+                      Model(rule_decls, root.loc)};
+}
 
 
 
@@ -61,38 +74,61 @@ TModel::~TModel() {}
 //   return stream.str();
 // }
 
-// const std::string TModel::gen_new_anon_name() {
+// const std::string ModelSplitter::gen_new_anon_name() {
 //   return "anon"+int_to_hex(anon_id++)+"_t";
 // }
 
-const std::string TModel::gen_new_anon_name() {
+const std::string ModelSplitter::gen_new_anon_name() {
   char buff[24];
   sprintf(buff, "anon0x%x_t", anon_id++);
   return std::string(buff);
 }
 
-const std::string TModel::make_name_unique(const std::string old) {
-  char buff[old.size()+24];
-  sprintf(buff, (old+"__0x%x_t").c_str(), anon_id++);
-  return std::string(buff);
+void ModelSplitter::make_name_unique(std::string &name) {
+  if (cTypeNames.find(name) == cTypeNames.end())
+    return;
+  char buff[name.size()+24];
+  sprintf(buff, (name+"__0x%x").c_str(), anon_id++);
+  name = std::string(buff);
 }
 
-void TModel::insert_to_global_top(Ptr<TypeDecl> n) {
-  if (cTypeNames.find(n->name) != cTypeNames.end()) {
-    n->name = make_name_unique(n->name);
-  }
-  _top = _children.insert(_top, Ptr<TypeDecl>(n->clone()));
-  _top++;
+void ModelSplitter::insert_to_global_decls(Ptr<TypeDecl> n) {
+  make_name_unique(n->name);
+  global_decls.push_back(n);
   cTypeNames.insert(n->name);
 }
 
-void TModel::insert_to_global_top(Ptr<ConstDecl> n) {
-  if (cTypeNames.find(n->name) != cTypeNames.end()) {
-    n->name = make_name_unique(n->name);
-  }
-  _top = _children.insert(_top, Ptr<ConstDecl>(n->clone()));
-  _top++;
+void ModelSplitter::insert_to_global_decls(Ptr<ConstDecl> n) {
+  make_name_unique(n->name);
+  global_decls.push_back(n);
   cTypeNames.insert(n->name);
+}
+
+
+void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
+  for (const Ptr<Node> &_c : children) {
+    Ptr<Node> c(_c);
+
+    if (auto td = dynamic_cast<TypeDecl *>(c.get())) {
+      dispatch(*td);
+      insert_to_global_decls(Ptr<TypeDecl>(td));
+    } else if (auto cd = dynamic_cast<ConstDecl *>(c.get())) 
+      insert_to_global_decls(Ptr<ConstDecl>(cd));
+    else if (auto _vd = dynamic_cast<VarDecl *>(c.get())) {
+      Ptr<VarDecl> vd(_vd->clone());
+      state_var_decls.push_back(Ptr<VarDecl>(vd->clone()));
+      dispatch(*vd);
+    } else if (auto _f = dynamic_cast<Function *>(c.get())) {
+      Ptr<Function> f(_f->clone());
+      funct_decls.push_back(f);
+      dispatch(*f);
+    } else if (auto _r = dynamic_cast<Rule *>(c.get())) {
+      Ptr<Rule> r = Ptr<Rule>(r->clone());
+      rule_decls.push_back(r);
+      dispatch(*r);
+    } else 
+        throw new Error("Unexpected item in the global scope!!", _c->loc);
+  }
 }
 
 
@@ -102,66 +138,43 @@ void TModel::insert_to_global_top(Ptr<ConstDecl> n) {
 // << ========================================================================================== >> 
 
 
-void TModel::visit_model(Model &n) {
-  // std::list<Ptr<Node>> _children;
-
-  // emit_leading_comments(n);
-
-  for (Ptr<Node> &c : n.children) {
-
-    // emit_leading_comments(*c);
-
-    // if this is a rule, first flatten it so we do not have to deal with the
-    // hierarchy of rulesets, aliasrules, etc.
-    if (auto r = dynamic_cast<Rule *>(c.get())) {
-      std::vector<Ptr<Rule>> rs = r->flatten();
-      for (Ptr<Rule> &r2 : rs) {
-        _children.insert(_children.end(), r2.make());
-        dispatch(*r2);
-      }
-
-    } else {
-      if (auto td = dynamic_cast<TypeDecl *>(c.get())) 
-        insert_to_global_top(Ptr<TypeDecl>(td->clone()));
-      else if (auto cd = dynamic_cast<ConstDecl *>(c.get())) 
-        insert_to_global_top(Ptr<ConstDecl>(cd->clone()));
-      else 
-        dispatch(*c);
-    }
-  }
-  n.children = std::vector<Ptr<Node>>(_children.begin(), _children.end());
+void ModelSplitter::visit_model(Model &n) {
+  sort_model(n.children);
 }
 
 
-// void TModel::visit_constdecl(ConstDecl &n) {}
-
-
-void TModel::visit_typedecl(TypeDecl &n) {
+void ModelSplitter::visit_constdecl(ConstDecl &n) {
   // shouldn't have to do anything here.
 }
 
 
-void TModel::visit_typeexprid(TypeExprID &n) {
+void ModelSplitter::visit_typedecl(TypeDecl &n) {
+  // shouldn't have to do anything here.
+}
+
+
+void ModelSplitter::visit_typeexprid(TypeExprID &n) {
   // shouldn't need to do anything here
 }
 
 
 
 
-void TModel::visit_enum(Enum &n) {
+void ModelSplitter::visit_enum(Enum &n) {
   // shouldn't need to do anything here
 }
 
 
-void TModel::visit_array(Array &n) {
+void ModelSplitter::visit_array(Array &n) {
   //TODO: handle the cases of non-TypeExprId TypeExpr values & the nested enums.
 
   if (auto et_id = dynamic_cast<TypeExprID *>(n.element_type.get())) {
     // do nothing
   } else {
+    dispatch(*(n.element_type));
     std::string name = gen_new_anon_name();
     Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(n.element_type->clone()), n.element_type->loc));
-    insert_to_global_top(decl);
+    insert_to_global_decls(decl);
     n.element_type = Ptr<TypeExprID>(new TypeExprID(name, decl, n.element_type->loc));
   }
   
@@ -186,7 +199,7 @@ void TModel::visit_array(Array &n) {
   if (auto e = dynamic_cast<const Enum *>(n.index_type.get())) {
     std::string name = gen_new_anon_name();
     Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<Enum>(e->clone()), e->loc));
-    insert_to_global_top(decl);
+    insert_to_global_decls(decl);
     n.index_type = Ptr<TypeExprID>(new TypeExprID(name, decl, e->loc));
   }
 
@@ -194,23 +207,24 @@ void TModel::visit_array(Array &n) {
 }
 
 
-void TModel::visit_range(Range &) {
+void ModelSplitter::visit_range(Range &) {
   // shouldn't need to do anything here
 }
 
 
-void TModel::visit_record(Record &n) {
+void ModelSplitter::visit_record(Record &n) {
   //TODO: handle the cases of non-TypeExprId TypeExpr values
   std::vector<Ptr<VarDecl>> _fields(n.fields.size());
 
-  for (const Ptr<VarDecl> &f : n.fields) {  // pre output any inplace type definitions
+  for (Ptr<VarDecl> &f : n.fields) {  // pre output any inplace type definitions
     
-    if (auto et_id = dynamic_cast<const TypeExprID *>(f->type.get())) {
+    if (auto et_id = dynamic_cast<TypeExprID *>(f->type.get())) {
       _fields.push_back(Ptr<TypeExprID>(et_id->clone()));
     } else {
+      dispatch(*(f->type));
       std::string name = gen_new_anon_name();
       Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(f->type->clone()), f->loc));
-      insert_to_global_top(decl);
+      insert_to_global_decls(decl);
       _fields.push_back(Ptr<TypeExpr>(new TypeExprID(name, decl, f->loc)));
     }
   }
@@ -218,12 +232,12 @@ void TModel::visit_record(Record &n) {
 }
 
 
-void TModel::visit_scalarset(Scalarset &n) { 
+void ModelSplitter::visit_scalarset(Scalarset &n) { 
   // shouldn't need to do anything here
 }
 
 
-void TModel::visit_vardecl(VarDecl &n) {
+void ModelSplitter::visit_vardecl(VarDecl &n) {
   // DEBUG: check that no VarDecl is reached that has a non-TypeExprId type! 
   if (auto et_id = dynamic_cast<const TypeExprID *>(n.type.get())) {
     // do nothing
@@ -234,15 +248,16 @@ void TModel::visit_vardecl(VarDecl &n) {
 }
 
 
-void TModel::visit_function(Function &n) {
+void ModelSplitter::visit_function(Function &n) {
   //TODO: handle the cases of non-TypeExprID TypeExpr values
 
   if (auto et_id = dynamic_cast<TypeExprID *>(n.return_type.get())) {
     // do nothing
   } else {
+    
     std::string name = gen_new_anon_name();
     Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(n.return_type->clone()), n.return_type->loc));
-    insert_to_global_top(decl);
+    insert_to_global_decls(decl);
     n.return_type = Ptr<TypeExprID>(new TypeExprID(name, decl, n.return_type->loc));
   }
 
@@ -250,9 +265,10 @@ void TModel::visit_function(Function &n) {
     if (auto et_id = dynamic_cast<TypeExprID *>(p->type.get())) {
       // do nothing
     } else {
+      dispatch(*(p->type));
       std::string name = gen_new_anon_name();
       Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(p->type->clone()), p->type->loc));
-      insert_to_global_top(decl);
+      insert_to_global_decls(decl);
       p->type = Ptr<TypeExprID>(new TypeExprID(name, decl, p->type->loc));
     }
 
@@ -262,70 +278,126 @@ void TModel::visit_function(Function &n) {
       if (auto et_id = dynamic_cast<TypeExprID *>(vd->type.get())) {
         // do nothing
       } else {
+        dispatch(*(vd->type));
         std::string name = gen_new_anon_name();
         Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(vd->type->clone()), vd->type->loc));
-        insert_to_global_top(decl);
+        insert_to_global_decls(decl);
         vd->type = Ptr<TypeExprID>(new TypeExprID(name, decl, vd->type->loc));
       }
       _decls.push_back(d);
     } else if (auto td = dynamic_cast<TypeDecl *>(d.get())) {
-      insert_to_global_top(Ptr<TypeDecl>(td->clone()));
+      insert_to_global_decls(Ptr<TypeDecl>(td->clone()));
     } else if (auto cd = dynamic_cast<ConstDecl *>(d.get())) {
-      insert_to_global_top(Ptr<ConstDecl>(cd->clone()));
+      insert_to_global_decls(Ptr<ConstDecl>(cd->clone()));
     }
   n.decls = _decls;
 }
 
 
-void TModel::visit_propertyrule(PropertyRule &n) {
-  // I shouldn;t need to do anything here
+void ModelSplitter::visit_propertyrule(PropertyRule &n) {
+  for (Quantifier &q : n.quantifiers) 
+    if (q.type != NULL) 
+      if (auto _td = dynamic_cast<TypeExprID *>(q.type.get())) {
+        // do nothing
+      } else {
+        dispatch(*(q.type));
+        std::string name = gen_new_anon_name();
+        Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(q.type), q.type->loc));
+        insert_to_global_decls(decl);
+        q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
+    }
 }
 
 
-void TModel::visit_simplerule(SimpleRule &n) {
+void ModelSplitter::visit_simplerule(SimpleRule &n) {
   //TODO: handle the cases of non-TypeExprId TypeExpr values
+  for (Quantifier &q : n.quantifiers) 
+    if (q.type != NULL) 
+      if (auto _td = dynamic_cast<TypeExprID *>(q.type.get())) {
+        // do nothing
+      } else {
+        dispatch(*(q.type));
+        std::string name = gen_new_anon_name();
+        Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(q.type), q.type->loc));
+        insert_to_global_decls(decl);
+        q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
+    }
 
+  std::vector<Ptr<Decl>> _decls(n.decls.size());
+  for (Ptr<Decl> &d : n.decls)
+    if (auto vd = dynamic_cast<VarDecl *>(d.get())) {
+      if (auto _ = dynamic_cast<TypeExprID *>(vd->type.get())) {
+        // do nothing
+      } else {
+         dispatch(*(vd->type));
+        std::string name = gen_new_anon_name();
+        Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(vd->type), vd->type->loc));
+        insert_to_global_decls(decl);
+        vd->type = Ptr<TypeExprID>(new TypeExprID(name, decl, vd->type->loc));
+      }
+      _decls.push_back(d);
+    } else if (auto td = dynamic_cast<TypeDecl *>(d.get())) {
+      insert_to_global_decls(Ptr<TypeDecl>(td));
+    } else if (auto cd = dynamic_cast<ConstDecl *>(d.get())) {
+      insert_to_global_decls(Ptr<ConstDecl>(cd));
+    }
+  n.decls = _decls;
+
+}
+
+void ModelSplitter::visit_ruleset(rumur::Ruleset &n) {
+  for (Quantifier &q : n.quantifiers) 
+    if (q.type != NULL) 
+      if (auto _td = dynamic_cast<TypeExprID *>(q.type.get())) {
+        // do nothing
+      } else {
+        dispatch(*(q.type));
+        std::string name = gen_new_anon_name();
+        Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(q.type), q.type->loc));
+        insert_to_global_decls(decl);
+        q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
+    }
+  for (auto _r : n.rules)
+    dispatch(*_r);
+}
+
+
+void ModelSplitter::visit_aliasrule(rumur::AliasRule &n) {
+  for (auto _r : n.rules)
+    dispatch(*_r);
+}
+
+
+void ModelSplitter::visit_startstate(StartState &n) {
+  //TODO: handle the cases of non-TypeExprId TypeExpr values
+  for (Quantifier &q : n.quantifiers) 
+  if (q.type != NULL) 
+    if (auto _td = dynamic_cast<TypeExprID *>(q.type.get())) {
+      // do nothing
+    } else {
+      dispatch(*(q.type));
+      std::string name = gen_new_anon_name();
+      Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(q.type), q.type->loc));
+      insert_to_global_decls(decl);
+      q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
+  }
   std::vector<Ptr<Decl>> _decls(n.decls.size());
   for (Ptr<Decl> &d : n.decls)
     if (auto vd = dynamic_cast<VarDecl *>(d.get())) {
       if (auto et_id = dynamic_cast<TypeExprID *>(vd->type.get())) {
         // do nothing
       } else {
+         dispatch(*(vd->type));
         std::string name = gen_new_anon_name();
         Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(vd->type->clone()), vd->type->loc));
-        insert_to_global_top(decl);
-        vd->type = Ptr<TypeExprID>(new TypeExprID(name, decl, vd->type->loc));
-      }
-      _decls.push_back(d);
-    } else if (auto td = dynamic_cast<TypeDecl *>(d.get())) {
-      insert_to_global_top(Ptr<TypeDecl>(td->clone()));
-    } else if (auto cd = dynamic_cast<ConstDecl *>(d.get())) {
-      insert_to_global_top(Ptr<ConstDecl>(cd->clone()));
-    }
-  n.decls = _decls;
-
-}
-
-
-void TModel::visit_startstate(StartState &n) {
-  //TODO: handle the cases of non-TypeExprId TypeExpr values
-
-  std::vector<Ptr<Decl>> _decls(n.decls.size());
-  for (Ptr<Decl> &d : n.decls)
-    if (auto vd = dynamic_cast<VarDecl *>(d.get())) {
-      if (auto et_id = dynamic_cast<TypeExprID *>(vd->type.get())) {
-        // do nothing
-      } else {
-        std::string name = gen_new_anon_name();
-        Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(vd->type->clone()), vd->type->loc));
-        insert_to_global_top(decl);
+        insert_to_global_decls(decl);
         vd->type = Ptr<TypeExprID>(new TypeExprID(name, decl, vd->type->loc));
       }
       _decls.push_back(d/* Ptr<VarDecl>(vd->clone()) */);
     } else if (auto td = dynamic_cast<TypeDecl *>(d.get())) {
-      insert_to_global_top(Ptr<TypeDecl>(td->clone()));
+      insert_to_global_decls(Ptr<TypeDecl>(td->clone()));
     } else if (auto cd = dynamic_cast<ConstDecl *>(d.get())) {
-      insert_to_global_top(Ptr<ConstDecl>(cd->clone()));
+      insert_to_global_decls(Ptr<ConstDecl>(cd->clone()));
     }
   n.decls = _decls;
 }
@@ -333,12 +405,12 @@ void TModel::visit_startstate(StartState &n) {
 
 
 
-// TModel &TModel::operator<<(std::string &s) {
+// ModelSplitter &ModelSplitter::operator<<(std::string &s) {
 //   out << s;
 //   return *this;
 // }
 
-// TModel &TModel::operator<<(Node &n) {
+// ModelSplitter &ModelSplitter::operator<<(Node &n) {
 //   dispatch(n);
 //   return *this;
 // }

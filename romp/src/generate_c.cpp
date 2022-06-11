@@ -1,5 +1,6 @@
-#include "generate_c.h"
-#include "CLikeGenerator.h"
+#include "generate_c.hpp"
+#include "CLikeGenerator.hpp"
+// #include "CTypeGenerator.hpp"
 #include "options.h"
 #include "resources.h"
 #include <cstddef>
@@ -15,7 +16,7 @@
 
 using namespace rumur;
 
-namespace {
+namespace romp {
 
 class CGenerator : public CLikeGenerator {
 
@@ -310,10 +311,6 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
   for (size_t i = 0; i < resources_c_prefix_c_len; i++)
     out << (char)resources_c_prefix_c[i];
 
-  // std::streambuf buffer;
-  std::fstream buffer;
-  buffer.open("./~__romp__codegen_temp.tmp", 
-              std::fstream::in | std::fstream::out | std::fstream::app);
 
   CGenerator gen(comments, buffer, pack);
   gen.dispatch(n);

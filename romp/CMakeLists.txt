@@ -46,15 +46,16 @@ add_executable(romp
   ../common/escape.cc
   ../common/help.cc
   src/check.cc
-  src/CLikeGenerator.cc
-  src/CodeGenerator.cc
+  src/CLikeGenerator.cpp
+  src/CodeGenerator.cpp
   src/compares_complex_values.cc
-  src/generate_c.cc
+  src/generate_c.cpp
   # src/generate_h.cc
   src/main.cc
   src/options.cc
   src/romp_def.cpp
-  src/model/TModel.cpp
+  src/ModelSplitter.cpp
+  src/CTypeGenerator.cpp
   )
 
 target_include_directories(romp

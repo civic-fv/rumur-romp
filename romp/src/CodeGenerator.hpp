@@ -1,10 +1,25 @@
+/**
+ * @proj romp
+ * @author Andrew Osterhout
+ * @author Ajantha Varadharaaj
+ * @org University of Utah (UofU) School of Computing (SoC)
+ * @org Center for Parallel compute at Utah (CPU)
+ * @org <a href="https://civic-fv.github.io">Civic-fv NSF Grant</a>
+ * @org Ganesh Gopalakrishnan's Research Group
+ * @file CodeGenerator.hpp
+ * 
+ * @brief The place where dreams come to die
+ * 
+ * @date 2022/06/10
+ * @version 0.1
+ */
+
 #pragma once
 
 #include <cstddef>
 #include <string>
 #include <vector>
 // #include <stack>
-#include <rumur/Node.h>
 
 #include "romp_def.hpp"
 
@@ -21,11 +36,6 @@ namespace romp {
     int next_rule_ref_id = 0;
     int next_invariant_ref_id = 0;
     int next_startstate_ref_id = 0;
-
-    std::vector<guard_ref*> rule_guard_refs;
-    std::vector<action_ref*> rule_action_refs;
-    std::vector<invariant_ref*> invariant_refs;
-    std::vector<startstate_ref*> startstate_refs;
     
 
   protected:

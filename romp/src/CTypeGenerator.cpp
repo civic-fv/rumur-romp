@@ -1,0 +1,157 @@
+/**
+ * @proj romp
+ * @author Andrew Osterhout
+ * @author Ajantha Varadharaaj
+ * @org University of Utah (UofU) School of Computing (SoC)
+ * @org Center for Parallel compute at Utah (CPU)
+ * @org <a href="https://civic-fv.github.io">Civic-fv NSF Grant</a>
+ * @org Ganesh Gopalakrishnan's Research Group
+ * @file CTypeGenerator.cpp
+ * 
+ * @brief An AST traversing structure that can only handle generating Types.
+ * 
+ * @date 2022/06/10
+ * @version 0.1
+ */
+
+#include "CTypeGenerator.hpp"
+#include "options.h"
+#include "romp_def.hpp"
+#include <rumur/rumur.h>
+
+using namespace rumur;
+
+namespace romp {
+
+
+
+void CTypeGenerator::visit_typedecl(const TypeDecl &n) {
+
+  // If we are typedefing something that is an enum, save this for later lookup.
+  // See CGenerator/HGenerator::visit_constdecl for the purpose of this.
+  if (auto e = dynamic_cast<const Enum *>(n.value.get()))
+    enum_typedefs[e->unique_id] = n.name;
+
+  *this << indentation() << "typedef " << *n.value << " " << n.name << ";";
+  emit_trailing_comments(n);
+  *this << "\n";
+
+  emit_json_converter(n.name, n.value);
+}
+
+
+void CTypeGenerator::visit_array(const Array &n) {
+
+  check_type_ref(n, n.element_type);
+  check_type_ref(n, n.index_type);
+
+
+  mpz_class count = n.index_type->count();
+
+  assert(count > 0 && "index type of array does not include undefined");
+  count--;
+
+  // wrap the array in a struct so that we do not have the awkwardness of
+  // having to emit its type and size on either size of another node
+  *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{ "
+        << *n.element_type << " data[" << count.get_str() << "];";
+
+  // // The index for this array may be an enum declared inline:
+  // //
+  // //   array [enum {A, B}] of foo
+  // //
+  // // If so, we need to emit it somehow so that the enum’s members can be
+  // // referenced later. We define it within this struct to avoid any awkward
+  // // lexical issues.
+  // if (auto e = dynamic_cast<const Enum *>(n.index_type.get())) {
+  //   *this << " " << *e << ";";
+  // }
+  *this << " }";
+
+  //TODO: insert to_string or to_json method here.
+
+}
+
+void CTypeGenerator::emit_json_converter(const std::string &name, const Array &te) {
+  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
+           "j = to_json(j, std::vector<" << *(te.element_type) << ">(std::begin(data), std::end(data))); }\n";
+}
+
+
+void CTypeGenerator::visit_enum(const Enum &n) {
+  *this << "enum { ";
+  for (const std::pair<std::string, location> &m : n.members) {
+    *this << m.first << ", ";
+  }
+  *this << "}";
+}
+
+void CTypeGenerator::emit_json_converter(const std::string &name, const Enum &te) {
+  *this << indentation() << "NLOHMANN_JSON_SERIALIZE_ENUM( " << name << ", { ";
+  for (auto &m : te.members)
+    *this << "{" << m.first << "," 
+          "(" ROMP_SHOW_TYPE_OPTION_EXPR ") ? "
+          " \"" << name << ":" << m.first << "\" "
+          ": \"" << m.first << "\"},";
+  *this << " })\n";
+}
+
+
+void CTypeGenerator::visit_range(const Range &) { *this << value_type; }
+
+
+void CTypeGenerator::emit_json_converter(const std::string &name, const Range &te) {
+  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
+        "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? " 
+          ROMP_JSON_TYPE "({\"type\",\"Range(" << te.min->to_string() << ".." << te.max->to_string() << ")\"}, "
+                          "{\"value\",(" << value_type << ")data}) "
+          ": to_json((" << value_type << ")data) ; }\n";
+}
+
+
+void CTypeGenerator::visit_record(const Record &n) {
+  *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{\n";
+  indent();
+  for (const Ptr<VarDecl> &f : n.fields) {
+    *this << *f;
+  }
+  dedent();
+  *this << indentation() << "}";
+}
+
+
+void CTypeGenerator::emit_json_converter(const std::string &name, const Record &te) {
+
+}
+
+
+void CTypeGenerator::visit_scalarset(const Scalarset &) { *this << value_type; }
+
+
+void CTypeGenerator::emit_json_converter(const std::string &name, const Scalarset &te) {
+
+}
+
+
+void CTypeGenerator::emit_json_converter(const std::string &name, const TypeExprID &te) {
+  // do nothing
+}
+
+void CTypeGenerator::emit_json_converter(const std::string &name, const Ptr<TypeExpr> &te) {
+  if (auto _a = dynamic_cast<const Array *>(te.get()))
+    emit_json_converter(name, *_a);
+  else if (auto _e = dynamic_cast<const Enum *>(te.get()))
+    emit_json_converter(name, *_e);
+  else if (auto _ra = dynamic_cast<const Range *>(te.get()))
+    emit_json_converter(name, *_ra);
+  else if (auto _re = dynamic_cast<const Record *>(te.get()))
+    emit_json_converter(name, *_re);
+  else if (auto _s = dynamic_cast<const Scalarset *>(te.get()))
+    emit_json_converter(name, *_s);
+  else if (auto _id = dynamic_cast<const TypeExprID *>(te.get()))
+    emit_json_converter(name, *_id);
+  else
+    throw new Error("Unrecognized Type!!", te->loc);
+}
+
+}

@@ -1,4 +1,4 @@
-#include "CLikeGenerator.h"
+#include "CLikeGenerator.hpp"
 #include "../../common/escape.h"
 #include "../../common/isa.h"
 #include "options.h"
@@ -51,28 +51,7 @@ void CLikeGenerator::visit_and(const And &n) {
 }
 
 void CLikeGenerator::visit_array(const Array &n) {
-  mpz_class count = n.index_type->count();
-
-  assert(count > 0 && "index type of array does not include undefined");
-  count--;
-
-  // wrap the array in a struct so that we do not have the awkwardness of
-  // having to emit its type and size on either size of another node
-  *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{ "
-        << *n.element_type << " data[" << count.get_str() << "];";
-
-  // The index for this array may be an enum declared inline:
-  //
-  //   array [enum {A, B}] of foo
-  //
-  // If so, we need to emit it somehow so that the enum’s members can be
-  // referenced later. We define it within this struct to avoid any awkward
-  // lexical issues.
-  if (auto e = dynamic_cast<const Enum *>(n.index_type.get())) {
-    *this << " " << *e << ";";
-  }
-
-  *this << " }";
+  throw new Error("Type Expression (Array) found in unsupported portion of code!!", n.loc);
 }
 
 void CLikeGenerator::visit_assignment(const Assignment &n) {
@@ -124,11 +103,7 @@ void CLikeGenerator::visit_element(const Element &n) {
 }
 
 void CLikeGenerator::visit_enum(const Enum &n) {
-  *this << "enum { ";
-  for (const std::pair<std::string, location> &m : n.members) {
-    *this << m.first << ", ";
-  }
-  *this << "}";
+  throw new Error("Type Expression (Enum) found in unsupported portion of code!!", n.loc);
 }
 
 void CLikeGenerator::visit_eq(const Eq &n) {
@@ -614,16 +589,12 @@ void CLikeGenerator::visit_quantifier(const Quantifier &n) {
   assert(!"missing case in visit_quantifier()");
 }
 
-void CLikeGenerator::visit_range(const Range &) { *this << value_type; }
+void CLikeGenerator::visit_range(const Range &n) { 
+  throw new Error("Type Expression (Range) found in unsupported portion of code!!", n.loc);
+}
 
 void CLikeGenerator::visit_record(const Record &n) {
-  *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{\n";
-  indent();
-  for (const Ptr<VarDecl> &f : n.fields) {
-    *this << *f;
-  }
-  dedent();
-  *this << indentation() << "}";
+  throw new Error("Type Expression (Record) found in unsupported portion of code!!", n.loc);
 }
 
 void CLikeGenerator::visit_return(const Return &n) {
@@ -647,7 +618,9 @@ void CLikeGenerator::visit_ruleset(const Ruleset &) {
   __builtin_unreachable();
 }
 
-void CLikeGenerator::visit_scalarset(const Scalarset &) { *this << value_type; }
+void CLikeGenerator::visit_scalarset(const Scalarset &n) { 
+  throw new Error("Type Expression (Scalarset) found in unsupported portion of code!!", n.loc);
+}
 
 void CLikeGenerator::visit_sub(const Sub &n) {
   *this << "(" << *n.lhs << " - " << *n.rhs << ")";
@@ -726,18 +699,14 @@ void CLikeGenerator::visit_ternary(const Ternary &n) {
 }
 
 void CLikeGenerator::visit_typedecl(const TypeDecl &n) {
-
-  // If we are typedefing something that is an enum, save this for later lookup.
-  // See CGenerator/HGenerator::visit_constdecl for the purpose of this.
-  if (auto e = dynamic_cast<const Enum *>(n.value.get()))
-    enum_typedefs[e->unique_id] = n.name;
-
-  *this << indentation() << "typedef " << *n.value << " " << n.name << ";";
-  emit_trailing_comments(n);
-  *this << "\n";
+  throw new Error("Type Declaration found in unsupported portion of code!!", n.loc);
 }
 
-void CLikeGenerator::visit_typeexprid(const TypeExprID &n) { *this << n.name; }
+void CLikeGenerator::visit_typeexprid(const TypeExprID &n) { 
+  if (emitted_tDecls.find(n.referent->unique_id) == emitted_tDecls.end())
+    throw new Error("TypeExprID references a currently undefined type declaration!", n.loc);
+  *this << n.referent->name; // n.name; 
+}
 
 void CLikeGenerator::visit_undefine(const Undefine &n) {
   *this << indentation() << "memset(&" << *n.rhs << ", 0, sizeof(" << *n.rhs
@@ -872,6 +841,14 @@ size_t CLikeGenerator::emit_trailing_comments(const Node &n) {
     ++i;
   }
   return count;
+}
+
+void CLikeGenerator::check_type_ref(const Node &p, const Ptr<TypeExpr> &t) const {
+  if (auto _tid = dynamic_cast<const TypeExprID *>(t.get())) {
+    if (emitted_tDecls.find(_tid->referent->unique_id) == emitted_tDecls.end())
+      throw new Error("BAD Type Reference to currently undefined type!", p.loc);
+  } else
+    throw new Error("BAD AST Transform, type object still had a reference to a undeclared type", p.loc);
 }
 
 CLikeGenerator::~CLikeGenerator() {}

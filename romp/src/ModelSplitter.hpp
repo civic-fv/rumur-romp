@@ -30,6 +30,10 @@
 
 namespace romp {
 
+struct SplitModel { rumur::Model global_decls; rumur::Model state_var_decl;
+                    rumur::Model funct_decls; rumur::Model rule_decls; };
+
+
 /**
  * @brief   A Class that is a intermediary representation of the model,
  *        used to allow for generating the Cpp romp tools
@@ -41,7 +45,7 @@ namespace romp {
  *        \li allowing lookup of all above mentioned items.
  *        \li preserving a notion of scope.
  */
-class TModel : public rumur::BaseTraversal,
+class ModelSplitter : public rumur::BaseTraversal,
                public romp::CodeGenerator {
 
   // << ===================================== Class Members ====================================== >> 
@@ -50,29 +54,30 @@ public: // ---- Public Class Members ---- //
 
 private: // ---- Private Class Members ---- //
   
-  const rumur::Node& root;
-  const rumur::Ptr<rumur::Model> _model;
+  rumur::Node& root;
 
-  std::vector<rumur::VarDecl&> state_vars;
   
-  std::unordered_set<std::string> cTypeNames;
+  std::unordered_set<std::string> cTypeNames{ROMP_RESERVED_NAMES};
   // std::unordered_map<size_t,std::string> cTypeName;  // might end up not needing this
 
-  std::list<Ptr<Node>> _children;
-  std::list<rumur::Ptr<rumur::Node>>::iterator _top;
+  std::vector<rumur::Ptr<rumur::Node>> global_decls;
+  std::vector<rumur::Ptr<rumur::Node>> state_var_decls;
+  std::vector<rumur::Ptr<rumur::Node>> funct_decls;
+  std::vector<rumur::Ptr<rumur::Node>> rule_decls;
 
   id_t anon_id = 0;
 
 
   // << ============================= Constructors & Deconstructor =============================== >> 
 public:
-  TModel(rumur::Node& root) : root(root) { }
-  ~TModel();
+  ModelSplitter(rumur::Node& root) : root(root) { }
+  ~ModelSplitter();
 
 
   // << ========================== Public/External Function Functions ============================ >> 
 public:
 
+  SplitModel split_model();
 
 
 
@@ -80,9 +85,11 @@ public:
 private:
 
   const std::string gen_new_anon_name();
-  const std::string make_name_unique(const std::string old);
-  void insert_to_global_top(Ptr<TypeDecl> n);
-  void insert_to_global_top(Ptr<ConstDecl> n);
+  void make_name_unique(std::string &name);
+  void insert_to_global_decls(rumur::Ptr<rumur::TypeDecl> n);
+  void insert_to_global_decls(rumur::Ptr<rumur::ConstDecl> n);
+  void sort_model(const std::vector<rumur::Ptr<rumur::Node>> &children);
+  // void process_anon_complex_type(rumur::TypeExpr &children);
 
 
   // << =========================== Model Processing Helper Functions ============================ >> 
@@ -91,26 +98,29 @@ public:
   void visit_model(rumur::Model &n) final;
   void visit_array(rumur::Array &n) final;
   void visit_record(rumur::Record &n) final;
-  void visit_function(Function &n) final;
-  void visit_simplerule(SimpleRule &n) final;
-  void visit_startstate(StartState &n) final;
+  void visit_function(rumur::Function &n) final;
+  void visit_simplerule(rumur::SimpleRule &n) final;
+  void visit_ruleset(rumur::Ruleset &n) final;
+  void visit_aliasrule(rumur::AliasRule &n) final;
+  void visit_startstate(rumur::StartState &n) final;
+  void visit_propertyrule(rumur::PropertyRule &n) final;
 
   // - useful for debugging ---- 
   void visit_typedecl(rumur::TypeDecl &n) final;
-  void visit_constdecl(ConstDecl &n) final;
-  void visit_vardecl(VarDecl &n) final;
+  void visit_constdecl(rumur::ConstDecl &n) final;
+  void visit_vardecl(rumur::VarDecl &n) final;
   void visit_enum(rumur::Enum &n) final;
   void visit_range(rumur::Range &) final;
   void visit_scalarset(rumur::Scalarset &) final;
   void visit_typeexprid(rumur::TypeExprID &n) final;
-  void visit_propertyrule(PropertyRule &n) final;
+  
   
 
   // void visit_constdecl(ConstDecl &n) final; // pretty sure I don't need this!
 
 
-  // TModel &operator<<(std::string &s);
-  // TModel &operator<<(rumur::Node &n);
+  // ModelSplitter &operator<<(std::string &s);
+  // ModelSplitter &operator<<(rumur::Node &n);
   
 };
 

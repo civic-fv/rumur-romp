@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CodeGenerator.h"
+#include "CodeGenerator.hpp"
 #include <cstddef>
 #include <iostream>
 #include <rumur/rumur.h>
@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+
 
 // generator for C-like code
 class __attribute__((visibility("hidden"))) CLikeGenerator
@@ -20,6 +22,10 @@ protected:
 
   // mapping of Enum unique_ids to the name of a TypeDecl to them
   std::unordered_map<size_t, std::string> enum_typedefs;
+
+  // track what types have been defined so that you can
+  // ensure to emit types in a C/C++ safe way
+  std::unordered_set<size_t> emitted_tDecls;
 
   // collection of unique_ids that were emitted as pointers instead of standard
   // variables
@@ -37,12 +43,23 @@ public:
       : out(out_), pack(pack_), comments(comments_),
         emitted(comments_.size(), false) {}
 
+  CLikeGenerator(std::unordered_set<size_t> emitted_tDecls_,
+                 const std::vector<rumur::Comment> &comments_,
+                 std::vector<bool> emitted_comments_,
+                 std::unordered_map<size_t, std::string> enum_typedefs_,
+                 std::ostream &out_, bool pack_)
+      : out(out_), pack(pack_), comments(comments_),
+        emitted(emitted_comments_),
+        emitted_tDecls(emitted_tDecls_),
+        enum_typedefs(enum_typedefs_) 
+         {}
+
   void visit_add(const rumur::Add &n) final;
   void visit_aliasdecl(const rumur::AliasDecl &n) final;
   void visit_aliasrule(const rumur::AliasRule &) final;
   void visit_aliasstmt(const rumur::AliasStmt &n) final;
   void visit_and(const rumur::And &n) final;
-  void visit_array(const rumur::Array &n) final;
+  void visit_array(const rumur::Array &n); // final;
   void visit_assignment(const rumur::Assignment &n) final;
   void visit_band(const rumur::Band &n) final;
   void visit_bnot(const rumur::Bnot &n) final;
@@ -50,7 +67,7 @@ public:
   void visit_clear(const rumur::Clear &n) final;
   void visit_div(const rumur::Div &n) final;
   void visit_element(const rumur::Element &n) final;
-  void visit_enum(const rumur::Enum &n) final;
+  void visit_enum(const rumur::Enum &n); // final;
   void visit_eq(const rumur::Eq &n) final;
   void visit_errorstmt(const rumur::ErrorStmt &n) final;
   void visit_exists(const rumur::Exists &n) final;
@@ -81,17 +98,17 @@ public:
   void visit_propertystmt(const rumur::PropertyStmt &n) final;
   void visit_put(const rumur::Put &n) final;
   void visit_quantifier(const rumur::Quantifier &n) final;
-  void visit_range(const rumur::Range &) final;
-  void visit_record(const rumur::Record &n) final;
+  void visit_range(const rumur::Range &); // final;
+  void visit_record(const rumur::Record &n); // final;
   void visit_return(const rumur::Return &n) final;
   void visit_rsh(const rumur::Rsh &n) final;
   void visit_ruleset(const rumur::Ruleset &) final;
-  void visit_scalarset(const rumur::Scalarset &) final;
+  void visit_scalarset(const rumur::Scalarset &); // final;
   void visit_sub(const rumur::Sub &n) final;
   void visit_switch(const rumur::Switch &n) final;
   void visit_switchcase(const rumur::SwitchCase &n) final;
   void visit_ternary(const rumur::Ternary &n) final;
-  void visit_typedecl(const rumur::TypeDecl &n) final;
+  void visit_typedecl(const rumur::TypeDecl &n); // final;
   void visit_typeexprid(const rumur::TypeExprID &n) final;
   void visit_undefine(const rumur::Undefine &n) final;
   void visit_while(const rumur::While &n) final;
@@ -119,4 +136,10 @@ protected:
 
   // output single line comments following the given node
   size_t emit_trailing_comments(const rumur::Node &n);
+
+  // ensure all internal references to TypeExpressions are ID's referencing 
+  // type declarations that have already been emitted.
+  // Throws rumur::Error if this is not the case.
+  void check_type_ref(const rumur::Node &p, const rumur::Ptr<rumur::TypeExpr> &t) const;
+
 };
