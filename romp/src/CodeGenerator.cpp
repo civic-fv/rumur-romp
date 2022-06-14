@@ -1,4 +1,4 @@
-#include "CodeGenerator.h"
+#include "CodeGenerator.hpp"
 #include <cassert>
 #include <cstddef>
 #include <string>
@@ -6,6 +6,16 @@
 
 
 namespace romp {
+
+std::string CodeGenerator::M_FUNCTION__FUNC_ATTR = "";
+
+std::string CodeGenerator::M_RULE_GUARD__FUNC_ATTRS = "";
+std::string CodeGenerator::M_RULE_ACTION__FUNC_ATTRS = "";
+
+std::string CodeGenerator::M_STARTSTATE__FUNC_ATTRS = "";
+
+std::string CodeGenerator::M_INVARIANT__FUNC_ATTRS = "";
+
 
 std::string CodeGenerator::indentation() const {
   return std::string(indent_level * 2, ' ');

@@ -28,14 +28,21 @@ namespace romp {
   // some common supporting code used by code generation functions
   class CodeGenerator {
 
+  public:
+    // function attributes to prepend before the definition of any murphi function's C/C++ function.
+    static std::string M_FUNCTION__FUNC_ATTRS;
+    // function attributes to prepend before the definition of any murphi simple rule's guard C/C++ function.
+    static std::string M_RULE_GUARD__FUNC_ATTRS;
+    // function attributes to prepend before the definition of any murphi simple rule's action C/C++ function.
+    static std::string M_RULE_ACTION__FUNC_ATTRS;
+    // function attributes to prepend before the definition of any murphi start_state's C/C++ function.
+    static std::string M_STARTSTATE__FUNC_ATTRS;
+    // function attributes to prepend before the definition of any murphi invariant's (property-rule) C/C++ function.
+    static std::string M_INVARIANT__FUNC_ATTRS;
+
   private:
     size_t indent_level = 0; // current indentation level
-    size_t scope_level = 0; // current scope level
-    // std::stack<romp::Scope> scope;
 
-    int next_rule_ref_id = 0;
-    int next_invariant_ref_id = 0;
-    int next_startstate_ref_id = 0;
     
 
   protected:

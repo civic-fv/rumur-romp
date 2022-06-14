@@ -1,6 +1,7 @@
 #include "generate_c.hpp"
-#include "CLikeGenerator.hpp"
-// #include "CTypeGenerator.hpp"
+// #include "CLikeGenerator.hpp"
+#include "CTypeGenerator.hpp"
+#include "ModelSplitter.hpp"
 #include "options.h"
 #include "resources.h"
 #include <cstddef>
@@ -19,6 +20,12 @@ using namespace rumur;
 namespace romp {
 
 class CGenerator : public CLikeGenerator {
+
+private:
+  std::vector<std::string> state_vars;
+  std::vector<const SimpleRule&> rules;
+  std::vector<const PropertyRule&> invariants;
+  std::vector<const StartState&> startstates;
 
 public:
   CGenerator(const std::vector<rumur::Comment> &comments_, std::ostream &out_,
@@ -51,8 +58,7 @@ public:
   }
 
   void visit_function(const Function &n) final {
-    // scope_level++;
-    *this << indentation() << romp::CODEGEN_CONFIG::M_FUNCTION__FUNC_ATTRS << "\n"
+    *this << indentation() << CodeGenerator::M_FUNCTION__FUNC_ATTRS << "\n"
           << indentation();
     if (n.return_type == nullptr) {
       *this << "void";
@@ -76,7 +82,6 @@ public:
       }
     }
     *this << ") {\n";
-    enter_scope();
     indent();
     for (const Ptr<Decl> &d : n.decls) {
       emit_leading_comments(*d);
@@ -87,16 +92,14 @@ public:
       *this << *s;
     }
     dedent();
-    leave_scope();
     *this << "}\n";
-    // scope_level--;
   }
 
   void visit_propertyrule(const PropertyRule &n) final {
-    // scope_level++;
+    invariants.push_back(n);
     // function prototype
-    *this << indentation() << romp::CODEGEN_CONFIG::M_RULE_GUARD__FUNC_ATTRS << "\n"
-          << indentation() << "bool " << n.name << "(";
+    *this << indentation() << CodeGenerator::M_INVARIANT__FUNC_ATTRS << "\n"
+          << indentation() << "bool invariant__" << n.name << "(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -116,7 +119,6 @@ public:
     }
 
     *this << ") {\n";
-    enter_scope();
     indent();
 
     // any aliases this property uses
@@ -133,13 +135,13 @@ public:
 
     dedent();
     *this << "}\n";
-    leave_scope();
-    // scope_level--;
   }
 
   void visit_simplerule(const SimpleRule &n) final {
-    // scope_level++;
-    *this << indentation() << "bool guard_" << n.name << "(";
+    rules.push_back(n);
+
+    *this << indentation() << CodeGenerator::M_RULE_GUARD__FUNC_ATTRS << "\n"
+          << indentation() << "bool rule__" << n.name << "__guard(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -159,7 +161,6 @@ public:
     }
 
     *this << ") {\n";
-    enter_scope();
     indent();
 
     // any aliases that are defined in an outer scope
@@ -181,10 +182,10 @@ public:
     }
 
     dedent();
-    leave_scope();
     *this << indentation() << "}\n\n";
 
-    *this << indentation() << "void rule_" << n.name << "(";
+    *this << indentation() << CodeGenerator::M_RULE_ACTION__FUNC_ATTRS << "\n"
+          << indentation() << "void rule__" << n.name << "__action(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -204,7 +205,6 @@ public:
     }
 
     *this << ") {\n";
-    enter_scope();
     indent();
 
     // aliases, variables, local types, etc.
@@ -239,8 +239,10 @@ public:
   }
 
   void visit_startstate(const StartState &n) final {
-    // scope_level++;
-    *this << indentation() << "void startstate_" << n.name << "(";
+    startstates.push_back(n);
+    
+    *this << indentation() << CodeGenerator::M_STARTSTATE__FUNC_ATTRS 
+          << " void startstate__" << n.name << "(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -260,7 +262,6 @@ public:
     }
 
     *this << ") {\n";
-    enter_scope();
     indent();
 
     // aliases, variables, local types, etc.
@@ -289,7 +290,6 @@ public:
     }
 
     dedent();
-    leave_scope();
     *this << indentation() << "}\n\n";
   }
 
@@ -297,6 +297,81 @@ public:
       *this << indentation() << *n.type << " " << n.name << ";";
       emit_trailing_comments(n);
       *this << "\n";
+  }
+
+
+  void gen_state_to_json(const Model &n) {
+    *this << "\n" << indentation() << "NLOHMANN_DEFINE_TYPE_INTRUSIVE("
+          ROMP_STATE_CLASS_NAME ", ";
+    for (auto c : n.children) 
+      if (auto v = dynamic_cast<const VarDecl *>(c.get()))
+        *this << v->name << ",";
+    *this << ")\n";
+  }
+
+  void gen_ruleset_array() {
+    for (const SimpleRule& rule : rules) {
+
+    }
+  }
+
+
+  void gen_invariant_array() {
+    for (const PropertyRule& invar : invariants) {
+
+    }
+  }
+
+
+  void gen_startstate_array() {
+    for (const StartState& start : startstates) {
+
+    }
+  }
+
+  void dispatch(const Node &n) {
+    ModelSplitter splitter;
+    splitter.dispatch(n);
+    SplitModel split = splitter.get_split_model();
+
+    *this << "\n" << indentation() << "namespace " ROMP_MODEL_NAMESPACE_NAME " {\n";
+    indent();
+
+
+    *this << "\n\n" << indentation() << "/* ======= Model Type Definitions ====== */\n\n";
+    CTypeGenerator type_gen(comments, out, pack, 
+      [&](const ConstDecl &_n) -> void {visit_constdecl(_n);});
+    type_gen.dispatch(split.global_decls);
+
+    *this << "\n" << indentation() << "class " ROMP_STATE_CLASS_NAME " {\n";
+    indent();
+
+    *this << "\n\n" << indentation() << "/* ======= Model State Variables ====== */\n\n";
+    split.state_var_decl.visit(*this);
+    gen_state_to_json(split.state_var_decl);
+
+    *this << "\n\n" << indentation() << "/* ======= Murphi Model Functions ====== */\n\n";
+    split.funct_decls.visit(*this);
+
+    *this << "\n\n" << indentation() << "/* ======= Murphi Model Rules (& Invariants) ====== */\n\n";
+    split.rule_decls.visit(*this);
+
+    dedent();
+    *this << "\n" << indentation() << "};\n";
+
+    dedent();
+    *this << "\n" << indentation() << "}\n\n";
+
+    *this << "\n" << indentation() << "namespace " ROMP_CALLER_NAMESPACE_NAME " {\n";
+    indent();
+
+    *this << "\n\n" << indentation() << "/* ======= Romp Callable Lists ====== */\n\n";
+    gen_ruleset_array();
+    gen_invariant_array();
+    gen_startstate_array();
+
+    dedent();
+    *this << "\n" << indentation() << "}\n\n";
   }
 
   virtual ~CGenerator() = default;
@@ -312,7 +387,7 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
     out << (char)resources_c_prefix_c[i];
 
 
-  CGenerator gen(comments, buffer, pack);
+  romp::CGenerator gen(comments, out, pack);
   gen.dispatch(n);
 
 

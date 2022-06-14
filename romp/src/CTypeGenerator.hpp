@@ -17,6 +17,7 @@
 #include "CLikeGenerator.hpp"
 // #include <rumur/rumur.h>
 #include <unordered_set>
+#include <functional>
 
 
 namespace romp {
@@ -27,10 +28,13 @@ private:
 
 
 protected:
-  
+  std::function<void(const rumur::ConstDecl&)> f_visit_constdecl;
 
 public:
-
+  CTypeGenerator(const std::vector<rumur::Comment> &comments_,
+                 std::ostream &out_, bool pack_, 
+                 std::function<void(const rumur::ConstDecl&)> f_visit_constdecl_)
+              : CLikeGenerator(comments_, out_, pack_), f_visit_constdecl(f_visit_constdecl_) {}
 
 public:
 
@@ -40,6 +44,16 @@ public:
   void visit_range(const rumur::Range &) final;
   void visit_record(const rumur::Record &n) final;
   void visit_scalarset(const rumur::Scalarset &) final;
+
+  void visit_constdecl(const rumur::ConstDecl &n) { f_visit_constdecl(n); }
+
+  // - make this class non-abstract ---- 
+  void visit_function(const rumur::Function &n) { __throw_unreachable_error(n); }
+  void visit_propertyrule(const rumur::PropertyRule &n) { __throw_unreachable_error(n); }
+  void visit_simplerule(const rumur::SimpleRule &n) { __throw_unreachable_error(n); }
+  void visit_vardecl(const rumur::VarDecl &n) { __throw_unreachable_error(n); }
+  void visit_startstate(const rumur::StartState &n) { __throw_unreachable_error(n); }
+
 
 
 
@@ -51,6 +65,8 @@ private:
   void emit_json_converter(const std::string &name, const rumur::Range &te);
   void emit_json_converter(const std::string &name, const rumur::Scalarset &te);
   void emit_json_converter(const std::string &name, const rumur::TypeExprID &te);
+
+  void __throw_unreachable_error(const rumur::Node &n);
 
 };
 

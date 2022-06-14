@@ -56,7 +56,7 @@ public:
 
   void visit_add(const rumur::Add &n) final;
   void visit_aliasdecl(const rumur::AliasDecl &n) final;
-  void visit_aliasrule(const rumur::AliasRule &) final;
+  void visit_aliasrule(const rumur::AliasRule &); // final;
   void visit_aliasstmt(const rumur::AliasStmt &n) final;
   void visit_and(const rumur::And &n) final;
   void visit_array(const rumur::Array &n); // final;

@@ -16,7 +16,7 @@
  * @version 0.1
  */
 
-#include "TModel.hpp"
+#include "ModelSplitter.hpp"
 
 #include "../../../common/escape.h"
 #include "../../../common/isa.h"
@@ -50,12 +50,19 @@ ModelSplitter::~ModelSplitter() {}
 // <<                               SPLIT MODEL FACTORY FUNCTION                                 >> 
 // << ========================================================================================== >> 
 
-SplitModel ModelSplitter::split_model() {
-  dispatch(root);
-  return (SplitModel){Model(global_decls, root.loc),
-                      Model(state_var_decls, root.loc),
-                      Model(funct_decls, root.loc),
-                      Model(rule_decls, root.loc)};
+SplitModel ModelSplitter::get_split_model() {
+  sort_model(n.children);
+  return (SplitModel){Model(global_decls, n.loc),
+                      Model(state_var_decls, n.loc),
+                      Model(funct_decls, n.loc),
+                      Model(rule_decls, n.loc)};
+}
+
+void ModelSplitter::dispatch(const Node &n) {
+  if (auto _m = dynamic_cast<const Model *>(&n))
+    sort_model(_m->children);
+  else
+    throw new Error("!! Expected a Model !!", n.loc);
 }
 
 
@@ -138,9 +145,9 @@ void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
 // << ========================================================================================== >> 
 
 
-void ModelSplitter::visit_model(Model &n) {
-  sort_model(n.children);
-}
+// void ModelSplitter::visit_model(Model &n) {
+//   sort_model(n.children);
+// }
 
 
 void ModelSplitter::visit_constdecl(ConstDecl &n) {
@@ -403,6 +410,10 @@ void ModelSplitter::visit_startstate(StartState &n) {
 }
 
 
+
+void ModelSplitter::__throw_unreachable_error(const Node &n) {
+  throw new Error("The Model Splitter & Organizer visited an unsupported syntactic element!!", n.loc);
+}
 
 
 // ModelSplitter &ModelSplitter::operator<<(std::string &s) {

@@ -24,7 +24,6 @@ using namespace rumur;
 namespace romp {
 
 
-
 void CTypeGenerator::visit_typedecl(const TypeDecl &n) {
 
   // If we are typedefing something that is an enum, save this for later lookup.
@@ -73,8 +72,16 @@ void CTypeGenerator::visit_array(const Array &n) {
 }
 
 void CTypeGenerator::emit_json_converter(const std::string &name, const Array &te) {
+  std::string et_str = "";
+  if (auto et = dynamic_cast<const TypeExprID *>(te.element_type.get()))
+    et_str += et->referent->name;
+  else
+    et_str += value_type;
   *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
-           "j = to_json(j, std::vector<" << *(te.element_type) << ">(std::begin(data), std::end(data))); }\n";
+           "j = (" << ROMP_SHOW_TYPE_OPTION_EXPR << ") ? " 
+           ROMP_JSON_TYPE "{{\"type\",\"" << name << te.to_string() << "\"},"
+                            "{\"value\", std::vector<" << et_str << ">(std::begin(data), std::end(data))}}"
+           " : to_json(j, std::vector<" << et_str << ">(std::begin(data), std::end(data))); }\n";
 }
 
 
@@ -102,26 +109,34 @@ void CTypeGenerator::visit_range(const Range &) { *this << value_type; }
 
 void CTypeGenerator::emit_json_converter(const std::string &name, const Range &te) {
   *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
-        "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? " 
-          ROMP_JSON_TYPE "({\"type\",\"Range(" << te.min->to_string() << ".." << te.max->to_string() << ")\"}, "
-                          "{\"value\",(" << value_type << ")data}) "
-          ": to_json((" << value_type << ")data) ; }\n";
+        "if (" ROMP_SHOW_TYPE_OPTION_EXPR ") " 
+          "j = " ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"}, "
+                          "{\"value\",(" << value_type << ")data}}; "
+        "else "
+          "to_json(j,(" << value_type << ")data); }\n";
 }
 
 
 void CTypeGenerator::visit_record(const Record &n) {
   *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{\n";
   indent();
-  for (const Ptr<VarDecl> &f : n.fields) {
+  for (const Ptr<VarDecl> &f : n.fields)
     *this << *f;
-  }
   dedent();
   *this << indentation() << "}";
 }
 
 
 void CTypeGenerator::emit_json_converter(const std::string &name, const Record &te) {
-
+  std::string conv_str = ROMP_JSON_TYPE "{";
+  for (const Ptr<VarDecl> &f : te.fields)
+    conv_str += "{\"" + f->name + "\", data." + f->name + "},";
+  conv_str += "}";
+  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
+        "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? " 
+            ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"},"
+            "{\"value\"," << conv_str << "}}"
+          " : " << conv_str << "; }";
 }
 
 
@@ -129,13 +144,20 @@ void CTypeGenerator::visit_scalarset(const Scalarset &) { *this << value_type; }
 
 
 void CTypeGenerator::emit_json_converter(const std::string &name, const Scalarset &te) {
-
+  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
+        "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? " 
+          ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"}, "
+                          "{\"value\",(" << value_type << ")data}} "
+          ": to_json((" << value_type << ")data) ; }\n";
 }
 
 
 void CTypeGenerator::emit_json_converter(const std::string &name, const TypeExprID &te) {
-  // do nothing
+  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
+        "to_json(j,(" << te.referent->name << ")data); "
+        "}\n";
 }
+
 
 void CTypeGenerator::emit_json_converter(const std::string &name, const Ptr<TypeExpr> &te) {
   if (auto _a = dynamic_cast<const Array *>(te.get()))
@@ -152,6 +174,10 @@ void CTypeGenerator::emit_json_converter(const std::string &name, const Ptr<Type
     emit_json_converter(name, *_id);
   else
     throw new Error("Unrecognized Type!!", te->loc);
+}
+
+void CTypeGenerator::__throw_unreachable_error(const Node &n) {
+  throw new Error("The CType Code generator encountered an unsupported syntactic object during generation!!", n.loc);
 }
 
 }
