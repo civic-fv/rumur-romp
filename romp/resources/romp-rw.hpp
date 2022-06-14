@@ -100,10 +100,12 @@ public:
   static id_t next_id;
   const id_t id;
   class State; // do not remove me
-  class startstate;
-  startstate *startstate; //storing the startstate of model 
   State *state;
   // was this state tripped
+  class startstate;
+  startstate *startstate; //storing the startstate of model
+  class rand_seed;// to generate randomseeds 
+  rand_seed *rand_seed;
   bool valid;
   // tripped thing
   std::string tripped;
@@ -126,36 +128,44 @@ public:
   }
   RandWalker() : id(RandWalker::next_id++) {}
 
-void random_walker_simulation(int thread_count, int randomwalker)
+void random_walker_simulation(int thread_count, int randomwalker){
 /**
  * @brief implementing randomwalk_parallel simulation which has the threads 
  * and no of randomwalkers specified by the user options .
  * 
  */
-{
-  startstate* genstartstate()
+  startstate* genstartstate(){
   /**
    * @brief generate all startstates of the model. 
    * To do - how to get the size of startstate
    * 
    */
-  {
     startstate *startstate = new startstate[/*how to get the no of startstate*/];
     for (int i=0;i<size;i++)
       startstate[size] = new startstate(size);
     return startstate;
   }
- if(size<randomwalker)
+ if(size<randomwalker){
  /**
   * @brief duplicate the startstate 
   * must get randomwalkers startstates-->to do 
   * 
   */
- {
    startstate *startstate1 = new startstate[size];
    std::copy(std::begin(startstate),std::end(startstate), std::begin(startstate1));
  }
-
+rand_seed* genrandomseed(){
+  /**
+   * @brief to generate randomseeds for the no of randomwalkers
+   * rand is generated using UNIX timestamp 
+   * 
+   */
+  rand_seed *rand_seed = new rand_seed[randomwalker];
+  srand(time(NULL));
+  for(int i=0;i<randomwalker;i++)
+      rand_seed[randomwalker] = new rand_seed(randomwalker);
+  return rand_seed;
+}
 }
 
 
