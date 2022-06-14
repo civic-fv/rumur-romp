@@ -115,7 +115,7 @@ public:
 
 }; //? END class RandomWalker
 
-RandWalker::next_id = 0;
+id_t RandWalker::next_id = 0u;
 
 
 /**
