@@ -7,7 +7,7 @@
 
 namespace romp {
 
-std::string CodeGenerator::M_FUNCTION__FUNC_ATTR = "";
+std::string CodeGenerator::M_FUNCTION__FUNC_ATTRS = "";
 
 std::string CodeGenerator::M_RULE_GUARD__FUNC_ATTRS = "";
 std::string CodeGenerator::M_RULE_ACTION__FUNC_ATTRS = "";
