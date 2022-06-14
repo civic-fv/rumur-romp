@@ -14,31 +14,41 @@
  * @version 0.1
  */
 
-// #ifndef __romp__GENERATED_CODE
+#ifndef __romp__GENERATED_CODE
+#include "c_prefix.c"
+#endif
+
 #include <cstddef>
-#include <functional>
 #include <string>
-#include <iterator>
-// #endif
+#include <vector>
 
-// << =============================== Preprocessor DEclarations
-// ================================ >>
+// << =============================== Preprocessor Declarations ================================ >>
 
+
+#ifndef STATE_HISTORY_SIZE
 #define STATE_HISTORY_SIZE 16
+#endif
 #ifndef RULES_SIZE
 #define RULES_SIZE 0
 #endif
-#ifndef INVARIANTS_SIZE 2
-#define RULE_COUNT 0
+#ifndef INVARIANTS_SIZE 
+#define INVARIANTS_SIZE 2
 #endif
-#ifndef STARTSTATES_SIZE 2
-#define RULE_COUNT 0
+#ifndef STARTSTATES_SIZE
+#define STARTSTATES_SIZE 0
+#endif
+#ifndef _ROMP_STATE_TYPE 
+#define _ROMP_STATE_TYPE ::__model__::__State__
 #endif
 
 // << =================================== Type Declarations ==================================== >>
-namespace __model__ {
- class __State__;
+#ifndef __romp__GENERATED_CODE
+namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!
+ class __State__ { // LANGUAGE SERVER SUPPORT ONLY !!
+    size_t test1[16];
+ };
 }
+#endif
 
 namespace romp {
 
@@ -59,11 +69,13 @@ typedef struct {
 
 }
 
-namespace __caller__ {
- ::romp::Rule* RULES[RULES_SIZE];
- ::romp::Invariant* INVARIANTS[INVARIANTS_SIZE];
- ::romp::StartState* STARTSTATES[STARTSTATES_SIZE];
+#ifndef __romp__GENERATED_CODE
+namespace __caller__ { // LANGUAGE SERVER SUPPORT ONLY!!
+ ::romp::Rule* RULES[RULES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
+ ::romp::Invariant INVARIANTS[INVARIANTS_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
+ ::romp::StartState STARTSTATES[STARTSTATES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
 }
+#endif
 
 
 namespace romp {
@@ -72,13 +84,9 @@ class RandWalker {
 public:
   static id_t next_id;
   const id_t id;
+  const unsigned int rand_seed;
+  _ROMP_STATE_TYPE state;
   
-  ::__model__::__State__* state;
-  // was this state tripped
-  class startstate;
-  startstate *startstate; //storing the startstate of model
-  class rand_seed;// to generate randomseeds 
-  rand_seed *rand_seed;
   bool valid;
   // tripped thing
   std::string tripped;
@@ -99,79 +107,114 @@ public:
     history[true_level % STATE_HISTORY_SIZE] = id;
     true_level++;
   }
-  RandWalker() : id(RandWalker::next_id++) {}
+  RandWalker(_ROMP_STATE_TYPE startstate, unsigned int rand_seed_) 
+    : state(startstate), 
+      rand_seed(rand_seed_),
+      id(RandWalker::next_id++) 
+  {}
 
-void random_walker_simulation(int thread_count, int randomwalker){
+}; //? END class RandomWalker
+
+RandWalker::next_id = 0;
+
+
 /**
- * @brief implementing randomwalk_parallel simulation which has the threads 
- * and no of randomwalkers specified by the user options .
+ * @brief generate all startstates of the model. 
+ * To do - how to get the size of startstate
  * 
  */
-  startstate* genstartstate(){
-  /**
-   * @brief generate all startstates of the model. 
-   * To do - how to get the size of startstate
-   * 
-   */
-    startstate *startstate = new startstate[/*how to get the no of startstate*/];
-    for (int i=0;i<size;i++)
-      startstate[size] = new startstate(size);
-    return startstate;
+std::vector<_ROMP_STATE_TYPE> gen_startstates() {
+  std::vector<_ROMP_STATE_TYPE> states;
+  for (int i=0; i<STARTSTATES_SIZE; i++) {
+    states.push_back(_ROMP_STATE_TYPE());
+    ::__caller__::STARTSTATES[i].initialize(states[states.size()-1]);
   }
- if(size<randomwalker){
- /**
-  * @brief duplicate the startstate 
-  * must get randomwalkers startstates-->to do 
-  * 
-  */
-   startstate *startstate1 = new startstate[size];
-   std::copy(std::begin(startstate),std::end(startstate), std::begin(startstate1));
- }
-rand_seed* genrandomseed(){
-  /**
-   * @brief to generate randomseeds for the no of randomwalkers
-   * rand is generated using UNIX timestamp 
-   * 
-   */
+  return states;
+}
+
+/**
+ * @brief to generate randomseeds for the no of random-walkers
+ * rand is generated using UNIX timestamp 
+ */
+unsigned int get_random_seed(unsigned int root_seed){
+  return rand_seed(root_seed); // this should just gen a rand int between 0 and max unsigned int
+}
+
+/**
+ * @brief generate all startstates of the model. 
+ * To do - how to get the size of startstate
+ * 
+ */
+std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_seed) {
+  std::vector<RandWalker> rws;
+  auto startstates = gen_startstates();
+  for(int i=0; i<rw_count; i++) {
+    auto copied_startstate = _ROMP_STATE_TYPE(startstates[i%startstates.size()]);
+    RandWalker rw1(copied_startstate, get_random_seed(root_seed));
+  }
+  return rws;
+}
+
+// example of how to get a copy of an object in C++:
+//   use the copy constructor (always has the signature)
+//    ClassName(const ClassName &obj)
+//  this means your's should look like:
+//    auto copied_state = _ROMP_STATE_TYPE(startstates[i%startstates.size()]);
+
+
+/**
+ * @brief to generate randomseeds for the no of random-walkers
+ * rand is generated using UNIX timestamp 
+ */
+std::vector<unsigned int> genrandomseed(){
   rand_seed *rand_seed = new rand_seed[randomwalker];
   srand(time(NULL));
   for(int i=0;i<randomwalker;i++)
       rand_seed[randomwalker] = new rand_seed(randomwalker);
   return rand_seed;
 }
+
+/**
+ * @brief implementing randomwalk_parallel simulation which has the threads 
+ * and no of random-walkers specified by the user options .
+ */
+void launch_OpenMP(int thread_count, int rw_count) {
+  
+  
+}
+
+void launch_CUDA();
+
+void launch_SYCL();
+
+void launch_OpenMPI();
+
+void launch_single() {
+
 }
 
 
-  void Sim1Step(RandWalker::State state, Rule rule, size_t state_count) {
-    for (int s = 0; s < state_count; s++)
-      if (rule.Guard(states[s])) {
-        rule.Run(states[s]);
-        states[i].rule_applied(
-            rule.id); // this keeps track of history and other overhead
-        // These could possibly be parallelized even better for GPU using
-        // shared memory. (not implemented here, could introduce data races)
-        for (int i = 0; i < INVARIANTS_SIZE; i++)
-          states[s].valid |= State::INVARIANTS[i](
-              states[i]); // this will need to change after we figure shit out
-        for (int a = 0; a < ASSERTIONS_SIZE; a++)
-          states[s].valid |= State::ASSERTIONS[a](
-              states[i]); // this will need to change after we figure shit out
-      }
-  }
+
+// void Sim1Step(RandWalker::State state, Rule rule, size_t state_count) {
+//   for (int s = 0; s < state_count; s++)
+//     if (rule.Guard(states[s])) {
+//       rule.Run(states[s]);
+//       states[i].rule_applied(
+//           rule.id); // this keeps track of history and other overhead
+//       // These could possibly be parallelized even better for GPU using
+//       // shared memory. (not implemented here, could introduce data races)
+//       for (int i = 0; i < INVARIANTS_SIZE; i++)
+//         states[s].valid |= State::INVARIANTS[i](
+//             states[i]); // this will need to change after we figure shit out
+//       for (int a = 0; a < ASSERTIONS_SIZE; a++)
+//         states[s].valid |= State::ASSERTIONS[a](
+//             states[i]); // this will need to change after we figure shit out
+//     }
+// }
+
+
+// << ========================================================================================== >> 
+// <<                                         ROMP CODE                                          >> 
+// << ========================================================================================== >> 
 }
-}; // namespace romp
-
-Sim::next_id = 0;
-
-
-
-
-// <<
-// ==========================================================================================
-// >>
-// <<                                         ROMP CODE >>
-// <<
-// ==========================================================================================
-// >>
-
 // template<class S, class R>
