@@ -156,23 +156,6 @@ void random_walker_simulation(int thread_count, int randomwalker)
    std::copy(std::begin(startstate),std::end(startstate), std::begin(startstate1));
  }
 
-
- int main()
-{
-    const int n = 5;
-    int src[] = {1, 3, 5, 7, 9};
- 
-    int dest[n];
-    std::copy(std::begin(src), std::end(src), std::begin(dest));
- 
-    for (int &i: dest) {
-        std::cout << i << ' ';
-    }
- 
-    return 0;
-}
-
-
 }
 
 
