@@ -40,6 +40,12 @@
 #ifndef _ROMP_STATE_TYPE 
 #define _ROMP_STATE_TYPE ::__model__::__State__
 #endif
+#ifndef _ROMP_RAND_SEED
+#define _ROMP_STATE_TYPE ::__model__::__State__
+#endif
+/*#ifndef fuel
+#define fuel 10000
+#endif*/
 
 // << =================================== Type Declarations ==================================== >>
 #ifndef __romp__GENERATED_CODE
@@ -53,6 +59,10 @@ namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!
 namespace romp {
 
 // typedef void* Param;
+typedef struct {
+  bool (*guard)(::__model__::__State__);
+  void (*action)(::__model__::__State__);
+} param;
 
 typedef struct {
   bool (*guard)(::__model__::__State__);
@@ -66,7 +76,9 @@ typedef struct {
 typedef struct {
   void (*initialize)(::__model__::__State__);
 } StartState;
-
+typedef struct {
+  void (*initialize)(::__model__::__State__);
+} RandSeed;
 }
 
 #ifndef __romp__GENERATED_CODE
@@ -74,8 +86,11 @@ namespace __caller__ { // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::Rule* RULES[RULES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::Invariant INVARIANTS[INVARIANTS_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::StartState STARTSTATES[STARTSTATES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
+ ::romp::RandSeed RANDSEEDS[randomwalker];
 }
 #endif
+
+void launch_single();
 
 
 namespace romp {
@@ -86,7 +101,6 @@ public:
   const id_t id;
   const unsigned int rand_seed;
   _ROMP_STATE_TYPE state;
-  
   bool valid;
   // tripped thing
   std::string tripped;
@@ -112,10 +126,10 @@ public:
       rand_seed(rand_seed_),
       id(RandWalker::next_id++) 
   {}
-
+    launch_single(StartState[],rand_seed[]); //must take in the startstate and randseed vector as args 
 }; //? END class RandomWalker
 
-id_t RandWalker::next_id = 0u;
+id_t RandWalker::next_id = 0u;//ask andrew on this 
 
 
 /**
@@ -136,8 +150,13 @@ std::vector<_ROMP_STATE_TYPE> gen_startstates() {
  * @brief to generate randomseeds for the no of random-walkers
  * rand is generated using UNIX timestamp 
  */
-unsigned int get_random_seed(unsigned int root_seed){
-  return rand_seed(root_seed); // this should just gen a rand int between 0 and max unsigned int
+std::vector<_ROMP_STATE_TYPE int> genrandomseed(){
+  std::vector<_ROMP_STATE_TYPE> rand_seed;
+  srand(time(NULL));
+  for(int i=0;i<randomwalker;i++)
+  states.push_back(_ROMP_STATE_TYPE());
+    ::__caller__::RANDSEEDS[i].initialize(rand_seed[randomwalker]);
+  return rand_seed;
 }
 
 /**
@@ -161,17 +180,13 @@ std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_se
 //  this means your's should look like:
 //    auto copied_state = _ROMP_STATE_TYPE(startstates[i%startstates.size()]);
 
-
 /**
- * @brief to generate randomseeds for the no of random-walkers
- * rand is generated using UNIX timestamp 
+ * @brief helper function rand_choice 
+ * 
  */
-std::vector<unsigned int> genrandomseed(){
-  rand_seed *rand_seed = new rand_seed[randomwalker];
-  srand(time(NULL));
-  for(int i=0;i<randomwalker;i++)
-      rand_seed[randomwalker] = new rand_seed(randomwalker);
-  return rand_seed;
+void rand_choice()
+{
+  /***TO DO ***/
 }
 
 /**
@@ -179,9 +194,7 @@ std::vector<unsigned int> genrandomseed(){
  * and no of random-walkers specified by the user options .
  */
 void launch_OpenMP(int thread_count, int rw_count) {
-  
-  
-}
+  }
 
 void launch_CUDA();
 
@@ -189,11 +202,25 @@ void launch_SYCL();
 
 void launch_OpenMPI();
 
-void launch_single() {
-
+void launch_single(StartState[],rand_seed[],int fuel) {
+  /* ----> to do how to obtain the total no of rule set (treating rules as singleton rules )*/
+    int choice_of_rule=rand() % no_of_rs;//picking a rule randomly from the ruleset
+    std::vector<_ROMP_STATE_TYPE> param;  
+    param = rand_choice(/* how to get randchoice from the ruleset and what params to be passed for ran*/);
+     while(error == 0)
+      {
+          if(fuel>0)
+          {
+            sim_rw_step(/*what are the args*/);
+            fuel--;
+          }
+      }
 }
 
+Void sim_rw_Step(/*args to be decided*/)
+{
 
+}
 
 // void Sim1Step(RandWalker::State state, Rule rule, size_t state_count) {
 //   for (int s = 0; s < state_count; s++)
