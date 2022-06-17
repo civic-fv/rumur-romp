@@ -23,9 +23,9 @@ class CGenerator : public CLikeGenerator {
 
 private:
   std::vector<std::string> state_vars;
-  std::vector<const SimpleRule&> rules;
-  std::vector<const PropertyRule&> invariants;
-  std::vector<const StartState&> startstates;
+  std::vector<Ptr<const SimpleRule>> rules;
+  std::vector<Ptr<const PropertyRule>> invariants;
+  std::vector<Ptr<const StartState>> startstates;
 
 public:
   CGenerator(const std::vector<rumur::Comment> &comments_, std::ostream &out_,
@@ -96,7 +96,7 @@ public:
   }
 
   void visit_propertyrule(const PropertyRule &n) final {
-    invariants.push_back(n);
+    invariants.push_back(Ptr<const PropertyRule>(&n));
     // function prototype
     *this << indentation() << CodeGenerator::M_INVARIANT__FUNC_ATTRS << "\n"
           << indentation() << "bool invariant__" << n.name << "(";
@@ -138,7 +138,7 @@ public:
   }
 
   void visit_simplerule(const SimpleRule &n) final {
-    rules.push_back(n);
+    rules.push_back(Ptr<const SimpleRule>(&n));
 
     *this << indentation() << CodeGenerator::M_RULE_GUARD__FUNC_ATTRS << "\n"
           << indentation() << "bool rule__" << n.name << "__guard(";
@@ -233,13 +233,11 @@ public:
     }
 
     dedent();
-    leave_scope();
     *this << indentation() << "}\n";
-    // scope_level--;
   }
 
   void visit_startstate(const StartState &n) final {
-    startstates.push_back(n);
+    startstates.push_back(Ptr<const StartState>(&n));
     
     *this << indentation() << CodeGenerator::M_STARTSTATE__FUNC_ATTRS 
           << " void startstate__" << n.name << "(";
@@ -310,22 +308,22 @@ public:
   }
 
   void gen_ruleset_array() {
-    for (const SimpleRule& rule : rules) {
-
+    for (const Ptr<const SimpleRule> rule : rules) {
+      int tmp = 0;
     }
   }
 
 
   void gen_invariant_array() {
-    for (const PropertyRule& invar : invariants) {
-
+    for (const Ptr<const PropertyRule> invar : invariants) {
+      int tmp = 0;
     }
   }
 
 
   void gen_startstate_array() {
-    for (const StartState& start : startstates) {
-
+    for (const Ptr<const StartState> start : startstates) {
+      int tmp = 0;
     }
   }
 
@@ -377,19 +375,45 @@ public:
   virtual ~CGenerator() = default;
 };
 
+
 } // namespace
+
+void output_embedded_code_file(std::ostream& out, const unsigned char* ecf, const size_t ecf_l) {
+  for (size_t i = 0; i < ecf_l; i++)
+    out << (char) ecf[i];
+}
 
 void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
                 std::ostream &out) {
 
+  out << ROMP_GENERATED_FILE_PREFACE("test text") "\n";
+  out << "\n#define __romp__GENERATED_CODE\n\n";
+
+  out << "\n#region inline_library_includes\n\n";
+  // write json library to the file
+  output_embedded_code_file(out, resources_lib_nlohmann_json_hpp, resources_lib_nlohmann_json_hpp_len);
+  out << "\n#endregion inline_library_includes\n\n";
+
+  out << "\n#region model_prefixes\n\n";
   // write the static prefix to the beginning of the source file
-  for (size_t i = 0; i < resources_c_prefix_c_len; i++)
-    out << (char)resources_c_prefix_c[i];
+  output_embedded_code_file(out, resources_c_prefix_c, resources_c_prefix_c_len);
+  out << "\n#endregion model_prefixes\n\n";
 
 
+  out << "\n\n#region generated_code\n\n";
   romp::CGenerator gen(comments, out, pack);
   gen.dispatch(n);
+  out << "\n\n#endregion generated_code\n\n";
 
+  out << "\n#region romp_rw\n\n";
+  output_embedded_code_file(out, resources_romp_rw_hpp, resources_romp_rw_hpp_len);
+  out << "\n#endregion romp_rw\n\n";
+  out << "\n#region romp_rw_options\n\n";
+  output_embedded_code_file(out, resources_romp_rw_options_hpp, resources_romp_rw_options_hpp_len);
+  out << "\n#endregion romp_rw_options\n\n";
+  out << "\n#region romp_rw_main\n\n";
+  output_embedded_code_file(out, resources_romp_rw_main_hpp, resources_romp_rw_main_hpp_len);
+  out << "\n#endregion romp_rw_main\n";
 
 
   // out << buffer.rdbuf() << "\n\n";

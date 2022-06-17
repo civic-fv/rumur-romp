@@ -14,7 +14,7 @@
  * @version 0.1
  */
 
-#include "rommp_def.hpp"
+#include "romp_def.hpp"
 
 namespace romp
 {

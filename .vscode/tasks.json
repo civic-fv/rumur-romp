@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cmake",
+            "label": "CMake: build romp",
+            "command": "build",
+            "targets": [
+                "romp"
+            ],
+            "group": "build",
+            "problemMatcher": [],
+            "detail": "use CMake to build the romp codegen tool"
+        },
+        // {
+        //     "type": "cmake",
+        //     "label": "CMake: build romp [debug]",
+        //     "command": "build",
+        //     "targets": [
+        //         "romp"
+        //     ],
+        //     "group": "build",
+        //     "problemMatcher": [],
+        //     "detail": "CMake template build task"
+        // },
+    ]
+}

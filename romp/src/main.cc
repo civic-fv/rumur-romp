@@ -1,7 +1,7 @@
 #include "../../common/help.h"
 #include "check.h"
 #include "compares_complex_values.h"
-#include "generate_c.h"
+#include "generate_c.hpp"
 // #include "generate_h.h"
 #include "options.h"
 #include "resources.h"

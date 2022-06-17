@@ -25,6 +25,7 @@
 // #include <unordered_map>
 #include <unordered_set>
 #include <rumur/rumur.h>
+#include "romp_def.hpp"
 
 
 namespace romp {
@@ -52,7 +53,7 @@ public: // ---- Public Class Members ---- //
 
 private: // ---- Private Class Members ---- //
 
-
+  rumur::location loc;
   
   std::unordered_set<std::string> cTypeNames{ROMP_RESERVED_NAMES};
   // std::unordered_map<size_t,std::string> cTypeName;  // might end up not needing this
@@ -133,7 +134,6 @@ public:
   virtual void visit_field(rumur::Field &n) { __throw_unreachable_error(n); }
   virtual void visit_for(rumur::For &n) { __throw_unreachable_error(n); }
   virtual void visit_forall(rumur::Forall &n) { __throw_unreachable_error(n); }
-  virtual void visit_function(rumur::Function &n) { __throw_unreachable_error(n); }
   virtual void visit_functioncall(rumur::FunctionCall &n) { __throw_unreachable_error(n); }
   virtual void visit_geq(rumur::Geq &n) { __throw_unreachable_error(n); }
   virtual void visit_gt(rumur::Gt &n) { __throw_unreachable_error(n); }
@@ -154,7 +154,6 @@ public:
   virtual void visit_or(rumur::Or &n) { __throw_unreachable_error(n); }
   virtual void visit_procedurecall(rumur::ProcedureCall &n) { __throw_unreachable_error(n); }
   virtual void visit_property(rumur::Property &n) { __throw_unreachable_error(n); }
-  virtual void visit_propertyrule(rumur::PropertyRule &n) { __throw_unreachable_error(n); }
   virtual void visit_propertystmt(rumur::PropertyStmt &n) { __throw_unreachable_error(n); }
   virtual void visit_put(rumur::Put &n) { __throw_unreachable_error(n); }
   virtual void visit_quantifier(rumur::Quantifier &n) { __throw_unreachable_error(n); }

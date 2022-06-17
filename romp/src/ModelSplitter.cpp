@@ -18,9 +18,9 @@
 
 #include "ModelSplitter.hpp"
 
-#include "../../../common/escape.h"
-#include "../../../common/isa.h"
-#include "../options.h"
+#include "../../common/escape.h"
+#include "../../common/isa.h"
+#include "options.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
@@ -51,15 +51,16 @@ ModelSplitter::~ModelSplitter() {}
 // << ========================================================================================== >> 
 
 SplitModel ModelSplitter::get_split_model() {
-  sort_model(n.children);
-  return (SplitModel){Model(global_decls, n.loc),
-                      Model(state_var_decls, n.loc),
-                      Model(funct_decls, n.loc),
-                      Model(rule_decls, n.loc)};
+  // sort_model(n.children);
+  return (SplitModel){Model(global_decls, (global_decls.size() > 0) ? global_decls[0]->loc : loc),
+                      Model(state_var_decls, (state_var_decls.size() > 0) ? state_var_decls[0]->loc : loc),
+                      Model(funct_decls, (funct_decls.size() > 0) ? funct_decls[0]->loc : loc),
+                      Model(rule_decls, (rule_decls.size() > 0) ? rule_decls[0]->loc : loc)};
 }
 
 void ModelSplitter::dispatch(const Node &n) {
-  if (auto _m = dynamic_cast<const Model *>(&n))
+  loc = location(n.loc);
+  if (const auto _m = dynamic_cast<const Model *>(&n))
     sort_model(_m->children);
   else
     throw new Error("!! Expected a Model !!", n.loc);
@@ -113,28 +114,32 @@ void ModelSplitter::insert_to_global_decls(Ptr<ConstDecl> n) {
 
 
 void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
-  for (const Ptr<Node> &_c : children) {
-    Ptr<Node> c(_c);
+  // for (const Ptr<Node> &_c : children) {
+  for (const Ptr<Node> &c : children) {
+    // Ptr<Node> c(_c->clone());
 
-    if (auto td = dynamic_cast<TypeDecl *>(c.get())) {
+    if (const auto _td = dynamic_cast<const TypeDecl *>(c.get())) {
+      Ptr<TypeDecl> td(_td->clone());
       dispatch(*td);
-      insert_to_global_decls(Ptr<TypeDecl>(td));
-    } else if (auto cd = dynamic_cast<ConstDecl *>(c.get())) 
-      insert_to_global_decls(Ptr<ConstDecl>(cd));
-    else if (auto _vd = dynamic_cast<VarDecl *>(c.get())) {
+      insert_to_global_decls(td);
+    } else if (const auto _cd = dynamic_cast<const ConstDecl *>(c.get())) {
+      Ptr<ConstDecl> cd(_cd->clone());
+      insert_to_global_decls(cd);
+    } else if (const auto _vd = dynamic_cast<const VarDecl *>(c.get())) {
       Ptr<VarDecl> vd(_vd->clone());
-      state_var_decls.push_back(Ptr<VarDecl>(vd->clone()));
+      state_var_decls.push_back(vd);
       dispatch(*vd);
-    } else if (auto _f = dynamic_cast<Function *>(c.get())) {
+    } else if (const auto _f = dynamic_cast<const Function *>(c.get())) {
       Ptr<Function> f(_f->clone());
       funct_decls.push_back(f);
       dispatch(*f);
-    } else if (auto _r = dynamic_cast<Rule *>(c.get())) {
-      Ptr<Rule> r = Ptr<Rule>(r->clone());
+    } else if (const auto _r = dynamic_cast<const Rule *>(c.get())) {
+      Ptr<Rule> r(r->clone());
       rule_decls.push_back(r);
       dispatch(*r);
     } else 
-        throw new Error("Unexpected item in the global scope!!", _c->loc);
+        // throw new Error("Unexpected item in the global scope!!", _c->loc);
+        throw new Error("Unexpected item in the global scope!!", c->loc);
   }
 }
 
@@ -226,13 +231,15 @@ void ModelSplitter::visit_record(Record &n) {
   for (Ptr<VarDecl> &f : n.fields) {  // pre output any inplace type definitions
     
     if (auto et_id = dynamic_cast<TypeExprID *>(f->type.get())) {
-      _fields.push_back(Ptr<TypeExprID>(et_id->clone()));
+      _fields.push_back(Ptr<VarDecl>(f));
     } else {
       dispatch(*(f->type));
       std::string name = gen_new_anon_name();
-      Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(f->type->clone()), f->loc));
+      Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(f->type), f->loc));
       insert_to_global_decls(decl);
-      _fields.push_back(Ptr<TypeExpr>(new TypeExprID(name, decl, f->loc)));
+      _fields.push_back(Ptr<VarDecl>(new VarDecl(f->name, 
+                                          Ptr<TypeExprID>(new TypeExprID(name, decl, f->loc)),
+                                           f->loc)));
     }
   }
   n.fields = _fields;

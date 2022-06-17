@@ -13,5 +13,21 @@ extern const unsigned char resources_c_prefix_c[];
 extern const size_t resources_c_prefix_c_len;
 
 // ../resources/h_prefix.h
-extern const unsigned char resources_h_prefix_h[];
-extern const size_t resources_h_prefix_h_len;
+// extern const unsigned char resources_h_prefix_h[];
+// extern const size_t resources_h_prefix_h_len;
+
+// ../resources/lib/nlohmann_json.hpp
+extern const unsigned char resources_lib_nlohmann_json_hpp[];
+extern const size_t resources_lib_nlohmann_json_hpp_len;
+
+// ../resources/romp-rw.hpp
+extern const unsigned char resources_romp_rw_hpp[];
+extern const size_t resources_romp_rw_hpp_len;
+
+// ../resources/romp-rw-options.hpp
+extern const unsigned char resources_romp_rw_options_hpp[];
+extern const size_t resources_romp_rw_options_hpp_len;
+
+// ../resources/romp-rw-main.hpp
+extern const unsigned char resources_romp_rw_main_hpp[];
+extern const size_t resources_romp_rw_main_hpp_len;

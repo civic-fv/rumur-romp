@@ -38,66 +38,7 @@
 
 #define ROMP_SHOW_TYPE_OPTION_EXPR "options.SHOW_TYPE"
 
-
-
-// << ========================================================================================== >> 
-// <<                                 SIMULATION CLASS CODE GEN                                  >> 
-// << ========================================================================================== >> 
-
-// #define __romp__Simulation_start \
-//   "class Simulation\n"\
-//   "{\n"\
-//   "public:\n"\
-//   "  State state;"\
-//   "  /*<list* of callable rules>*/\n"\
-//   "  /*<list* of callable invariants>*/\n"\
-//   "  /*<list* of callable startstate gens>*/\n"\
-//   "  \n"
-
-// #define __romp__Simulation_Constructor \
-//   "  \n"\
-//   "  /* Class Constructor(s) */\n"\
-//   "  \n"\
-//   "  /* Class Deconstructor */\n"\
-//   "  \n"
-
-// #define __romp__Simulation_Methods \
-//   "  \n"\
-//   "  /* Helper methods */\n"
-
-// #define __romp__Simulation_end \
-//   __romp__Simulation_Constructor\
-//   __romp__Simulation_Methods\
-//   "\n"\
-//   "};\n\n"
-
-
-// << ========================================================================================== >> 
-// <<                                   STATE CLASS CODE GEN                                     >> 
-// << ========================================================================================== >> 
-
-#define __romp__State_start \
-  "  class Simulation::State\n"\
-  "  {\n"\
-  "  public:\n"\
-  "    \n"
-
-#define __romp__State_Constructor \
-  "    \n"\
-  "    /* Class Constructor(s) */\n"\
-  "    \n"\
-  "    /* Class Deconstructor */\n"\
-  "    \n"
-
-#define __romp__State_Methods \
-  "    \n"\
-  "    /* Helper methods */\n"
-
-#define __romp__State_end \
-  __romp__State_Constructor\
-  __romp__State_Methods\
-  "  \n"\
-  "  };\n\n"
-
+#define ROMP_GENERATED_FILE_PREFACE(p) \
+        "/*" p "*/"
 
 #endif
