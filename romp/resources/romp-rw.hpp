@@ -29,13 +29,13 @@
 #define STATE_HISTORY_SIZE 16ul
 #endif
 #ifndef RULES_SIZE
-#define RULES_SIZE 0ul
+#define RULES_SIZE 6ul
 #endif
 #ifndef INVARIANTS_SIZE 
 #define INVARIANTS_SIZE 2ul
 #endif
 #ifndef STARTSTATES_SIZE
-#define STARTSTATES_SIZE 0ul
+#define STARTSTATES_SIZE 2ul
 #endif
 #ifndef _ROMP_STATE_TYPE 
 #define _ROMP_STATE_TYPE ::__model__::__State__
@@ -77,21 +77,19 @@ public:
   // tripped thing
   std::string tripped;
   // how many rules have tried to be applied to this state
-  int level;
-  // how many rules have actually been applied to this state
-  int true_level;
-  // array of intigers representing the rul ID's applied to this state (treated
+  size_t level = 0;
+  // array of intgers representing the rul ID's applied to this state (treated
   // as a circular buffer array)
-  int history[STATE_HISTORY_SIZE];
+  id_t history[STATE_HISTORY_SIZE];
 
   /**
    * @brief call if rule is applied to store what rule made the change in the
    * history circular buffer.
    * @param id the id of the rule that was applied.
    */
-  void rule_applied(int id) {
-    history[true_level % STATE_HISTORY_SIZE] = id;
-    true_level++;
+  void rule_applied(id_t id) {
+    history[level % STATE_HISTORY_SIZE] = id;
+    level++;
   }
 
   RandWalker(_ROMP_STATE_TYPE startstate, unsigned int rand_seed, size_t fuel/* =DEFAULT_FUEL */) 
@@ -100,6 +98,15 @@ public:
       fuel(fuel),
       id(RandWalker::next_id++) 
   {} 
+
+  void sim1Step() {
+    //TODO: pick a rule (completely at random at first later ganesh's algorithm)
+    //TODO: check if the guard is true then state gets mutated
+    //TODO: decrement fuel when appropriate 
+    //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
+    //TODO: check for error message and store in the bad state <-- Andrew needs to finish infrastructure for this (but it wil be a try catch statement)
+    //TODO: check for the invariants and store in if any invariants is voilated 
+  }
 }; //? END class RandomWalker
 
 id_t RandWalker::next_id = 0u;
@@ -122,14 +129,10 @@ std::vector<_ROMP_STATE_TYPE> gen_startstates() {
 /**
  * @brief to generate randomseeds for the no of random-walkers
  * rand is generated using UNIX timestamp 
+ * @param root_seed the parent seed for generating the random seeds.
  */
-unsigned int genrandomseed() {
-  std::vector<_ROMP_STATE_TYPE> rand_seed;
-  srand(time(NULL));
-  for(int i=0;i<randomwalker;i++)
-  states.push_back(_ROMP_STATE_TYPE());
-    ::__caller__::RANDSEEDS[i].initialize(rand_seed[randomwalker]);
-  return rand_seed;
+unsigned int genrandomseed(unsigned int &root_seed) {
+  return rand_choice(root_seed, 1u, UINT32_MAX);
 }
 
 /**
@@ -210,15 +213,15 @@ void launch_OpenMPI(unsigned int rand_seed, size_t fuel);
  */
 void launch_single(unsigned int rand_seed, size_t fuel) {
   /* ----> to do how to obtain the total no of rule set (treating rules as singleton rules )*/
+  unsigned int _seed_cpy = rand_seed;
   _ROMP_STATE_TYPE start_state;
-  ::__caller__::STARTSTATES[rand_choice(rand_seed, 0ul, STARTSTATES_SIZE)].initialize(start_state);
-  RandWalker* rw = new RandWalker(/* _ROMP_STATE_TYPE startstate */, /* unsigned int rand_seed */, /* size_t fuel */);
+  ::__caller__::STARTSTATES[rand_choice(_seed_cpy, 0ul, STARTSTATES_SIZE)].initialize(start_state);
+  RandWalker* rw = new RandWalker(start_state,rand_seed,fuel);
+  //TODO: call sim1Step as RandWalker (rw) method
+  //TODO: check if rw is still valid to run (check valid parameter & fuel level) -> make a decision
+  //TODO: send rw off to have it's results presented to the user
 }
 
-Void sim_rw_Step(/*args to be decided*/)
-{
-
-}
 
 // void Sim1Step(RandWalker::State state, Rule rule, size_t state_count) {
 //   for (int s = 0; s < state_count; s++)
