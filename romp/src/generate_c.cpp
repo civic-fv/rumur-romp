@@ -332,14 +332,19 @@ public:
     splitter.dispatch(n);
     SplitModel split = splitter.get_split_model();
 
-    *this << "\n" << indentation() << "namespace " ROMP_MODEL_NAMESPACE_NAME " {\n";
+    *this << "\n" << indentation() << "namespace " ROMP_TYPE_NAMESPACE " {\n";
     indent();
-
 
     *this << "\n\n" << indentation() << "/* ======= Model Type Definitions ====== */\n\n";
     CTypeGenerator type_gen(comments, out, pack, 
       [&](const ConstDecl &_n) -> void {visit_constdecl(_n);});
     type_gen.dispatch(split.global_decls);
+
+    dedent();
+    *this << "\n" << indentation() << "}\n\n";
+
+    *this << "\n" << indentation() << "namespace " ROMP_MODEL_NAMESPACE_NAME " {\n";
+    indent();
 
     *this << "\n" << indentation() << "class " ROMP_STATE_CLASS_NAME " {\n";
     indent();

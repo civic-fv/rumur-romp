@@ -705,7 +705,7 @@ void CLikeGenerator::visit_typedecl(const TypeDecl &n) {
 void CLikeGenerator::visit_typeexprid(const TypeExprID &n) { 
   if (emitted_tDecls.find(n.referent->unique_id) == emitted_tDecls.end())
     throw new Error("TypeExprID references a currently undefined type declaration!", n.loc);
-  *this << n.referent->name; // n.name; 
+  *this << "::" ROMP_TYPE_NAMESPACE "::" << n.referent->name; // n.name; // change me if loss of specificity occurs
 }
 
 void CLikeGenerator::visit_undefine(const Undefine &n) {

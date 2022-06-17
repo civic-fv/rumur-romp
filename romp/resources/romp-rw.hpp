@@ -24,7 +24,7 @@
 
 // << =============================== Preprocessor Declarations ================================ >>
 
-
+#ifndef __romp__GENERATED_CODE
 #ifndef STATE_HISTORY_SIZE
 #define STATE_HISTORY_SIZE 16ul
 #endif
@@ -40,12 +40,7 @@
 #ifndef _ROMP_STATE_TYPE 
 #define _ROMP_STATE_TYPE ::__model__::__State__
 #endif
-#ifndef _ROMP_RAND_SEED
-#define _ROMP_STATE_TYPE ::__model__::__State__
 #endif
-/*#ifndef fuel
-#define fuel 10000
-#endif*/
 
 // << =================================== Type Declarations ==================================== >>
 #ifndef __romp__GENERATED_CODE
@@ -56,22 +51,7 @@ namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!
 }
 #endif
 
-namespace romp {
 
-typedef struct {
-  bool (*guard)(::__model__::__State__);
-  void (*action)(::__model__::__State__&);
-} Rule;
-
-typedef struct {
-  bool (*check)(::__model__::__State__);
-} Invariant;
-
-typedef struct {
-  void (*initialize)(::__model__::__State__&);
-} StartState;
-
-}
 
 #ifndef __romp__GENERATED_CODE
 namespace __caller__ { // LANGUAGE SERVER SUPPORT ONLY!!

@@ -25,6 +25,8 @@
 
 #define ROMP_STATE_TYPE "::" ROMP_MODEL_NAMESPACE "::" ROMP_STATE_CLASS_NAME
 
+#define ROMP_TYPE_NAMESPACE "__type__"
+
 #define ROMP_CALLABLE_RULE_TYPE "::romp::Rule";
 
 #define ROMP_CALLABLE_INVARIANT_TYPE "::romp::Invariant";
