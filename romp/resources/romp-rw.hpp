@@ -26,16 +26,16 @@
 
 
 #ifndef STATE_HISTORY_SIZE
-#define STATE_HISTORY_SIZE 16
+#define STATE_HISTORY_SIZE 16ul
 #endif
 #ifndef RULES_SIZE
-#define RULES_SIZE 0
+#define RULES_SIZE 0ul
 #endif
 #ifndef INVARIANTS_SIZE 
-#define INVARIANTS_SIZE 2
+#define INVARIANTS_SIZE 2ul
 #endif
 #ifndef STARTSTATES_SIZE
-#define STARTSTATES_SIZE 0
+#define STARTSTATES_SIZE 0ul
 #endif
 #ifndef _ROMP_STATE_TYPE 
 #define _ROMP_STATE_TYPE ::__model__::__State__
@@ -58,15 +58,9 @@ namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!
 
 namespace romp {
 
-// typedef void* Param;
 typedef struct {
   bool (*guard)(::__model__::__State__);
-  void (*action)(::__model__::__State__);
-} param;
-
-typedef struct {
-  bool (*guard)(::__model__::__State__);
-  void (*action)(::__model__::__State__);
+  void (*action)(::__model__::__State__&);
 } Rule;
 
 typedef struct {
@@ -74,11 +68,9 @@ typedef struct {
 } Invariant;
 
 typedef struct {
-  void (*initialize)(::__model__::__State__);
+  void (*initialize)(::__model__::__State__&);
 } StartState;
-typedef struct {
-  void (*initialize)(::__model__::__State__);
-} RandSeed;
+
 }
 
 #ifndef __romp__GENERATED_CODE
@@ -86,7 +78,6 @@ namespace __caller__ { // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::Rule* RULES[RULES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::Invariant INVARIANTS[INVARIANTS_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::StartState STARTSTATES[STARTSTATES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
- ::romp::RandSeed RANDSEEDS[randomwalker];
 }
 #endif
 
@@ -101,6 +92,7 @@ public:
   const id_t id;
   const unsigned int rand_seed;
   _ROMP_STATE_TYPE state;
+  size_t fuel;
   bool valid;
   // tripped thing
   std::string tripped;
@@ -121,15 +113,16 @@ public:
     history[true_level % STATE_HISTORY_SIZE] = id;
     true_level++;
   }
-  RandWalker(_ROMP_STATE_TYPE startstate, unsigned int rand_seed_) 
+
+  RandWalker(_ROMP_STATE_TYPE startstate, unsigned int rand_seed, size_t fuel/* =DEFAULT_FUEL */) 
     : state(startstate), 
-      rand_seed(rand_seed_),
+      rand_seed(rand_seed),
+      fuel(fuel),
       id(RandWalker::next_id++) 
-  {}
-    launch_single(StartState[],rand_seed[]); //must take in the startstate and randseed vector as args 
+  {} 
 }; //? END class RandomWalker
 
-id_t RandWalker::next_id = 0u;//ask andrew on this 
+id_t RandWalker::next_id = 0u;
 
 
 /**
@@ -150,7 +143,7 @@ std::vector<_ROMP_STATE_TYPE> gen_startstates() {
  * @brief to generate randomseeds for the no of random-walkers
  * rand is generated using UNIX timestamp 
  */
-std::vector<_ROMP_STATE_TYPE int> genrandomseed(){
+unsigned int genrandomseed() {
   std::vector<_ROMP_STATE_TYPE> rand_seed;
   srand(time(NULL));
   for(int i=0;i<randomwalker;i++)
@@ -164,12 +157,12 @@ std::vector<_ROMP_STATE_TYPE int> genrandomseed(){
  * To do - how to get the size of startstate
  * 
  */
-std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_seed) {
+std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_seed, size_t fuel) {
   std::vector<RandWalker> rws;
   auto startstates = gen_startstates();
   for(int i=0; i<rw_count; i++) {
     auto copied_startstate = _ROMP_STATE_TYPE(startstates[i%startstates.size()]);
-    RandWalker rw1(copied_startstate, get_random_seed(root_seed));
+    RandWalker rw1(copied_startstate, get_random_seed(root_seed), fuel);
   }
   return rws;
 }
@@ -184,37 +177,62 @@ std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_se
  * @brief helper function rand_choice 
  * 
  */
-void rand_choice()
-{
+template<typename T>
+T rand_choice(unsigned int &rand_seed, T min, T max) {
   /***TO DO ***/
 }
 
+
 /**
- * @brief implementing randomwalk_parallel simulation which has the threads 
- * and no of random-walkers specified by the user options .
+ * @brief implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
+ *        and no of random-walkers specified by the user options .
+ * @param rand_seed the starting random seed that will generate all other random seeds
+ * @param fuel the max number of rules any \c RandWalker will try to apply.
+ * @param thread_count the max number of threads to use to accomplish all said random walks.
+ * @param rw_count the number of \c RandWalker 's to use.
  */
-void launch_OpenMP(int thread_count, int rw_count) {
-  }
+void launch_OpenMP(unsigned int rand_seed, size_t fuel, int thread_count, int rw_count) {
 
-void launch_CUDA();
+}
 
-void launch_SYCL();
 
-void launch_OpenMPI();
+/**
+ * @brief (NOT YET IMPLEMENTED) \n
+ *        Implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
+ *        and no of random-walkers specified by the user options .
+ * @param rand_seed the starting random seed that will generate all other random seeds
+ * @param fuel the max number of rules any \c RandWalker will try to apply.
+ */
+void launch_CUDA(unsigned int rand_seed, size_t fuel);
 
-void launch_single(StartState[],rand_seed[],int fuel) {
+/**
+ * @brief (NOT YET IMPLEMENTED) \n
+ *        Implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
+ *        and no of random-walkers specified by the user options .
+ * @param rand_seed the starting random seed that will generate all other random seeds
+ * @param fuel the max number of rules any \c RandWalker will try to apply.
+ */
+void launch_SYCL(unsigned int rand_seed, size_t fuel);
+
+/**
+ * @brief (NOT YET IMPLEMENTED) \n
+ *        Implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
+ *        and no of random-walkers specified by the user options .
+ * @param rand_seed the starting random seed that will generate all other random seeds
+ * @param fuel the max number of rules any \c RandWalker will try to apply.
+ */
+void launch_OpenMPI(unsigned int rand_seed, size_t fuel);
+
+/**
+ * @brief Launches a single RandWalker (basically jst a simulation).
+ * @param rand_seed the random seed
+ * @param fuel the max number of rules to try to apply
+ */
+void launch_single(unsigned int rand_seed, size_t fuel) {
   /* ----> to do how to obtain the total no of rule set (treating rules as singleton rules )*/
-    int choice_of_rule=rand() % no_of_rs;//picking a rule randomly from the ruleset
-    std::vector<_ROMP_STATE_TYPE> param;  
-    param = rand_choice(/* how to get randchoice from the ruleset and what params to be passed for ran*/);
-     while(error == 0)
-      {
-          if(fuel>0)
-          {
-            sim_rw_step(/*what are the args*/);
-            fuel--;
-          }
-      }
+  _ROMP_STATE_TYPE start_state;
+  ::__caller__::STARTSTATES[rand_choice(rand_seed, 0ul, STARTSTATES_SIZE)].initialize(start_state);
+  RandWalker* rw = new RandWalker(/* _ROMP_STATE_TYPE startstate */, /* unsigned int rand_seed */, /* size_t fuel */);
 }
 
 Void sim_rw_Step(/*args to be decided*/)
