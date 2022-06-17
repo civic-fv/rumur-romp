@@ -40,6 +40,9 @@
 #ifndef _ROMP_STATE_TYPE 
 #define _ROMP_STATE_TYPE ::__model__::__State__
 #endif
+#ifndef _ROMP_RAND_SEED
+#define _ROMP_STATE_TYPE ::__model__::__State__
+#endif
 
 // << =================================== Type Declarations ==================================== >>
 #ifndef __romp__GENERATED_CODE
@@ -66,7 +69,9 @@ typedef struct {
 typedef struct {
   void (*initialize)(::__model__::__State__);
 } StartState;
-
+typedef struct {
+  void (*initialize)(::__model__::__State__);
+} RandSeed;
 }
 
 #ifndef __romp__GENERATED_CODE
@@ -74,8 +79,11 @@ namespace __caller__ { // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::Rule* RULES[RULES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::Invariant INVARIANTS[INVARIANTS_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::StartState STARTSTATES[STARTSTATES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
+ ::romp::RandSeed RANDSEEDS[randomwalker];
 }
 #endif
+
+void launch_single(states , rws);
 
 
 namespace romp {
@@ -112,7 +120,7 @@ public:
       rand_seed(rand_seed_),
       id(RandWalker::next_id++) 
   {}
-
+    launch_single(states , rws); 
 }; //? END class RandomWalker
 
 id_t RandWalker::next_id = 0u;
@@ -136,8 +144,13 @@ std::vector<_ROMP_STATE_TYPE> gen_startstates() {
  * @brief to generate randomseeds for the no of random-walkers
  * rand is generated using UNIX timestamp 
  */
-unsigned int get_random_seed(unsigned int root_seed){
-  return rand_seed(root_seed); // this should just gen a rand int between 0 and max unsigned int
+std::vector<_ROMP_STATE_TYPE int> genrandomseed(){
+  std::vector<_ROMP_STATE_TYPE> rand_seed;
+  srand(time(NULL));
+  for(int i=0;i<randomwalker;i++)
+  states.push_back(_ROMP_STATE_TYPE());
+    ::__caller__::RANDSEEDS[i].initialize(rand_seed[randomwalker]);
+  return rand_seed;
 }
 
 /**
@@ -162,17 +175,7 @@ std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_se
 //    auto copied_state = _ROMP_STATE_TYPE(startstates[i%startstates.size()]);
 
 
-/**
- * @brief to generate randomseeds for the no of random-walkers
- * rand is generated using UNIX timestamp 
- */
-std::vector<unsigned int> genrandomseed(){
-  rand_seed *rand_seed = new rand_seed[randomwalker];
-  srand(time(NULL));
-  for(int i=0;i<randomwalker;i++)
-      rand_seed[randomwalker] = new rand_seed(randomwalker);
-  return rand_seed;
-}
+
 
 /**
  * @brief implementing randomwalk_parallel simulation which has the threads 
@@ -189,7 +192,7 @@ void launch_SYCL();
 
 void launch_OpenMPI();
 
-void launch_single() {
+void launch_single(state states, ran) {
 
 }
 
