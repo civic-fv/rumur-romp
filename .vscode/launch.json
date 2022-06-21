@@ -10,11 +10,11 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/romp/romp",
             "args": [
-                "--output", "${workspaceFolder}/tests/german-rw-test.cpp",
+                "--output", "${workspaceFolder}/tests/german-rw.test.cpp",
                 "${workspaceFolder}/tests/german.m"
             ],
             "stopAtEntry": false,
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
@@ -30,6 +30,7 @@
                     "ignoreFailures": true
                 }
             ], 
+            // "preLaunchTask": "make: build romp"
             "preLaunchTask": "CMake: build romp"
         }
 

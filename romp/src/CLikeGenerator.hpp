@@ -6,11 +6,11 @@
 #include <rumur/rumur.h>
 #include <string>
 #include <unordered_map>
+// #include <set>
 #include <unordered_set>
 #include <vector>
 
-
-
+#pragma endregion
 // generator for C-like code
 class __attribute__((visibility("hidden"))) CLikeGenerator
     : public romp::CodeGenerator,
@@ -19,13 +19,15 @@ class __attribute__((visibility("hidden"))) CLikeGenerator
 protected:
   std::ostream &out;
   bool pack;
+  static const std::unordered_set<std::string> reserved_type_names;
 
+public:
   // mapping of Enum unique_ids to the name of a TypeDecl to them
   std::unordered_map<size_t, std::string> enum_typedefs;
 
   // track what types have been defined so that you can
   // ensure to emit types in a C/C++ safe way
-  std::unordered_set<size_t> emitted_tDecls;
+  std::unordered_set<std::string> emitted_tDecls{ROMP_PREDEFINED_TYPES};
 
   // collection of unique_ids that were emitted as pointers instead of standard
   // variables
@@ -43,16 +45,16 @@ public:
       : out(out_), pack(pack_), comments(comments_),
         emitted(comments_.size(), false) {}
 
-  CLikeGenerator(std::unordered_set<size_t> emitted_tDecls_,
-                 const std::vector<rumur::Comment> &comments_,
-                 std::vector<bool> emitted_comments_,
-                 std::unordered_map<size_t, std::string> enum_typedefs_,
-                 std::ostream &out_, bool pack_)
-      : out(out_), pack(pack_), comments(comments_),
-        emitted(emitted_comments_),
-        emitted_tDecls(emitted_tDecls_),
-        enum_typedefs(enum_typedefs_) 
-         {}
+  // CLikeGenerator(std::unordered_set<size_t> emitted_tDecls_,
+  //                const std::vector<rumur::Comment> &comments_,
+  //                std::vector<bool> emitted_comments_,
+  //                std::unordered_map<size_t, std::string> enum_typedefs_,
+  //                std::ostream &out_, bool pack_)
+  //     : out(out_), pack(pack_), comments(comments_),
+  //       emitted(emitted_comments_),
+  //       emitted_tDecls(emitted_tDecls_),
+  //       enum_typedefs(enum_typedefs_) 
+  //        {}
 
   void visit_add(const rumur::Add &n) final;
   void visit_aliasdecl(const rumur::AliasDecl &n) final;
@@ -86,7 +88,7 @@ public:
   void visit_lsh(const rumur::Lsh &n) final;
   void visit_lt(const rumur::Lt &n) final;
   void visit_mod(const rumur::Mod &n) final;
-  void visit_model(const rumur::Model &n) final;
+  void visit_model(const rumur::Model &n); // final;
   void visit_mul(const rumur::Mul &n) final;
   void visit_negative(const rumur::Negative &n) final;
   void visit_neq(const rumur::Neq &n) final;

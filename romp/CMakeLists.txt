@@ -7,8 +7,8 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_custom_command(
   OUTPUT resources_c_prefix.cpp
-  COMMAND ../misc/xxd.py resources/c_prefix.c ${CMAKE_CURRENT_BINARY_DIR}/resources_c_prefix.cpp
-  MAIN_DEPENDENCY resources/c_prefix.c
+  COMMAND ../misc/xxd.py resources/c_prefix.cpp ${CMAKE_CURRENT_BINARY_DIR}/resources_c_prefix.cpp
+  MAIN_DEPENDENCY resources/c_prefix.cpp
   DEPENDS ../misc/xxd.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 # add_custom_command(

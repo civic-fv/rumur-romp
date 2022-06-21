@@ -69,19 +69,28 @@ static __attribute__((unused)) void print_uint64_t(uint64_t v) { printf("%" PRIu
 #define int64_t_VALUE_C(v)  INT64_C(v)
 #define uint64_t_VALUE_C(v) UINT64_C(v)
 
+// pre-declaration of the state object romp will generate.
+namespace __model__ {
+  class __State__;
+}
+
 namespace romp {
 
-typedef struct {
-  bool (*guard)(::__model__::__State__);
-  void (*action)(::__model__::__State__&);
-} Rule;
+  typedef struct {
+      bool (*guard)(const ::__model__::__State__&);
+      void (*action)(::__model__::__State__&);
+    } Rule;
 
-typedef struct {
-  bool (*check)(::__model__::__State__);
-} Invariant;
+  typedef struct {
+      bool (*check)(const ::__model__::__State__&);
+    } Invariant;
 
-typedef struct {
-  void (*initialize)(::__model__::__State__&);
-} StartState;
+  typedef struct {
+      void (*initialize)(::__model__::__State__&);
+    } StartState;
 
+}
+
+namespace __type__ {
+  typedef bool boolean; // builtin type mask for Murphi's boolean
 }

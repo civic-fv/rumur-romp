@@ -1,4 +1,5 @@
 #include "CLikeGenerator.hpp"
+#include "romp_def.hpp"
 #include "../../common/escape.h"
 #include "../../common/isa.h"
 #include "options.h"
@@ -51,7 +52,7 @@ void CLikeGenerator::visit_and(const And &n) {
 }
 
 void CLikeGenerator::visit_array(const Array &n) {
-  throw new Error("Type Expression (Array) found in unsupported portion of code!!", n.loc);
+  throw Error("Type Expression (Array) found in unsupported portion of code!!", n.loc);
 }
 
 void CLikeGenerator::visit_assignment(const Assignment &n) {
@@ -103,7 +104,7 @@ void CLikeGenerator::visit_element(const Element &n) {
 }
 
 void CLikeGenerator::visit_enum(const Enum &n) {
-  throw new Error("Type Expression (Enum) found in unsupported portion of code!!", n.loc);
+  throw Error("Type Expression (Enum) found in unsupported portion of code!!", n.loc);
 }
 
 void CLikeGenerator::visit_eq(const Eq &n) {
@@ -590,11 +591,11 @@ void CLikeGenerator::visit_quantifier(const Quantifier &n) {
 }
 
 void CLikeGenerator::visit_range(const Range &n) { 
-  throw new Error("Type Expression (Range) found in unsupported portion of code!!", n.loc);
+  throw Error("Type Expression (Range) found in unsupported portion of code!!", n.loc);
 }
 
 void CLikeGenerator::visit_record(const Record &n) {
-  throw new Error("Type Expression (Record) found in unsupported portion of code!!", n.loc);
+  throw Error("Type Expression (Record) found in unsupported portion of code!!", n.loc);
 }
 
 void CLikeGenerator::visit_return(const Return &n) {
@@ -619,7 +620,7 @@ void CLikeGenerator::visit_ruleset(const Ruleset &) {
 }
 
 void CLikeGenerator::visit_scalarset(const Scalarset &n) { 
-  throw new Error("Type Expression (Scalarset) found in unsupported portion of code!!", n.loc);
+  throw Error("Type Expression (Scalarset) found in unsupported portion of code!!", n.loc);
 }
 
 void CLikeGenerator::visit_sub(const Sub &n) {
@@ -699,12 +700,12 @@ void CLikeGenerator::visit_ternary(const Ternary &n) {
 }
 
 void CLikeGenerator::visit_typedecl(const TypeDecl &n) {
-  throw new Error("Type Declaration found in unsupported portion of code!!", n.loc);
+  throw Error("Type Declaration found in unsupported portion of code!!", n.loc);
 }
 
 void CLikeGenerator::visit_typeexprid(const TypeExprID &n) { 
-  if (emitted_tDecls.find(n.referent->unique_id) == emitted_tDecls.end())
-    throw new Error("TypeExprID references a currently undefined type declaration!", n.loc);
+  // if (emitted_tDecls.find(n.referent->name) == emitted_tDecls.end())
+  //   throw Error("TypeExprID references a currently undefined type declaration!", n.loc);
   *this << "::" ROMP_TYPE_NAMESPACE "::" << n.referent->name; // n.name; // change me if loss of specificity occurs
 }
 
@@ -843,12 +844,16 @@ size_t CLikeGenerator::emit_trailing_comments(const Node &n) {
   return count;
 }
 
+const std::unordered_set<std::string> CLikeGenerator::reserved_type_names{ROMP_PREDEFINED_TYPES};
+
 void CLikeGenerator::check_type_ref(const Node &p, const Ptr<TypeExpr> &t) const {
-  if (auto _tid = dynamic_cast<const TypeExprID *>(t.get())) {
-    if (emitted_tDecls.find(_tid->referent->unique_id) == emitted_tDecls.end())
-      throw new Error("BAD Type Reference to currently undefined type!", p.loc);
+  if (t->is_boolean()) return;
+  if (const TypeExprID *_tid = dynamic_cast<const TypeExprID *>(t.get())) {
+    if (CLikeGenerator::reserved_type_names.find(_tid->name) != CLikeGenerator::reserved_type_names.end()) return;
+    else if (emitted_tDecls.find(_tid->referent->name) == emitted_tDecls.end())
+      throw Error("BAD Type Reference to currently undefined type!", p.loc);
   } else
-    throw new Error("BAD AST Transform, type object still had a reference to a undeclared type", p.loc);
+    throw Error("BAD AST Transform, type object still had a reference to a undeclared type", p.loc);
 }
 
 CLikeGenerator::~CLikeGenerator() {}

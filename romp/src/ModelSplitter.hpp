@@ -53,7 +53,7 @@ public: // ---- Public Class Members ---- //
 
 private: // ---- Private Class Members ---- //
 
-  rumur::location loc;
+  // rumur::location loc;
   
   std::unordered_set<std::string> cTypeNames{ROMP_RESERVED_NAMES};
   // std::unordered_map<size_t,std::string> cTypeName;  // might end up not needing this
@@ -75,7 +75,8 @@ public:
   // << ========================== Public/External Function Functions ============================ >> 
 public:
 
-  SplitModel get_split_model();
+  SplitModel split_model(const rumur::Model &n);
+  
   // void split_model(SplitModel &dest, const rumur::Node &n);
 
 
@@ -174,7 +175,7 @@ public:
   // ModelSplitter &operator<<(std::string &s);
   // ModelSplitter &operator<<(rumur::Node &n);
 
-  void dispatch(const rumur::Node &n);
+  // void dispatch(const rumur::Node &n);
   
 };
 

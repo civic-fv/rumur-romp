@@ -34,7 +34,7 @@
 #define ROMP_CALLABLE_STARTSTATE_TYPE "::romp::StartState";
 
 #define ROMP_RESERVED_NAMES "rules", "invariants", "startstates", "__State__", "RandWalker", "to_json", \
-                            "__model__", "__caller__", "romp" 
+                            "__model__", "__caller__", "romp" , "boolean"
 
 #define ROMP_JSON_TYPE "nlohmann::json"
 
@@ -42,5 +42,7 @@
 
 #define ROMP_GENERATED_FILE_PREFACE(p) \
         "/*" p "*/"
+
+#define ROMP_PREDEFINED_TYPES "boolean"
 
 #endif

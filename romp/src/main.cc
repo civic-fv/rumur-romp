@@ -180,12 +180,17 @@ int main(int argc, char **argv) {
   // parse comments from the source code
   std::vector<rumur::Comment> comments = rumur::parse_comments(*in.second);
 
+  try {
   // output code
   // if (source) {
     generate_c(*m, comments, pack, out == nullptr ? std::cout : *out);
   // } else {
   //   generate_h(*m, comments, pack, out == nullptr ? std::cout : *out);
   // }
+  } catch (rumur::Error &e) {
+    std::cerr << e.loc << ":" << e.what() << "\n";
+    return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }

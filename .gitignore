@@ -3,6 +3,17 @@ bin/**
 build/**
 CMakeFiles/**
 
+# debug files
+tests/german-*-test.cpp
+tests/*.test.cpp
+tests/*.test.hpp
+tests/*.test.cc
+tests/*.test.hh
+tests/*.test.h
+tests/*.test.c
+tests/*.test.C
+tests/*.test.H
+
 # murphi generated c files
 *.m.c
 *.m.C

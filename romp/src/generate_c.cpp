@@ -118,7 +118,7 @@ public:
       }
     }
 
-    *this << ") {\n";
+    *this << ") const {\n";
     indent();
 
     // any aliases this property uses
@@ -160,7 +160,7 @@ public:
       }
     }
 
-    *this << ") {\n";
+    *this << ") const {\n";
     indent();
 
     // any aliases that are defined in an outer scope
@@ -327,37 +327,47 @@ public:
     }
   }
 
-  void dispatch(const Node &n) {
+  void visit_model(const Model &n) {
     ModelSplitter splitter;
-    splitter.dispatch(n);
-    SplitModel split = splitter.get_split_model();
+    // splitter.sort_model(n.children);
+    SplitModel split = splitter.split_model(n);
 
+    *this << "\n\n" << indentation() << "/* ======= Model Type Definitions ====== */\n";
     *this << "\n" << indentation() << "namespace " ROMP_TYPE_NAMESPACE " {\n";
     indent();
 
-    *this << "\n\n" << indentation() << "/* ======= Model Type Definitions ====== */\n\n";
     CTypeGenerator type_gen(comments, out, pack, 
       [&](const ConstDecl &_n) -> void {visit_constdecl(_n);});
-    type_gen.dispatch(split.global_decls);
+    type_gen << split.global_decls;
 
     dedent();
     *this << "\n" << indentation() << "}\n\n";
 
+    // update these to reflect the processes from the type emitter
+    enum_typedefs = type_gen.enum_typedefs;
+    emitted_tDecls = type_gen.emitted_tDecls;
+    is_pointer = type_gen.is_pointer;
+    // emitted = type_gen.emitted;
+
+    *this << "\n\n" << indentation() << "/* ======= Generated Model & State ====== */\n";
     *this << "\n" << indentation() << "namespace " ROMP_MODEL_NAMESPACE_NAME " {\n";
     indent();
 
     *this << "\n" << indentation() << "class " ROMP_STATE_CLASS_NAME " {\n";
     indent();
 
-    *this << "\n\n" << indentation() << "/* ======= Model State Variables ====== */\n\n";
-    split.state_var_decl.visit(*this);
+    *this << "\n" << indentation() << "/* ======= Model State Variables ====== */\n\n";
+    // split.state_var_decl.visit(*this);
+    *this << split.state_var_decl << "\n"; 
     gen_state_to_json(split.state_var_decl);
 
-    *this << "\n\n" << indentation() << "/* ======= Murphi Model Functions ====== */\n\n";
-    split.funct_decls.visit(*this);
+    *this << "\n" << indentation() << "/* ======= Murphi Model Functions ====== */\n\n";
+    // split.funct_decls.visit(*this);
+    *this << split.funct_decls << "\n";
 
-    *this << "\n\n" << indentation() << "/* ======= Murphi Model Rules (& Invariants) ====== */\n\n";
-    split.rule_decls.visit(*this);
+    *this << "\n" << indentation() << "/* ======= Murphi Model Rules (& Invariants) ====== */\n\n";
+    // split.rule_decls.visit(*this);
+    *this << split.rule_decls << "\n";
 
     dedent();
     *this << "\n" << indentation() << "};\n";
@@ -394,31 +404,31 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
   out << ROMP_GENERATED_FILE_PREFACE("test text") "\n";
   out << "\n#define __romp__GENERATED_CODE\n\n";
 
-  out << "\n#region inline_library_includes\n\n";
+  out << "\n#pragma region inline_library_includes\n\n";
   // write json library to the file
-  output_embedded_code_file(out, resources_lib_nlohmann_json_hpp, resources_lib_nlohmann_json_hpp_len);
-  out << "\n#endregion inline_library_includes\n\n";
+  // output_embedded_code_file(out, resources_lib_nlohmann_json_hpp, resources_lib_nlohmann_json_hpp_len);
+  out << "\n#pragma endregion inline_library_includes\n\n";
 
-  out << "\n#region model_prefixes\n\n";
+  out << "\n#pragma region model_prefixes\n\n";
   // write the static prefix to the beginning of the source file
-  output_embedded_code_file(out, resources_c_prefix_c, resources_c_prefix_c_len);
-  out << "\n#endregion model_prefixes\n\n";
+  output_embedded_code_file(out, resources_c_prefix_cpp, resources_c_prefix_cpp_len);
+  out << "\n#pragma endregion model_prefixes\n\n";
 
 
-  out << "\n\n#region generated_code\n\n";
+  out << "\n\n#pragma region generated_code\n\n";
   romp::CGenerator gen(comments, out, pack);
   gen.dispatch(n);
-  out << "\n\n#endregion generated_code\n\n";
+  out << "\n\n#pragma endregion generated_code\n\n";
 
-  out << "\n#region romp_rw\n\n";
+  out << "\n#pragma region romp_rw\n\n";
   output_embedded_code_file(out, resources_romp_rw_hpp, resources_romp_rw_hpp_len);
-  out << "\n#endregion romp_rw\n\n";
-  out << "\n#region romp_rw_options\n\n";
+  out << "\n#pragma endregion romp_rw\n\n";
+  out << "\n#pragma region romp_rw_options\n\n";
   output_embedded_code_file(out, resources_romp_rw_options_hpp, resources_romp_rw_options_hpp_len);
-  out << "\n#endregion romp_rw_options\n\n";
-  out << "\n#region romp_rw_main\n\n";
+  out << "\n#pragma endregion romp_rw_options\n\n";
+  out << "\n#pragma region romp_rw_main\n\n";
   output_embedded_code_file(out, resources_romp_rw_main_hpp, resources_romp_rw_main_hpp_len);
-  out << "\n#endregion romp_rw_main\n";
+  out << "\n#pragma endregion romp_rw_main\n";
 
 
   // out << buffer.rdbuf() << "\n\n";

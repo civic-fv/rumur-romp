@@ -18,7 +18,6 @@
 
 #include <cstddef>
 #include <string>
-#include <vector>
 // #include <stack>
 
 #include "romp_def.hpp"
@@ -54,24 +53,6 @@ namespace romp {
 
     // decrease the current indentation level
     void dedent();
-
-    // get a white space string for the current indentation level
-    size_t get_scope_level() const;
-
-    // increase the current scope level
-    size_t enter_scope();
-
-    // decrease the current scope level
-    size_t leave_scope();
-
-    // // get a white space string for the current indentation level
-    // romp::Scope scope_level() const;
-
-    // // increase the current scope level
-    // void push_scope(romp::Scope*);
-
-    // // decrease the current scope level
-    // romp::Scope pop_scope();
 
   public:
     // make this class abstract

@@ -34,6 +34,7 @@
 // #include <vector>
 
 // #include <functional>
+#include <typeinfo>
 
 
 namespace romp {
@@ -50,21 +51,23 @@ ModelSplitter::~ModelSplitter() {}
 // <<                               SPLIT MODEL FACTORY FUNCTION                                 >> 
 // << ========================================================================================== >> 
 
-SplitModel ModelSplitter::get_split_model() {
-  // sort_model(n.children);
-  return (SplitModel){Model(global_decls, (global_decls.size() > 0) ? global_decls[0]->loc : loc),
-                      Model(state_var_decls, (state_var_decls.size() > 0) ? state_var_decls[0]->loc : loc),
-                      Model(funct_decls, (funct_decls.size() > 0) ? funct_decls[0]->loc : loc),
-                      Model(rule_decls, (rule_decls.size() > 0) ? rule_decls[0]->loc : loc)};
+SplitModel ModelSplitter::split_model(const Model &n) {
+  sort_model(n.children);
+  return (SplitModel){Model(global_decls, (global_decls.size() > 0) ? global_decls[0]->loc : n.loc),
+                      Model(state_var_decls, (state_var_decls.size() > 0) ? state_var_decls[0]->loc : n.loc),
+                      Model(funct_decls, (funct_decls.size() > 0) ? funct_decls[0]->loc : n.loc),
+                      Model(rule_decls, (rule_decls.size() > 0) ? rule_decls[0]->loc : n.loc)};
 }
 
-void ModelSplitter::dispatch(const Node &n) {
-  loc = location(n.loc);
-  if (const auto _m = dynamic_cast<const Model *>(&n))
-    sort_model(_m->children);
-  else
-    throw new Error("!! Expected a Model !!", n.loc);
-}
+// void ModelSplitter::dispatch(const Node &n) {  // bad code all around
+//   loc = location(n.loc);
+//   try {
+//     auto m = dynamic_cast<const Model&>(n);
+//     sort_model(m.children);
+//   } catch (std::bad_cast &ex) {
+//     throw Error("!! Expected a Model !!", n.loc);
+//   }    
+// }
 
 
 
@@ -134,12 +137,12 @@ void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
       funct_decls.push_back(f);
       dispatch(*f);
     } else if (const auto _r = dynamic_cast<const Rule *>(c.get())) {
-      Ptr<Rule> r(r->clone());
+      Ptr<Rule> r(_r->clone());
       rule_decls.push_back(r);
       dispatch(*r);
     } else 
-        // throw new Error("Unexpected item in the global scope!!", _c->loc);
-        throw new Error("Unexpected item in the global scope!!", c->loc);
+        // throw Error("Unexpected item in the global scope!!", _c->loc);
+        throw Error("Unexpected item in the global scope!!", c->loc);
   }
 }
 
@@ -208,13 +211,23 @@ void ModelSplitter::visit_array(Array &n) {
   // If so, we need to emit it somehow so that the enum’s members can be
   // referenced later. We define it within this struct to avoid any awkward
   // lexical issues.
-  if (auto e = dynamic_cast<const Enum *>(n.index_type.get())) {
-    std::string name = gen_new_anon_name();
-    Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<Enum>(e->clone()), e->loc));
-    insert_to_global_decls(decl);
-    n.index_type = Ptr<TypeExprID>(new TypeExprID(name, decl, e->loc));
-  }
 
+  // if (auto e = dynamic_cast<const Enum *>(n.index_type.get())) {
+  //   std::string name = gen_new_anon_name();
+  //   Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<Enum>(e->clone()), e->loc));
+  //   insert_to_global_decls(decl);
+  //   n.index_type = Ptr<TypeExprID>(new TypeExprID(name, decl, e->loc));
+  // }
+
+  if (auto et_id = dynamic_cast<TypeExprID *>(n.index_type.get())) {
+    // do nothing
+  } else {
+    dispatch(*(n.index_type));
+    std::string name = gen_new_anon_name();
+    Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(n.index_type), n.index_type->loc));
+    insert_to_global_decls(decl);
+    n.index_type = Ptr<TypeExprID>(new TypeExprID(name, decl, n.index_type->loc));
+  }
   // *this << " }";
 }
 
@@ -256,8 +269,14 @@ void ModelSplitter::visit_vardecl(VarDecl &n) {
   if (auto et_id = dynamic_cast<const TypeExprID *>(n.type.get())) {
     // do nothing
   } else {
-    throw new Error("An inline type declaration was reached before being processed by the type handler!!",
-                n.loc);
+    dispatch(*(n.type));
+    std::string name = gen_new_anon_name();
+    Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(n.type), n.type->loc));
+    insert_to_global_decls(decl);
+    n.type = Ptr<TypeExprID>(new TypeExprID(name, decl, n.type->loc));
+    // throw Error("An inline type declaration was reached before being processed by the type handler!!"
+    //                 " :: `"+n.type->to_string()+"`",
+    //             n.loc);
   }
 }
 
@@ -419,7 +438,7 @@ void ModelSplitter::visit_startstate(StartState &n) {
 
 
 void ModelSplitter::__throw_unreachable_error(const Node &n) {
-  throw new Error("The Model Splitter & Organizer visited an unsupported syntactic element!!", n.loc);
+  throw Error("The Model Splitter & Organizer visited an unsupported syntactic element!!", n.loc);
 }
 
 

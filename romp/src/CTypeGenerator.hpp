@@ -26,6 +26,7 @@ namespace romp {
 class CTypeGenerator : public CLikeGenerator {
 private:
 
+  
 
 protected:
   std::function<void(const rumur::ConstDecl&)> f_visit_constdecl;
@@ -45,14 +46,15 @@ public:
   void visit_record(const rumur::Record &n) final;
   void visit_scalarset(const rumur::Scalarset &) final;
 
-  void visit_constdecl(const rumur::ConstDecl &n) { f_visit_constdecl(n); }
+  void visit_constdecl(const rumur::ConstDecl &n) final { f_visit_constdecl(n); }
+  // void visit_vardecl(const rumur::VarDecl &n) final;
 
   // - make this class non-abstract ---- 
   void visit_function(const rumur::Function &n) { __throw_unreachable_error(n); }
   void visit_propertyrule(const rumur::PropertyRule &n) { __throw_unreachable_error(n); }
   void visit_simplerule(const rumur::SimpleRule &n) { __throw_unreachable_error(n); }
-  void visit_vardecl(const rumur::VarDecl &n) { __throw_unreachable_error(n); }
   void visit_startstate(const rumur::StartState &n) { __throw_unreachable_error(n); }
+  void visit_vardecl(const rumur::VarDecl &n) { __throw_unreachable_error(n); }
 
 
 
