@@ -4,7 +4,7 @@ build/**
 CMakeFiles/**
 
 # debug files
-tests/german-*-test.cpp
+tests/german-rw-test.cpp
 tests/*.test.cpp
 tests/*.test.hpp
 tests/*.test.cc

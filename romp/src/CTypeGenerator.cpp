@@ -44,6 +44,10 @@ void CTypeGenerator::visit_typedecl(const TypeDecl &n) {
   *this << "\n";
 }
 
+// void CTypeGenerator::visit_indtype(const IndType &n) {
+//   *this << n.eval_size_str;
+// }
+
 
 void CTypeGenerator::visit_array(const Array &n) {
 
@@ -60,6 +64,7 @@ void CTypeGenerator::visit_array(const Array &n) {
   // having to emit its type and size on either size of another node
   *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{ "
         << *n.element_type 
+        // << " data[" << *(n.index_type) << "];";
         << " data[" << count.get_str() << "];";
 
   // // The index for this array may be an enum declared inline:

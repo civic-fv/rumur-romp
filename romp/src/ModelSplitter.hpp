@@ -16,6 +16,7 @@
  * @version 0.1
  */
 
+#pragma once
 
 #include <string>
 // #include <stack>
@@ -30,8 +31,8 @@
 
 namespace romp {
 
-struct SplitModel { rumur::Model global_decls; rumur::Model state_var_decl;
-                    rumur::Model funct_decls; rumur::Model rule_decls; };
+// struct SplitModel { rumur::Model global_decls; rumur::Model state_var_decl;
+//                     rumur::Model funct_decls; rumur::Model rule_decls; };
 
 
 /**
@@ -49,6 +50,10 @@ class ModelSplitter : public rumur::BaseTraversal {
 
   // << ===================================== Class Members ====================================== >> 
 public: // ---- Public Class Members ---- //
+  std::vector<rumur::Ptr<rumur::Decl>> global_decls;
+  std::vector<rumur::Ptr<rumur::VarDecl>> state_var_decls;
+  std::vector<rumur::Ptr<rumur::Function>> funct_decls;
+  std::vector<rumur::Ptr<rumur::Rule>> rule_decls;
 
 
 private: // ---- Private Class Members ---- //
@@ -58,10 +63,6 @@ private: // ---- Private Class Members ---- //
   std::unordered_set<std::string> cTypeNames{ROMP_RESERVED_NAMES};
   // std::unordered_map<size_t,std::string> cTypeName;  // might end up not needing this
 
-  std::vector<rumur::Ptr<rumur::Node>> global_decls;
-  std::vector<rumur::Ptr<rumur::Node>> state_var_decls;
-  std::vector<rumur::Ptr<rumur::Node>> funct_decls;
-  std::vector<rumur::Ptr<rumur::Node>> rule_decls;
 
   id_t anon_id = 0;
 
@@ -75,9 +76,9 @@ public:
   // << ========================== Public/External Function Functions ============================ >> 
 public:
 
-  SplitModel split_model(const rumur::Model &n);
+  // SplitModel split_model(const rumur::Model &n);
   
-  // void split_model(SplitModel &dest, const rumur::Node &n);
+  void sort_model(const std::vector<rumur::Ptr<rumur::Node>> &children);
 
 
 
@@ -88,7 +89,7 @@ private:
   void make_name_unique(std::string &name);
   void insert_to_global_decls(rumur::Ptr<rumur::TypeDecl> n);
   void insert_to_global_decls(rumur::Ptr<rumur::ConstDecl> n);
-  void sort_model(const std::vector<rumur::Ptr<rumur::Node>> &children);
+  // void sort_model(const std::vector<rumur::Ptr<rumur::Node>> &children);
   // void process_anon_complex_type(rumur::TypeExpr &children);
 
   void __throw_unreachable_error(const rumur::Node &n);

@@ -301,7 +301,7 @@ void CLikeGenerator::visit_model(const Model &n) {
     // hierarchy of rulesets, aliasrules, etc.
     if (auto r = dynamic_cast<const Rule *>(c.get())) {
       std::vector<Ptr<Rule>> rs = r->flatten();
-      for (const Ptr<Rule> &r2 : rs)
+      for (const Ptr<const Rule> &r2 : rs)
         *this << *r2 << "\n";
 
     } else {

@@ -1,5 +1,5 @@
 #include "generate_c.hpp"
-// #include "CLikeGenerator.hpp"
+#include "CLikeGenerator.hpp"
 #include "CTypeGenerator.hpp"
 #include "ModelSplitter.hpp"
 #include "options.h"
@@ -11,7 +11,7 @@
 #include <vector>
 // #include <streambuf>
 #include <strstream>
-#include <fstream>
+
 
 #include "romp_def.hpp"
 
@@ -298,10 +298,10 @@ public:
   }
 
 
-  void gen_state_to_json(const Model &n) {
+  void gen_state_to_json(std::vector<Ptr<VarDecl>> &children) {
     *this << "\n" << indentation() << "NLOHMANN_DEFINE_TYPE_INTRUSIVE("
           ROMP_STATE_CLASS_NAME ", ";
-    for (auto c : n.children) 
+    for (auto &c : children) 
       if (auto v = dynamic_cast<const VarDecl *>(c.get()))
         *this << v->name << ",";
     *this << ")\n";
@@ -328,9 +328,9 @@ public:
   }
 
   void visit_model(const Model &n) {
-    ModelSplitter splitter;
-    // splitter.sort_model(n.children);
-    SplitModel split = splitter.split_model(n);
+    ModelSplitter sorter;
+    sorter.sort_model(n.children);
+    // SplitModel split = splitter.split_model(n);
 
     *this << "\n\n" << indentation() << "/* ======= Model Type Definitions ====== */\n";
     *this << "\n" << indentation() << "namespace " ROMP_TYPE_NAMESPACE " {\n";
@@ -338,7 +338,8 @@ public:
 
     CTypeGenerator type_gen(comments, out, pack, 
       [&](const ConstDecl &_n) -> void {visit_constdecl(_n);});
-    type_gen << split.global_decls;
+    for (const Ptr<const Decl> &decl : sorter.global_decls)
+      type_gen << *decl;
 
     dedent();
     *this << "\n" << indentation() << "}\n\n";
@@ -358,16 +359,22 @@ public:
 
     *this << "\n" << indentation() << "/* ======= Model State Variables ====== */\n\n";
     // split.state_var_decl.visit(*this);
-    *this << split.state_var_decl << "\n"; 
-    gen_state_to_json(split.state_var_decl);
+    for (const Ptr<const VarDecl> &var : sorter.state_var_decls)
+      *this << *var << "\n"; 
+    gen_state_to_json(sorter.state_var_decls);
 
     *this << "\n" << indentation() << "/* ======= Murphi Model Functions ====== */\n\n";
     // split.funct_decls.visit(*this);
-    *this << split.funct_decls << "\n";
+    for (const Ptr<const Function> &funct : sorter.funct_decls)
+      *this << *funct << "\n";
 
     *this << "\n" << indentation() << "/* ======= Murphi Model Rules (& Invariants) ====== */\n\n";
     // split.rule_decls.visit(*this);
-    *this << split.rule_decls << "\n";
+    for (const Ptr<const Rule> &_r : sorter.rule_decls) {
+      std::vector<Ptr<Rule>> rs = _r->flatten();
+      for (const Ptr<const Rule> &r2 : rs)
+        *this << *r2 << "\n";
+    }
 
     dedent();
     *this << "\n" << indentation() << "};\n";
@@ -432,4 +439,5 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
 
 
   // out << buffer.rdbuf() << "\n\n";
+  out << std::flush;
 }

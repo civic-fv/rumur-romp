@@ -17,6 +17,7 @@
  */
 
 #include "ModelSplitter.hpp"
+#include "IndType.hpp"
 
 #include "../../common/escape.h"
 #include "../../common/isa.h"
@@ -51,13 +52,13 @@ ModelSplitter::~ModelSplitter() {}
 // <<                               SPLIT MODEL FACTORY FUNCTION                                 >> 
 // << ========================================================================================== >> 
 
-SplitModel ModelSplitter::split_model(const Model &n) {
-  sort_model(n.children);
-  return (SplitModel){Model(global_decls, (global_decls.size() > 0) ? global_decls[0]->loc : n.loc),
-                      Model(state_var_decls, (state_var_decls.size() > 0) ? state_var_decls[0]->loc : n.loc),
-                      Model(funct_decls, (funct_decls.size() > 0) ? funct_decls[0]->loc : n.loc),
-                      Model(rule_decls, (rule_decls.size() > 0) ? rule_decls[0]->loc : n.loc)};
-}
+// SplitModel ModelSplitter::split_model(const Model &n) {
+//   sort_model(n.children);
+//   return (SplitModel){Model(global_decls, (global_decls.size() > 0) ? global_decls[0]->loc : n.loc),
+//                       Model(state_var_decls, (state_var_decls.size() > 0) ? state_var_decls[0]->loc : n.loc),
+//                       Model(funct_decls, (funct_decls.size() > 0) ? funct_decls[0]->loc : n.loc),
+//                       Model(rule_decls, (rule_decls.size() > 0) ? rule_decls[0]->loc : n.loc)};
+// }
 
 // void ModelSplitter::dispatch(const Node &n) {  // bad code all around
 //   loc = location(n.loc);
@@ -117,9 +118,9 @@ void ModelSplitter::insert_to_global_decls(Ptr<ConstDecl> n) {
 
 
 void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
-  // for (const Ptr<Node> &_c : children) {
-  for (const Ptr<Node> &c : children) {
-    // Ptr<Node> c(_c->clone());
+  for (const Ptr<Node> &_c : children) {
+  // for (const Ptr<Node> &c : children) {
+    Ptr<Node> c(_c->clone());
 
     if (const auto _td = dynamic_cast<const TypeDecl *>(c.get())) {
       Ptr<TypeDecl> td(_td->clone());
@@ -130,8 +131,8 @@ void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
       insert_to_global_decls(cd);
     } else if (const auto _vd = dynamic_cast<const VarDecl *>(c.get())) {
       Ptr<VarDecl> vd(_vd->clone());
-      state_var_decls.push_back(vd);
       dispatch(*vd);
+      state_var_decls.push_back(vd);
     } else if (const auto _f = dynamic_cast<const Function *>(c.get())) {
       Ptr<Function> f(_f->clone());
       funct_decls.push_back(f);
@@ -216,17 +217,18 @@ void ModelSplitter::visit_array(Array &n) {
   //   std::string name = gen_new_anon_name();
   //   Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<Enum>(e->clone()), e->loc));
   //   insert_to_global_decls(decl);
-  //   n.index_type = Ptr<TypeExprID>(new TypeExprID(name, decl, e->loc));
-  // }
-
-  if (auto et_id = dynamic_cast<TypeExprID *>(n.index_type.get())) {
-    // do nothing
+  //   // n.index_type = Ptr<TypeExprID>(new TypeExprID(name, decl, e->loc));
+  //   n.index_type = Ptr<TypeExpr>(new IndType(*e));
+  // } else
+   if (auto it_id = dynamic_cast<TypeExprID *>(n.index_type.get())) {
+    // n.index_type = Ptr<IndType>(new IndType(*(it_id->referent->value)));
   } else {
     dispatch(*(n.index_type));
     std::string name = gen_new_anon_name();
-    Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(n.index_type), n.index_type->loc));
+    Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(n.index_type->clone()), n.index_type->loc));
     insert_to_global_decls(decl);
     n.index_type = Ptr<TypeExprID>(new TypeExprID(name, decl, n.index_type->loc));
+    // n.index_type = Ptr<IndType>(new IndType(*(n.index_type)));
   }
   // *this << " }";
 }

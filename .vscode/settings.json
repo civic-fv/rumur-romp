@@ -58,7 +58,12 @@
         "sstream": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "list": "cpp"
+        "list": "cpp",
+        "codecvt": "cpp",
+        "forward_list": "cpp",
+        "map": "cpp",
+        "iomanip": "cpp",
+        "valarray": "cpp"
     },
     "doxdocgen.file.fileOrder": [
         "custom",
@@ -306,6 +311,7 @@
         "hyperfocus",
         "ifclause",
         "indeterminates",
+        "indtype",
         "Initializable",
         "ipynb",
         "ipython",

@@ -14,7 +14,10 @@
  * @version 0.1
  */
 
+#pragma once
+
 #include "CLikeGenerator.hpp"
+// #include "IndType.hpp"
 // #include <rumur/rumur.h>
 #include <unordered_set>
 #include <functional>
@@ -42,9 +45,10 @@ public:
   void visit_typedecl(const rumur::TypeDecl &n) final;
   void visit_array(const rumur::Array &n) final;
   void visit_enum(const rumur::Enum &n) final;
-  void visit_range(const rumur::Range &) final;
+  void visit_range(const rumur::Range &n) final;
   void visit_record(const rumur::Record &n) final;
   void visit_scalarset(const rumur::Scalarset &) final;
+  // void visit_indtype(const IndType &n);
 
   void visit_constdecl(const rumur::ConstDecl &n) final { f_visit_constdecl(n); }
   // void visit_vardecl(const rumur::VarDecl &n) final;

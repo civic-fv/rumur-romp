@@ -10,7 +10,7 @@
 #include <unordered_set>
 #include <vector>
 
-#pragma endregion
+
 // generator for C-like code
 class __attribute__((visibility("hidden"))) CLikeGenerator
     : public romp::CodeGenerator,
