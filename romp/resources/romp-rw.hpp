@@ -18,9 +18,6 @@
 #include "c_prefix.c"
 #endif
 
-#include <cstddef>
-#include <string>
-#include <vector>
 
 // << =============================== Preprocessor Declarations ================================ >>
 
@@ -46,19 +43,20 @@
 #ifndef __romp__GENERATED_CODE
 namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!
  class __State__ { // LANGUAGE SERVER SUPPORT ONLY !!
-    size_t test1[16];
- };
-}
+    size_t test1[16]; // LANGUAGE SERVER SUPPORT ONLY !!
+ }; // LANGUAGE SERVER SUPPORT ONLY !!
+} // LANGUAGE SERVER SUPPORT ONLY !!
 #endif
 
 
 
 #ifndef __romp__GENERATED_CODE
 namespace __caller__ { // LANGUAGE SERVER SUPPORT ONLY!!
- ::romp::Rule* RULES[RULES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
+ ::romp::RuleSet RULE_SETS[RULES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::Invariant INVARIANTS[INVARIANTS_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
+ ::romp::Invariant_info INVARIANT_INFOS[INVARIANTS_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::StartState STARTSTATES[STARTSTATES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
-}
+} // LANGUAGE SERVER SUPPORT ONLY !!
 #endif
 
 void launch_single();
@@ -70,23 +68,41 @@ class RandWalker {
 public:
   static id_t next_id;
   const id_t id;
-  const unsigned int rand_seed;
+  const unsigned int init_rand_seed;
+  unsigned int rand_seed;
   _ROMP_STATE_TYPE state;
   size_t fuel;
   bool valid;
   // tripped thing
-  std::string tripped;
+  ModelException* tripped = nullptr;
   // how many rules have tried to be applied to this state
   size_t level = 0;
   // array of intgers representing the rul ID's applied to this state (treated
   // as a circular buffer array)
   id_t history[STATE_HISTORY_SIZE];
+  
+
+  RandWalker(_ROMP_STATE_TYPE startstate, unsigned int rand_seed, size_t fuel/* =DEFAULT_FUEL */) 
+    : state(startstate), 
+      rand_seed(rand_seed),
+      init_rand_seed(rand_seed),
+      fuel(fuel),
+      id(RandWalker::next_id++) 
+  {} 
+
   /**
    * @brief to pick a rule in random for simlution step
    * 
    */
-  void rand_ruleset(size_t choice){
-    //define rule as class obj?? or it has to be vector 
+  RuleSet& rand_ruleset(){
+    //returns a  
+  }
+  /**
+   * @brief to pick a rule in random for simlution step
+   * 
+   */
+  Rule& rand_rule(const RuleSet& rs){
+    //returns a  
   }
   
   /**
@@ -98,37 +114,29 @@ public:
     history[level % STATE_HISTORY_SIZE] = id;
     level++;
   }
-
-  RandWalker(_ROMP_STATE_TYPE startstate, unsigned int rand_seed, size_t fuel/* =DEFAULT_FUEL */) 
-    : state(startstate), 
-      rand_seed(rand_seed),
-      fuel(fuel),
-      id(RandWalker::next_id++) 
-  {} 
+  
   void sim1Step() {
-  //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
-
-    try{
-      if (state.rule_set[choice]==guard) //how to pass this rules and guard ?? for every state ?
-          state.rule_set[choice]=action;//how to pass action 
-        throw err_code;
+    //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
+    RuleSet& rs= rand_ruleset();
+    Rule& r= rand_rule(rs);
+    fuel--;
+    try {
+      if (r.guard(state) == true) //how to pass this rules and guard ?? for every state ?
+          r.action(state);
+      for (int i = 0; i < INVARIANTS_SIZE; i++)
+          if (::__caller__::INVARIANTS[i].check(state) == false) {
+              valid = false;
+              tripped = new ModelException_Test("", INVARIANTS[i].loc, INVARIANT_INFOS[i].expression);
+          }           
+    } catch(ModelException* ex) {
+      valid = false;
+      tripped = ex;
+      // TODO: handle error data
     }
-    catch(err_code)
-    {
-      //error obj(err_code)
-      cout<<err_code<<endl; //todo built class to handle errors ??
+  }
 
-    }
-    for (int i = 0; i < INVARIANTS_SIZE; i++){
-        if(states[s].valid != State::INVARIANTS[i](states[i])
-            error = set_error(invar);
-            bad_invar = invar;
-            bad_state = new State(state); } //must be checked  
-    for (int a = 0; a < ASSERTIONS_SIZE; a++){
-        if(states[s].valid != State::ASSERTIONS[a](states[a])
-            error = set_error(assert); }
-          //have to written onto file -->?
-   
+  ~RandWalker() {
+    if (tripped != nullptr) delete tripped;
   }
 }; //? END class RandomWalker
 
@@ -140,7 +148,7 @@ id_t RandWalker::next_id = 0u;
  * To do - how to get the size of startstate
  * 
  */
-std::vector<_ROMP_STATE_TYPE> gen_startstates() {
+std::vector<_ROMP_STATE_TYPE> gen_startstates() throw (ModelException*) {
   std::vector<_ROMP_STATE_TYPE> states;
   for (int i=0; i<STARTSTATES_SIZE; i++) {
     states.push_back(_ROMP_STATE_TYPE());
@@ -163,7 +171,7 @@ unsigned int genrandomseed(unsigned int &root_seed) {
  * To do - how to get the size of startstate
  * 
  */
-std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_seed, size_t fuel) {
+std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_seed, size_t fuel) throw (ModelException*) {
   std::vector<RandWalker> rws;
   auto startstates = gen_startstates();
   for(int i=0; i<rw_count; i++) {
@@ -192,13 +200,25 @@ T rand_choice(unsigned int &rand_seed, T min, T max) {
 /**
  * @brief implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
  *        and no of random-walkers specified by the user options .
+ * @param rw_count the number of \c RandWalker 's to use.
  * @param rand_seed the starting random seed that will generate all other random seeds
  * @param fuel the max number of rules any \c RandWalker will try to apply.
  * @param thread_count the max number of threads to use to accomplish all said random walks.
- * @param rw_count the number of \c RandWalker 's to use.
  */
-void launch_OpenMP(unsigned int rand_seed, size_t fuel, int thread_count, int rw_count) {
+void launch_OpenMP(size_t rw_count, unsigned int rand_seed, size_t fuel, size_t thread_count) {
+  try {
+    auto rws = gen_random_walkers(rw_count, root_seed, fuel);
 
+
+
+
+
+
+
+  } catch (ModelException* ex) {
+    std::error << "\nModel raised an error when initializing our start state!! (message below)\n"
+               << ex.what << std::endl;
+  }
 }
 
 
@@ -211,6 +231,7 @@ void launch_OpenMP(unsigned int rand_seed, size_t fuel, int thread_count, int rw
  */
 void launch_CUDA(unsigned int rand_seed, size_t fuel);
 
+
 /**
  * @brief (NOT YET IMPLEMENTED) \n
  *        Implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
@@ -219,6 +240,7 @@ void launch_CUDA(unsigned int rand_seed, size_t fuel);
  * @param fuel the max number of rules any \c RandWalker will try to apply.
  */
 void launch_SYCL(unsigned int rand_seed, size_t fuel);
+
 
 /**
  * @brief (NOT YET IMPLEMENTED) \n
@@ -229,6 +251,7 @@ void launch_SYCL(unsigned int rand_seed, size_t fuel);
  */
 void launch_OpenMPI(unsigned int rand_seed, size_t fuel);
 
+
 /**
  * @brief Launches a single RandWalker (basically jst a simulation).
  * @param rand_seed the random seed
@@ -238,15 +261,16 @@ void launch_single(unsigned int rand_seed, size_t fuel) {
   /* ----> to do how to obtain the total no of rule set (treating rules as singleton rules )*/
   unsigned int _seed_cpy = rand_seed;
   _ROMP_STATE_TYPE start_state;
-  ::__caller__::STARTSTATES[rand_choice(_seed_cpy, 0ul, STARTSTATES_SIZE)].initialize(start_state);
-  RandWalker* rw = new RandWalker(start_state,rand_seed,fuel);
-  while( error ==0 && fuel >0)
-  {
-    int choice = rand(no_of_rs);
-    rule_set=rand_ruleset(choice);//todo def rs
-    sim1step(/*rand_rule*/);
-    fuel--;
+  try {
+    ::__caller__::STARTSTATES[rand_choice(_seed_cpy, 0ul, STARTSTATES_SIZE)].initialize(start_state);
+  } catch (ModelException* ex) {
+    std::error << "\nModel raised an error when initializing our start state!! (message below)\n"
+               << ex.what << std::endl;
+    return;
   }
+  RandWalker* rw = new RandWalker(start_state,rand_seed,fuel);
+  while( rw->valid && rw->fuel > 0)
+    rw->sim1step();
 
   //TODO: call sim1Step as RandWalker (rw) method
   //TODO: check if rw is still valid to run (check valid parameter & fuel level) -> make a decision

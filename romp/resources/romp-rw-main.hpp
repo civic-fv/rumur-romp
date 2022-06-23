@@ -22,12 +22,13 @@
 
 
 #ifndef __romp__GENERATED_CODE
+#include "c_prifix.cpp"
 #include "romp-rw.hpp"
 // #include "romp-rse.hpp"
 #include "romp-rw-options.hpp"
 #endif
 
-
+namespace {
 
 using namespace std;
 
@@ -170,6 +171,8 @@ void argclass::PrintLicense( void )
   printf("License Notice: \n\n");
   printf("...............");
   fflush(stdout);
+}
+
 }
 /********************
   main routines

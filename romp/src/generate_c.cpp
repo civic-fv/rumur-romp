@@ -138,7 +138,7 @@ public:
     }
 
     dedent();
-    *this << "}\n";
+    *this << indentation() << "}\n";
   }
 
   void visit_simplerule(const SimpleRule &n) final {
