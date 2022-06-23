@@ -30,6 +30,10 @@ void CTypeGenerator::visit_typedecl(const TypeDecl &n) {
   if (emitted_tDecls.find(n.name) != emitted_tDecls.end())
     throw Error("Tried to redefine an already defined type!", n.loc);
 
+  // *this << "\n" << indentation() << "namespace " ROMP_TYPE_NAMESPACE " {\n";
+  indent();
+
+
   // If we are typedefing something that is an enum, save this for later lookup.
   // See CGenerator/HGenerator::visit_constdecl for the purpose of this.
   if (auto e = dynamic_cast<const Enum *>(n.value.get()))
@@ -38,10 +42,15 @@ void CTypeGenerator::visit_typedecl(const TypeDecl &n) {
   *this << indentation() << "typedef " << *n.value << " " << n.name << ";";
   emit_trailing_comments(n);
   *this << "\n";
+  
+  // dedent();
+  // *this << "\n" << indentation() << "}\n\n";
 
   emitted_tDecls.insert(n.name);
   emit_json_converter(n.name, n.value);
   *this << "\n";
+  dedent();
+
 }
 
 // void CTypeGenerator::visit_indtype(const IndType &n) {
@@ -120,7 +129,7 @@ void CTypeGenerator::visit_range(const Range &) { *this << value_type; }
 
 
 void CTypeGenerator::emit_json_converter(const std::string &name, const Range &te) {
-  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
+  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
         "if (" ROMP_SHOW_TYPE_OPTION_EXPR ") {" 
           "j = " ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"}, "
                           "{\"value\",(" << value_type << ")data}};"
@@ -151,7 +160,7 @@ void CTypeGenerator::emit_json_converter(const std::string &name, const Record &
   for (const Ptr<VarDecl> &f : te.fields)
     conv_str += "{\"" + f->name + "\", data." + f->name + "},";
   conv_str += "}";
-  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
+  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
         "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? (" 
             ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"},"
             "{\"value\"," << conv_str << "}}"
@@ -163,7 +172,7 @@ void CTypeGenerator::visit_scalarset(const Scalarset &) { *this << value_type; }
 
 
 void CTypeGenerator::emit_json_converter(const std::string &name, const Scalarset &te) {
-  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
+  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
         "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? (" 
           ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"}, "
                           "{\"value\",(" << value_type << ")data}} "
@@ -172,7 +181,7 @@ void CTypeGenerator::emit_json_converter(const std::string &name, const Scalarse
 
 
 void CTypeGenerator::emit_json_converter(const std::string &name, const TypeExprID &te) {
-  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
+  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
         "to_json(j,(" << te.referent->name << ")data); "
         "}\n";
 }

@@ -17,7 +17,6 @@
  */
 
 #include "ModelSplitter.hpp"
-#include "IndType.hpp"
 
 #include "../../common/escape.h"
 #include "../../common/isa.h"
