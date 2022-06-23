@@ -81,7 +81,14 @@ public:
   // array of intgers representing the rul ID's applied to this state (treated
   // as a circular buffer array)
   id_t history[STATE_HISTORY_SIZE];
-
+  /**
+   * @brief to pick a rule in random for simlution step
+   * 
+   */
+  void rand_ruleset(size_t choice){
+    //define rule as class obj?? or it has to be vector 
+  }
+  
   /**
    * @brief call if rule is applied to store what rule made the change in the
    * history circular buffer.
@@ -98,14 +105,30 @@ public:
       fuel(fuel),
       id(RandWalker::next_id++) 
   {} 
-
   void sim1Step() {
-    //TODO: pick a rule (completely at random at first later ganesh's algorithm)
-    //TODO: check if the guard is true then state gets mutated
-    //TODO: decrement fuel when appropriate 
-    //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
-    //TODO: check for error message and store in the bad state <-- Andrew needs to finish infrastructure for this (but it wil be a try catch statement)
-    //TODO: check for the invariants and store in if any invariants is voilated 
+  //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
+
+    try{
+      if (state.rule_set[choice]==guard) //how to pass this rules and guard ?? for every state ?
+          state.rule_set[choice]=action;//how to pass action 
+        throw err_code;
+    }
+    catch(err_code)
+    {
+      //error obj(err_code)
+      cout<<err_code<<endl; //todo built class to handle errors ??
+
+    }
+    for (int i = 0; i < INVARIANTS_SIZE; i++){
+        if(states[s].valid != State::INVARIANTS[i](states[i])
+            error = set_error(invar);
+            bad_invar = invar;
+            bad_state = new State(state); } //must be checked  
+    for (int a = 0; a < ASSERTIONS_SIZE; a++){
+        if(states[s].valid != State::ASSERTIONS[a](states[a])
+            error = set_error(assert); }
+          //have to written onto file -->?
+   
   }
 }; //? END class RandomWalker
 
@@ -217,6 +240,14 @@ void launch_single(unsigned int rand_seed, size_t fuel) {
   _ROMP_STATE_TYPE start_state;
   ::__caller__::STARTSTATES[rand_choice(_seed_cpy, 0ul, STARTSTATES_SIZE)].initialize(start_state);
   RandWalker* rw = new RandWalker(start_state,rand_seed,fuel);
+  while( error ==0 && fuel >0)
+  {
+    int choice = rand(no_of_rs);
+    rule_set=rand_ruleset(choice);//todo def rs
+    sim1step(/*rand_rule*/);
+    fuel--;
+  }
+
   //TODO: call sim1Step as RandWalker (rw) method
   //TODO: check if rw is still valid to run (check valid parameter & fuel level) -> make a decision
   //TODO: send rw off to have it's results presented to the user
