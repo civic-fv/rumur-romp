@@ -34,10 +34,10 @@ namespace romp {
 
 class SigPerm;
 struct Sig;
-struct Sig::Param;
+struct SigParam;
 struct QuantExpansion;
 
-using vec_MTypeVals_t = ::std::vector<const ::romp::Sig::Param>;
+using vec_MTypeVals_t = ::std::vector<const ::romp::SigParam>;
 using QuantExpansion_Iter_t = ::romp::vec_MTypeVals_t::iterator ;
 using SigParam_Iter_t = ::romp::vec_MTypeVals_t::iterator ;
 using quant_vals_cache_t = ::std::unordered_map<::std::string, const ::romp::QuantExpansion>> ;
@@ -66,15 +66,17 @@ struct Sig {
   }
 private:
   const SigPerm& parent;
-public:
-  struct Param {
-    rumur::Ptr<const TypeExprID> type;
-    size_t value;
-    std::string value_str;
-    std::string to_string() const { return "(" + type->to_string() + ") " + value_str; }
-  private:
-    const QuantExpansion& qe;
-  };
+
+};
+
+struct SigParam {
+  rumur::Ptr<const rumur::TypeExprID> type;
+  std::string type_id;
+  size_t value;
+  std::string value_str;
+  std::string to_string() const { return "(" + type->to_string() + ") " + value_str; }
+private:
+  const QuantExpansion& qe;
 };
 
 struct QuantExpansion {
@@ -86,6 +88,15 @@ struct QuantExpansion {
   size_t size() const { return (_size > 0) ? _size : (_size = (stop-start)/step); }
   QuantExpansion_Iter_t begin() const { values.begin(); }
   QuantExpansion_Iter_t end() const { values.end(); }
+  QuantExpansion(const Quantifier& q) {
+    if (q.type == nullptr) {
+      start = q.from->constant_fold().get_ui();
+      stop = q.to->constant_fold().get_ui();
+      step = (q.step == nullptr) ? 1ul : q.step->constant_fold().get_ui();
+    } else {
+      start = 
+    }
+  }
 private:
   size_t _size = 0;
 };

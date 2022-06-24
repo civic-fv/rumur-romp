@@ -107,6 +107,7 @@ public:
   void visit_aliasrule(rumur::AliasRule &n) final;
   void visit_startstate(rumur::StartState &n) final;
   void visit_propertyrule(rumur::PropertyRule &n) final;
+  void visit_quantifier(rumur::Quantifier &q) final;
 
   // - useful for debugging ---- 
   void visit_typedecl(rumur::TypeDecl &n) final;
@@ -158,7 +159,7 @@ public:
   virtual void visit_property(rumur::Property &n) { __throw_unreachable_error(n); }
   virtual void visit_propertystmt(rumur::PropertyStmt &n) { __throw_unreachable_error(n); }
   virtual void visit_put(rumur::Put &n) { __throw_unreachable_error(n); }
-  virtual void visit_quantifier(rumur::Quantifier &n) { __throw_unreachable_error(n); }
+  // virtual void visit_quantifier(rumur::Quantifier &n) { __throw_unreachable_error(n); }
   virtual void visit_return(rumur::Return &n) { __throw_unreachable_error(n); }
   virtual void visit_rsh(rumur::Rsh &n) { __throw_unreachable_error(n); }
   virtual void visit_sub(rumur::Sub &n) { __throw_unreachable_error(n); }

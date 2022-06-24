@@ -82,7 +82,7 @@ public:
         sep = ", ";
       }
     }
-    *this << ") {\n";
+    *this << ") throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
 
@@ -121,7 +121,7 @@ public:
       }
     }
 
-    *this << ") const {\n";
+    *this << ") const throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
 
@@ -164,7 +164,7 @@ public:
       }
     }
 
-    *this << ") const {\n";
+    *this << ") const throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
 
@@ -209,7 +209,7 @@ public:
       }
     }
 
-    *this << ") {\n";
+    *this << ") throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
 
@@ -265,7 +265,7 @@ public:
       }
     }
 
-    *this << ") {\n";
+    *this << ") throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n"; 
 

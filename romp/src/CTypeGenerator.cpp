@@ -14,6 +14,8 @@
  * @version 0.1
  */
 
+#define _ROMP_ENABLE_CUSTOM_RUMUR_TYPE_TRAVERSAL "yes"
+
 #include "CTypeGenerator.hpp"
 #include "options.h"
 #include "romp_def.hpp"
@@ -164,7 +166,7 @@ void CTypeGenerator::emit_json_converter(const std::string &name, const Record &
         "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? (" 
             ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"},"
             "{\"value\"," << conv_str << "}}"
-          ") : (" << conv_str << "); }";
+          ") : (" << conv_str << "); }\n";
 }
 
 
@@ -188,20 +190,21 @@ void CTypeGenerator::emit_json_converter(const std::string &name, const TypeExpr
 
 
 void CTypeGenerator::emit_json_converter(const std::string &name, const Ptr<TypeExpr> &te) {
-  if (auto _a = dynamic_cast<const Array *>(te.get()))
-    emit_json_converter(name, *_a);
-  else if (auto _e = dynamic_cast<const Enum *>(te.get()))
-    emit_json_converter(name, *_e);
-  else if (auto _ra = dynamic_cast<const Range *>(te.get()))
-    emit_json_converter(name, *_ra);
-  else if (auto _re = dynamic_cast<const Record *>(te.get()))
-    emit_json_converter(name, *_re);
-  else if (auto _s = dynamic_cast<const Scalarset *>(te.get()))
-    emit_json_converter(name, *_s);
-  else if (auto _id = dynamic_cast<const TypeExprID *>(te.get()))
-    emit_json_converter(name, *_id);
-  else
-    throw Error("Unrecognized Type!!", te->loc);
+  *this << indentation() << "/* NOT YET IMPLEMENTED !\n";
+  indent();
+  class type_dispatcher : public ConstBaseTypeTraversal {
+    const std::string& _name;
+    type_dispatcher(const std::string& name_) : _name(name_),
+    msg("Not a TypeExpr!! `type_dispatcher` can't handle it \t[dev-error]") {}
+    void visit_array(const Array& n) final { emit_json_converter(name, n); }
+    void visit_enum(const Enum& n) final { emit_json_converter(name, n); }
+    void visit_range(const Range& n) final { emit_json_converter(name, n); }
+    void visit_record(const Record& n) final { emit_json_converter(name, n); }
+    void visit_scalarset(const Scalarset& n) final { emit_json_converter(name, n); }
+    void visit_typeexprid(const TypeExprID& n) final { emit_json_converter(name, n); }
+  } tf(name).dispatch(*te);
+  dedent();
+  *this << indentation() << " */\n";
 }
 
 void CTypeGenerator::__throw_unreachable_error(const Node &n) {
