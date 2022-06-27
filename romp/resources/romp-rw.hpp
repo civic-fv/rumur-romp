@@ -102,7 +102,7 @@ public:
    * 
    */
   Rule& rand_rule(const RuleSet& rs){
-    //returns a  
+    //returns a  rule
   }
   
   /**
