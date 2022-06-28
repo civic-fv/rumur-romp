@@ -327,54 +327,71 @@ void ModelSplitter::visit_function(Function &n) {
   n.decls = _decls;
 }
 
-void ModelSplitter::visit_quantifier(Quantifier& q) {
+void ModelSplitter::_visit_quantifier(Quantifier& q) {
   if (q.type != nullptr) {
-    if (q.type->is_simple()) {
-      if (q.from != nullptr)
-        q.from = Ptr<Number>::make(q.type->lower_bound(),q.type->loc);
-      if (q.to != nullptr)
-        q.to = Ptr<Number>::make(q.type->upper_bound(), q.type->loc);
-      if (q.step != nullptr) {
-        // if (auto sc = dynamic_cast<Scalarset*>(q.type->resolve().get())) {
-        //   mpz_class temp = (((q.from->constant_fold()) - (q.to->constant_fold())) / (sc->count()));
-        //   q.step = Ptr<Number>::make(
-        //             temp.get_str(),
-        //             q.type->loc);
-        // } else 
-          q.step = Ptr<Number>::make("1",q.type->loc);
-      }
-    }
-    if (auto _td = dynamic_cast<TypeExprID *>(q.type.get())) {
-      // do nothing
-    } else {
+    if (not isa<TypeExprID *>(q.type.get())) {
       dispatch(*(q.type));
       std::string name = gen_new_anon_name();
       Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(q.type), q.type->loc));
       insert_to_global_decls(decl);
       q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
     }
-    
   } else if (q.from != nullptr && q.to != nullptr) {
     auto range = Ptr<Range>::make(q.from, q.to, q.loc);
     std::string name = gen_new_anon_name();
     Ptr<TypeDecl> decl(new TypeDecl(name, range, q.loc));
     insert_to_global_decls(decl);
     q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.loc));
+    if (q.step == nullptr)
+        q.step = Ptr<Number>::make("1",q.type->loc);
+  } else 
+    throw Error("the Quantifier has broken bounds!!", q.loc);
+}
+
+void ModelSplitter::visit_and_check_quantifier(Rule& r, Quantifier& q) {
+  if (q.type != nullptr) {
+    auto type = q.type->resolve();
+    if (type->is_simple()) {
+      if (q.from == nullptr)
+        q.from = Ptr<Number>::make(q.type->lower_bound(),q.type->loc);  // not valid str is c code
+      if (q.to == nullptr)
+        q.to = Ptr<Number>::make(q.type->upper_bound(), q.type->loc);   // not valid str is c code
+      if (q.step == nullptr) {
+        q.step = Ptr<Number>::make("1",q.type->loc);
+      }
+    } else {
+      
+    }
+    if (not isa<TypeExprID *>(q.type.get())) {
+      dispatch(*(q.type));
+      std::string name = gen_new_anon_name();
+      Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(q.type), q.type->loc));
+      insert_to_global_decls(decl);
+      q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
+    }
+  } else if (q.from != nullptr && q.to != nullptr) {
+    auto range = Ptr<Range>::make(q.from, q.to, q.loc);
+    std::string name = gen_new_anon_name();
+    Ptr<TypeDecl> decl(new TypeDecl(name, range, q.loc));
+    insert_to_global_decls(decl);
+    q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.loc));
+    if (q.step == nullptr)
+        q.step = Ptr<Number>::make("1",q.type->loc);
   } else 
     throw Error("the Quantifier has broken bounds!!", q.loc);
 }
 
 
 void ModelSplitter::visit_propertyrule(PropertyRule &n) {
-  for (Quantifier &q : n.quantifiers) 
-    dispatch(q);
+  for (Quantifier& q : n.quantifiers)
+    _visit_quantifier(q);
 }
 
 
 void ModelSplitter::visit_simplerule(SimpleRule &n) {
   //TODO: handle the cases of non-TypeExprId TypeExpr values
-  for (Quantifier &q : n.quantifiers) 
-    dispatch(q);
+  for (Quantifier& q : n.quantifiers)
+    _visit_quantifier(q);
     // if (q.type != nullptr) 
     //   if (auto _td = dynamic_cast<TypeExprID *>(q.type.get())) {
     //     // do nothing
@@ -409,9 +426,8 @@ void ModelSplitter::visit_simplerule(SimpleRule &n) {
 }
 
 void ModelSplitter::visit_ruleset(rumur::Ruleset &n) {
-  for (Quantifier &q : n.quantifiers) 
-    if (q.type != nullptr)
-      dispatch(q); 
+  for (Quantifier& q : n.quantifiers)
+      _visit_quantifier(q); 
       // if (auto _td = dynamic_cast<TypeExprID *>(q.type.get())) {
       //   // do nothing
       // } else {

@@ -89,6 +89,7 @@ private:
   void make_name_unique(std::string &name);
   void insert_to_global_decls(rumur::Ptr<rumur::TypeDecl> n);
   void insert_to_global_decls(rumur::Ptr<rumur::ConstDecl> n);
+  void visit_and_check_quantifier(rumur::Rule& r, rumur::Quantifier& q);
   // void sort_model(const std::vector<rumur::Ptr<rumur::Node>> &children);
   // void process_anon_complex_type(rumur::TypeExpr &children);
 
@@ -107,7 +108,8 @@ public:
   void visit_aliasrule(rumur::AliasRule &n) final;
   void visit_startstate(rumur::StartState &n) final;
   void visit_propertyrule(rumur::PropertyRule &n) final;
-  void visit_quantifier(rumur::Quantifier &q) final;
+  // void visit_quantifier(rumur::Quantifier& q) final;
+  void _visit_quantifier(rumur::Quantifier& q);
 
   // - useful for debugging ---- 
   void visit_typedecl(rumur::TypeDecl &n) final;
@@ -159,7 +161,7 @@ public:
   virtual void visit_property(rumur::Property &n) { __throw_unreachable_error(n); }
   virtual void visit_propertystmt(rumur::PropertyStmt &n) { __throw_unreachable_error(n); }
   virtual void visit_put(rumur::Put &n) { __throw_unreachable_error(n); }
-  // virtual void visit_quantifier(rumur::Quantifier &n) { __throw_unreachable_error(n); }
+  virtual void visit_quantifier(rumur::Quantifier &n) { __throw_unreachable_error(n); }
   virtual void visit_return(rumur::Return &n) { __throw_unreachable_error(n); }
   virtual void visit_rsh(rumur::Rsh &n) { __throw_unreachable_error(n); }
   virtual void visit_sub(rumur::Sub &n) { __throw_unreachable_error(n); }

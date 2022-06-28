@@ -99,6 +99,7 @@ struct QuantExpansion {
   }
 private:
   size_t _size = 0;
+  static void unify_quantifier(rumur::Quantifier& q);
 };
 
 class SigPerm {
@@ -217,5 +218,8 @@ public:
   };
 };
 
+void QuantExpansion::unify_quantifier(rumur::Quantifier& q) {
+  
+}
 
 }
