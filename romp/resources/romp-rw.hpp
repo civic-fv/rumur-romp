@@ -91,14 +91,14 @@ public:
   {} 
 
   /**
-   * @brief to pick a rule in random for simlution step
+   * @brief to pick a rule in random for simulation step
    * 
    */
   RuleSet& rand_ruleset(){
     //returns a  
   }
   /**
-   * @brief to pick a rule in random for simlution step
+   * @brief to pick a rule in random for simulation step
    * 
    */
   Rule& rand_rule(const RuleSet& rs){
@@ -157,7 +157,7 @@ std::vector<_ROMP_STATE_TYPE> gen_startstates() throw (ModelException*) {
 }
 
 /**
- * @brief to generate randomseeds for the no of random-walkers
+ * @brief to generate random seeds for the no of random-walkers
  * rand is generated using UNIX timestamp 
  * @param root_seed the parent seed for generating the random seeds.
  */
@@ -193,6 +193,17 @@ std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_se
 template<typename T>
 T rand_choice(unsigned int &rand_seed, T min, T max) {
   /***TO DO ***/
+  /*
+    Path of random seed:
+    1) user input (some string that can be hashed to a int or nothing)
+        if nothing use time to get a seed  (use time as seed to generate real seed)
+        else hash user input
+    2) use this random seed to generate other random seeds for the random walkers
+   */
+  /*
+    seed = (((seed ^ (seed >> 3)) >> 12) & 0xffff) | ((seed & 0x7fff) << 16); // modifies the seed
+    int choice = seed % (maxWeight-min+1) + min;  // generates the random number
+   */
 }
 
 
