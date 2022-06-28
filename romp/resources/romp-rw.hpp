@@ -103,7 +103,6 @@ public:
    */
   Rule& rand_rule(const RuleSet& rs){
     //returns a  
-  }
   
   /**
    * @brief call if rule is applied to store what rule made the change in the
