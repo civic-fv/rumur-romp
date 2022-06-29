@@ -21,6 +21,9 @@
 
 
 #include <rumur/rumur.h>
+#include "NestedError.hpp"
+#include "type_traverse.hpp"
+#include "romp_def.hpp"
 #include <cstddef>
 #include <ostream>
 #include <string>
@@ -37,6 +40,8 @@ struct Sig;
 struct SigParam;
 struct QuantExpansion;
 
+
+//TODO fix this mess !!
 using vec_MTypeVals_t = ::std::vector<const ::romp::SigParam>;
 using QuantExpansion_Iter_t = ::romp::vec_MTypeVals_t::iterator ;
 using SigParam_Iter_t = ::romp::vec_MTypeVals_t::iterator ;
@@ -55,7 +60,7 @@ using quant_vals_iter_t = ::romp::vec_quant_vals_t::iterator ;
 
 struct Sig {
   size_t index;
-  std::vector<const Param> params;
+  std::vector<const SigParam&> params;  //TODO figure out this type
   SigParam_Iter_t begin() const { return params.begin(); }
   SigParam_Iter_t end() const { return params.end(); }
   std::string to_string() const {
@@ -70,11 +75,9 @@ private:
 };
 
 struct SigParam {
-  rumur::Ptr<const rumur::TypeExprID> type;
-  std::string type_id;
-  size_t value;
+  mpz_class value;
   std::string value_str;
-  std::string to_string() const { return "(" + type->to_string() + ") " + value_str; }
+  std::string to_string() const { return "(::" ROMP_TYPE_NAMESPACE "::" + type_id + ") " + value_str; }
 private:
   const QuantExpansion& qe;
 };
@@ -82,24 +85,105 @@ private:
 struct QuantExpansion {
   vec_MTypeVals_t values;
   const rumur::Ptr<const rumur::TypeExpr> type;
-  size_t start;
-  size_t stop;
-  size_t step = 1;
-  size_t size() const { return (_size > 0) ? _size : (_size = (stop-start)/step); }
+  const std::string type_id;
+  mpz_class start;
+  mpz_class stop;
+  mpz_class step = 1_mpz;
+  size_t size() const { return (_size > 0_mpz) ? _size : (_size = ((abs(stop-start)+1_mpz)/abs(step))); }
   QuantExpansion_Iter_t begin() const { values.begin(); }
   QuantExpansion_Iter_t end() const { values.end(); }
-  QuantExpansion(const Quantifier& q) {
-    if (q.type == nullptr) {
-      start = q.from->constant_fold().get_ui();
-      stop = q.to->constant_fold().get_ui();
-      step = (q.step == nullptr) ? 1ul : q.step->constant_fold().get_ui();
-    } else {
-      start = 
-    }
+  QuantExpansion(const Quantifier& q) 
+    : type(q.decl->type->resolve())
+  {
+    if (auto _tid = dynamic_cast<const rumur::TypeExprID*>(q.decl->type.get()))
+      type_id = "::" ROMP_TYPE_NAMESPACE "::" + _tid->name;
+    else
+      throw Error("Unprocessed anonymous type found in ruleset quantifier!!\t[dev-error]",q.type->loc);
+    if (q.type == nullptr)
+      resolve_quantifier_bounds(q);
+    else
+      resolve_quantifier_type(q);
   }
 private:
-  size_t _size = 0;
-  static void unify_quantifier(rumur::Quantifier& q);
+  mpz_class _size = 0_mpz;
+  void resolve_quantifier_bounds(const rumur::Quantifier& q) {
+    // mpz_class start_mpz, stop_mpz, step_mpz;
+    try { 
+      start/* _mpz */ = q.from->constant_fold();
+      stop/* _mpz */ = q.to->constant_fold();
+      if (q.step != nullptr)
+        step/* _mpz */ = q.step->constant_fold();
+    } catch (rumur::Error& er) { 
+      throw rumur::NestedError("You can't have a Ruleset's Quantifier dependent on a variable or a subset of an Enum !!", q.loc, er); 
+    }
+    if (not start/* _mpz */.fits_slong_p())
+      throw Error("Couldn't resolve the value of the Expression.", q.from->loc);
+    if (not stop/* _mpz */.fits_slong_p())
+      throw Error("Couldn't resolve the value of the Expression.", q.to->loc);
+    if (q.step != nullptr && not step/* _mpz */.fits_slong_p())
+      throw Error("Couldn't resolve the value of the Expression (step).", q.step->loc);
+    // start = start_mpz.get_ui();
+    // stop = stop_mpz.get_ui();
+    // if (q.step != nullptr)
+    //   step = step_mpz.get_ui();
+    values = std::vector<SigParam>(qe.size());
+    for (mpz_class i = start; i<=stop, i += step)
+      qe.values.push_back(SigParam{
+                            i,
+                            i.get_str()
+                          });
+  }
+  void resolve_quantifier_type(const rumur::Quantifier& q_) {
+    class type_trav : public rumur::ConstBaseTypeTraversal {
+      const rumur::Quantifier& q;
+      QuantExpansion& qe;
+    public:
+      type_dispatcher(const rumur::Quantifier& q__, QuantExpansion& parent_) 
+        : q(q__), qe(parent_),
+          ConstBaseTypeTraversal("Not a supported TypeExpr for bounding a quantifier (it may be undefined or too complex) !!") 
+      {}
+      void visit_array(const rumur::Array& n) { unsupported_traversal("rumur::Array"); }
+      void visit_record(const rumur::Record& n) { unsupported_traversal("rumur::Record"); }
+      void visit_typeexprid(const rumur::TypeExprID& n) { unsupported_traversal("undefined rumur::TypeExprID");; }
+      void visit_enum(const rumur::Enum& n) { 
+        qe.start = mpz_class(0ul);
+        qe.stop = mpz_class(n.members.size()) - 1_mpz;
+        qe._size = n.members.size();
+        qe.values = std::vector<SigParam>(n.members.size());
+        for (int i=0; i<n.members.size(), ++i)
+          qe.values.push_back(SigParam{
+                                mpz_class(i),
+                                qe.type_id + n.members[i].first
+                              });
+      }
+      void visit_range(const rumur::Range& n) {
+        qe.start = n.min->constant_fold();
+        qe.stop = n.max->constant_fold();
+        qe.values = std::vector<SigParam>(qe.size());
+        for (mpz_class i = qe.start; i<=qe.stop, i += qe.step)
+          qe.values.push_back(SigParam{
+                                i,
+                                i.get_str()
+                              });
+      }
+      void visit_scalarset(const rumur::Scalarset& n) {
+        qe.start = 0_mpz;
+        qe.stop = n.bound->constant_fold() - 1_mpz;
+        qe.values = std::vector<SigParam>(qe.size());
+        for (mpz_class i = qe.start; i<=qe.stop, i += qe.step)
+          qe.values.push_back(SigParam{
+                                i,
+                                i.get_str()
+                              });
+      }
+    };
+    type_trav tt(q_, *this);
+    try {
+      tt.dispatch(*(q_.type->resolve()));
+    } catch (rumur:Error& er) {
+      throw NestedError("Could not resolve the bounds of the Type based Quantifier !!", q_.loc, er);
+    }
+  }
 };
 
 class SigPerm {
@@ -136,19 +220,22 @@ private:
   }
 
   void add_quant(const rumur::Quantifier& q) {
-    quant_vals_cache_iter_t qe_i = SigPerm::quant_vals_cache.find(q.type->to_string());
-    QuantExpansion& qe;
-    if (qe_i == SigPerm::quant_vals_cache.end()) {
-      SigPerm::add_quant(q);
-      qe = SigPerm::quant_vals_cache[q.type->to_string()];
+    if (auto _tid = dynamic_cast<const rumur::TypeExprID*>(q.decl->type.get())) {
+      quant_vals_cache_iter_t qe_i = SigPerm::quant_vals_cache.find(_tid->name);
+      QuantExpansion& qe;
+      if (qe_i == SigPerm::quant_vals_cache.end()) {
+        SigPerm::add_quant(_tid->name, q);
+        qe = SigPerm::quant_vals_cache[_tid->name];
+      } else
+        qe = *qe_i; 
+      quant_vals.push_back(qe->begin());
+      size *= qe.size();
     } else
-      qe = *qe_i; 
-    quant_vals.push_back(qe->begin());
-    size *= qe.size();
+      throw Error("Unprocessed anonymous type found in ruleset quantifier!!\t[dev-error]", q.type->loc);
   }
 
-  static void add_quant(const rumur::Quantifier& q) {
-    //TODO: actually extrapolate all possible values for a specific quantifier
+  static void add_quant(const std::string& name, const rumur::Quantifier& q) {
+    SigPerm::quant_vals_cache.insert(name, QuantExpansion(q));
   }
   
   std::vector<QuantExpansion_Iter_t> get_init_param_iters() {
@@ -217,9 +304,5 @@ public:
     ~Iterator() { delete sig_ptr; }
   };
 };
-
-void QuantExpansion::unify_quantifier(rumur::Quantifier& q) {
-  
-}
 
 }

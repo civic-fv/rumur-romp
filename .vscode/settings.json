@@ -63,7 +63,9 @@
         "forward_list": "cpp",
         "map": "cpp",
         "iomanip": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "bitset": "cpp",
+        "regex": "cpp"
     },
     "doxdocgen.file.fileOrder": [
         "custom",
@@ -380,6 +382,8 @@
         "sympy",
         "tcolorbox",
         "themeing",
+        "typeexpr",
+        "typeexprid",
         "unessisary",
         "vals",
         "Varadharaaj",

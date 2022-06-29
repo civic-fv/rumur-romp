@@ -2,6 +2,7 @@
 #include "check.h"
 #include "compares_complex_values.h"
 #include "generate_c.hpp"
+#include "NestedError.hpp"
 // #include "generate_h.h"
 #include "options.h"
 #include "resources.h"
@@ -187,6 +188,9 @@ int main(int argc, char **argv) {
   // } else {
   //   generate_h(*m, comments, pack, out == nullptr ? std::cout : *out);
   // }
+  } catch (rumur::NestedError &e) {
+    std::cerr << e.what();
+    return EXIT_FAILURE;
   } catch (rumur::Error &e) {
     std::cerr << e.loc << ":" << e.what() << "\n";
     return EXIT_FAILURE;

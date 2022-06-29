@@ -329,21 +329,26 @@ void ModelSplitter::visit_function(Function &n) {
 
 void ModelSplitter::_visit_quantifier(Quantifier& q) {
   if (q.type != nullptr) {
-    if (not isa<TypeExprID *>(q.type.get())) {
+    if (not isa<TypeExprID>(q.type.get())) {
       dispatch(*(q.type));
       std::string name = gen_new_anon_name();
       Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(q.type), q.type->loc));
       insert_to_global_decls(decl);
       q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
+      q.decl->type = q.type;
     }
   } else if (q.from != nullptr && q.to != nullptr) {
+    if (not q.from->constant()) throw Error("All bounds of a Ruleset's quantifier must NOT be dependent on variables !!",q.from->loc);
+    if (not q.to->constant()) throw Error("All bounds of a Ruleset's quantifier must NOT be dependent on variables !!",q.to->loc);
+    if (q.step == nullptr)
+      q.step = Ptr<Number>::make("1",q.type->loc);
+    else if (not q.step->constant()) 
+      throw Error("A bounds (including the step) of a Ruleset's quantifier must NOT be dependent on variables !!", q.step->loc);
     auto range = Ptr<Range>::make(q.from, q.to, q.loc);
     std::string name = gen_new_anon_name();
     Ptr<TypeDecl> decl(new TypeDecl(name, range, q.loc));
     insert_to_global_decls(decl);
-    q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.loc));
-    if (q.step == nullptr)
-        q.step = Ptr<Number>::make("1",q.type->loc);
+    q.decl->type = Ptr<TypeExprID>::make(name, decl, q.loc);
   } else 
     throw Error("the Quantifier has broken bounds!!", q.loc);
 }
@@ -362,7 +367,7 @@ void ModelSplitter::visit_and_check_quantifier(Rule& r, Quantifier& q) {
     } else {
       
     }
-    if (not isa<TypeExprID *>(q.type.get())) {
+    if (not isa<TypeExprID>(q.type.get())) {
       dispatch(*(q.type));
       std::string name = gen_new_anon_name();
       Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(q.type), q.type->loc));
@@ -370,13 +375,16 @@ void ModelSplitter::visit_and_check_quantifier(Rule& r, Quantifier& q) {
       q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
     }
   } else if (q.from != nullptr && q.to != nullptr) {
+    if (not q.from->constant()) throw Error("All bounds of a Ruleset's quantifier must NOT be dependent on variables !!",q.from->loc);
+    if (not q.to->constant()) throw Error("All bounds of a Ruleset's quantifier must NOT be dependent on variables !!",q.to->loc);
     auto range = Ptr<Range>::make(q.from, q.to, q.loc);
     std::string name = gen_new_anon_name();
     Ptr<TypeDecl> decl(new TypeDecl(name, range, q.loc));
     insert_to_global_decls(decl);
-    q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.loc));
+    q.type = Ptr<TypeExprID>::make(name, decl, q.loc);
     if (q.step == nullptr)
         q.step = Ptr<Number>::make("1",q.type->loc);
+    else if (not q.step->constant()) throw Error("A bounds (including the step) of a Ruleset's quantifier must NOT be dependent on variables !!", q.step->loc);
   } else 
     throw Error("the Quantifier has broken bounds!!", q.loc);
 }

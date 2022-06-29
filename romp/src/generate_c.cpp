@@ -82,7 +82,9 @@ public:
         sep = ", ";
       }
     }
-    *this << ") throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
+    *this << ") ";
+    if (n.is_pure()) *this << "const ";
+    *this << " throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
 
@@ -110,13 +112,13 @@ public:
     } else {
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
-        *this << sep;
-        if (auto t = dynamic_cast<const TypeExprID *>(q.type.get())) {
-          *this << *t; //t->name;
-        } else {
-          *this << value_type;
-        }
-        *this << " " << q.name;
+        *this << sep // ;
+              << *(q.decl->type) << " " << q.name;
+        // if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
+        //   *this << *t; //t->name;
+        // else
+        //   *this << value_type;
+        // *this << " " << q.name;
         sep = ", ";
       }
     }
@@ -153,13 +155,13 @@ public:
     } else {
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
-        *this << sep;
-        if (auto t = dynamic_cast<const TypeExprID *>(q.type.get())) {
-          *this << *t; //t->name;
-        } else {
-          *this << value_type;
-        }
-        *this << " " << q.name;
+        *this << sep // ;
+              << *(q.decl->type) << " " << q.name;
+        /// if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
+        //   *this << *t; //t->name;
+        // else
+        //   *this << value_type;
+        // *this << " " << q.name;
         sep = ", ";
       }
     }
@@ -198,12 +200,13 @@ public:
     } else {
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
-        *this << sep;
-        if (auto t = dynamic_cast<const TypeExprID *>(q.type.get())) {
-          *this << *t; //t->name;
-        } else {
-          *this << value_type;
-        }
+        *this << sep // ;
+              << *(q.decl->type) << " " << q.name;
+        // if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
+        //   *this << *t; //t->name;
+        // else
+        //   *this << value_type;
+        // *this << " " << q.name;
         *this << " " << q.name;
         sep = ", ";
       }
@@ -254,13 +257,13 @@ public:
     } else {
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
-        *this << sep;
-        if (auto t = dynamic_cast<const TypeExprID *>(q.type.get())) {
-          *this << *t; //t->name;
-        } else {
-          *this << value_type;
-        }
-        *this << " " << q.name;
+        *this << sep // ;
+              << *(q.decl->type) << " " << q.name;
+        /// if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
+        //   *this << *t; //t->name;
+        // else
+        //   *this << value_type;
+        // *this << " " << q.name;
         sep = ", ";
       }
     }
