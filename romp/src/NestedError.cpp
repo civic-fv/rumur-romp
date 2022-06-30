@@ -85,4 +85,8 @@ void NestedError::format_what(const std::string& prefix, std::vector<std::string
     prev_error->format_what(prefix + "| ", msg, format);
 }
 
+
+  // FormatNestedException::FormatNestedException(std::exception& error_) : error(error_) {}
 }
+
+// std::ostream& ::operator << (const FormatNestedException& ex);

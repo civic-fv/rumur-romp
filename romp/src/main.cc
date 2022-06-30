@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
   try {
   // output code
   // if (source) {
-    generate_c(*m, comments, pack, out == nullptr ? std::cout : *out);
+    generate_c(*m, comments, pack, (out == nullptr) ? std::cout : *out, in_filename, "<not-implemented-yet>");
   // } else {
   //   generate_h(*m, comments, pack, out == nullptr ? std::cout : *out);
   // }

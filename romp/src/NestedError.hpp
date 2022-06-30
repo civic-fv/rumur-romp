@@ -20,6 +20,7 @@
 #include <string>
 #include <memory>
 #include <regex>
+#include <ostream>
 
 namespace rumur {
 
@@ -46,5 +47,17 @@ public:
 private:
   void format_what(const std::string& prefix, std::vector<std::string>& msg, const format_str& format);
 };
+
+
+
+// class FormatNestedException {
+//   std::exception& error;
+//   static const std::string default_format;
+// public:
+//   FormatNestedException(std::exception& error_);
+//   friend std::ostream& operator << (const FormatNestedException& ex);
+// protected:
+//   void format_what(const std::string& prefix, std::vector<std::string>& msg, const format_str& format);
+// };
 
 }

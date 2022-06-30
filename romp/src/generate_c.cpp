@@ -2,6 +2,7 @@
 #include "CLikeGenerator.hpp"
 #include "CTypeGenerator.hpp"
 #include "ModelSplitter.hpp"
+#include "SigPerm.hpp"
 #include "options.h"
 #include "resources.h"
 #include <cstddef>
@@ -12,6 +13,7 @@
 #include <unordered_set>
 // #include <streambuf>
 #include <strstream>
+#include <algorithm>
 
 
 #include "romp_def.hpp"
@@ -104,7 +106,7 @@ public:
     invariants.push_back(Ptr<const PropertyRule>(&n));
     // function prototype
     *this << indentation() << CodeGenerator::M_INVARIANT__FUNC_ATTRS << "\n"
-          << indentation() << "bool invariant__" << n.name << "(";
+          << indentation() << "bool " ROMP_PROPERTYRULE_PREFIX << n.name << "(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -147,7 +149,7 @@ public:
     rules.push_back(Ptr<const SimpleRule>(&n));
 
     *this << indentation() << CodeGenerator::M_RULE_GUARD__FUNC_ATTRS << "\n"
-          << indentation() << "bool rule_guard__" << n.name << "(";
+          << indentation() << "bool " ROMP_RULE_GUARD_PREFIX << n.name << "(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -192,7 +194,7 @@ public:
     *this << indentation() << "}\n\n";
 
     *this << indentation() << CodeGenerator::M_RULE_ACTION__FUNC_ATTRS << "\n"
-          << indentation() << "void rule_action__" << n.name << "(";
+          << indentation() << "void " ROMP_RULE_ACTION_PREFIX << n.name << "(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -249,7 +251,7 @@ public:
     startstates.push_back(Ptr<const StartState>(&n));
     
     *this << indentation() << CodeGenerator::M_STARTSTATE__FUNC_ATTRS 
-          << " void startstate__" << n.name << "(";
+          << " void " ROMP_STARTSTATE_PREFIX << n.name << "(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -322,10 +324,11 @@ public:
     std::strstream ruleset_name_array;
     for (const Ptr<const SimpleRule>& rule : rules) {
       *this << indentation() << "/* --- Ruleset " << rule->name << " (generated) --- */\n\n";
-      size_t start;
-      size_t stop;
-      size_t step;
+      SigPerm sigs(rule);
+      std::strstream _sig_str;
+      for (Sig sig : sigs) {
 
+      }
     }
   }
 
@@ -401,6 +404,8 @@ public:
     *this << "\n" << indentation() << "namespace " ROMP_CALLER_NAMESPACE_NAME " {\n";
     indent();
 
+    *this << indentation() << "typedef " ROMP_STATE_TYPE " State_t; // type mask for the generated state object\n";
+
     *this << "\n\n" << indentation() << "/* ======= Romp Callable Lists ====== */\n\n";
     // gen_ruleset_array();
     // gen_invariant_array();
@@ -416,7 +421,22 @@ public:
   //   out << os;
   //   return *this;
   // }
+
+  // CGenerator& operator << (const char* str) { out << str; return *this; }
+  CGenerator& operator << (const Sig& sig) { out << sig; return *this; }
+  CGenerator& operator << (const SigParam& param) { out << param; return *this; }
 };
+
+std::ostream& operator << (std::ostream& out, const Sig& sig) {
+  out << sig.perm.rule->name << "(";
+  std:string sep;
+  for (SigParam param : sig)
+    out << sep << param;
+  return (out << ")");
+}
+
+std::ostream& operator << (std::ostream& out, const SigParam& param) { return (out << param.to_string()); }
+
 
 
 } // namespace
@@ -426,16 +446,43 @@ void output_embedded_code_file(std::ostream& out, const unsigned char* ecf, cons
     out << (char) ecf[i];
 }
 
-void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
-                std::ostream &out) {
+std::string trim(const std::string &s)
+{
+    auto start = s.begin();
+    while (start != s.end() && std::isspace(*start)) {
+        start++;
+    }
+ 
+    auto end = s.end();
+    do {
+        end--;
+    } while (std::distance(start, end) > 0 && std::isspace(*end));
+ 
+    return std::string(start, end + 1);
+}
 
-  out << ROMP_GENERATED_FILE_PREFACE("test text") "\n";
+void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
+                std::ostream &out, const std::string& in_filename, const std::string& build_cmds) {
+
+  out << ROMP_GENERATED_FILE_PREFACE("\tGenerated code for a romp \"parallel random walker\" verification tool based off of the Murphi Model described in:\n"
+                                     "\t\tOriginal Murphi Model: " + in_filename + "\n"
+                                     "\tPlease build with the following command:\n") "\n";
+
   out << "\n#define __romp__GENERATED_CODE\n\n";
+  out << "\n#define _ROMP_STATE_TYPE\n\n";
+  out << "\n#define __model__filename \"" << in_filename << "\"\n\n";
+  auto _tmp = trim(in_filename);
+  auto _count = std::count(_tmp.begin(), _tmp.end(), ' ');
+  out << "\n#define __model__filename_contains_space " 
+      << ((_count > 0) ? "true" : "false") << "\n\n";
+
 
   out << "\n#pragma region inline_library_includes\n\n";
   // write json library to the file
   // output_embedded_code_file(out, resources_lib_nlohmann_json_hpp, resources_lib_nlohmann_json_hpp_len);
   out << "\n#pragma endregion inline_library_includes\n\n" << std::flush;
+
+  out << "namespace " ROMP_MODEL_NAMESPACE_NAME " { class " ROMP_STATE_CLASS_NAME "; }\n\n";
 
   out << "\n#pragma region model_prefixes\n\n";
   // write the static prefix to the beginning of the source file

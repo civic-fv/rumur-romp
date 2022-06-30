@@ -34,7 +34,7 @@
 #include <strstream>
 
 namespace romp {
-
+class CGenerator;
 class SigPerm;
 struct Sig;
 struct SigParam;
@@ -58,30 +58,69 @@ using quant_vals_iter_t = ::romp::vec_quant_vals_t::iterator ;
 // typedef ::romp::vec_quant_vals_t::iterator quant_vals_iter_t;
 
 
+// << ========================================================================================== >> 
+// <<                                            Sig                                             >> 
+// << ========================================================================================== >> 
+#pragma region class_Sig
 struct Sig {
   size_t index;
-  std::vector<const SigParam&> params;  //TODO figure out this type
+  std::vector<const SigParam&> params;
   SigParam_Iter_t begin() const { return params.begin(); }
   SigParam_Iter_t end() const { return params.end(); }
   std::string to_string() const {
-    std::strstream buf;
-    buf << perm.rule->name << "(";
-    std::string sep;
-    //TODO: figure out what ot do here (probs manual json output)
+
   }
+  // std::string to_json() const {  
+  //   std::strstream buf;
+  //   buf << "{\"$type\":\""+ perm.rule_type +"\","
+  //           "\"id\":\"" + perm.rule->name + "\","
+  //           "\"quantifiers\":[";
+  //   std::string sep;
+  //   for (int i=0; i<perm.param_count; ++i) {
+  //     buf << sep << "{\"$type\":\"quantifier\","
+  //                   "\"id:\"" << perm.quantifiers[i]->name << "\","
+  //                   "\"value\":" << params[i] << "}";
+  //     sep = ",";
+  //   }
+  //   buf << "]}";
+  //   return buf.str(); 
+  // }
 private:
-  const SigPerm& parent;
-
+  const SigPerm& perm;
+  friend std::ostream& operator << (std::ostream& out, const Sig& sig);
+  friend CGenerator& CGenerator::operator << (const Sig& sig);
 };
+#pragma endregion class_Sig
 
+
+// << ========================================================================================== >> 
+// <<                                         SigParam                                           >> 
+// << ========================================================================================== >> 
+#pragma region class_SigParam
 struct SigParam {
-  mpz_class value;
-  std::string value_str;
-  std::string to_string() const { return "(::" ROMP_TYPE_NAMESPACE "::" + type_id + ") " + value_str; }
-private:
+  const mpz_class value;
+  const std::string value_str;
+  const std::string str_rep;
+  const std::string json_rep;
   const QuantExpansion& qe;
+  const std::string& to_string() const {return str_rep;}
+  const std::string& to_json() const {return json_rep;}
+private:
+  friend struct QuantExpansion;
+  static const std::string to_string(const std::string value_str&, const QuantExpansion& qe) { 
+    return "(::" ROMP_TYPE_NAMESPACE "::" + qe.type_id + ") " + value_str; }
+  static const std::string to_json() const { return "{\"type\":\"" + qe.type->to_string() + "\","
+                                                      "\"value\":""\"" + value_str +"\"}"; }
+  friend std::ostream& operator << (std::ostream& out, const SigParam& param);
+  friend CGenerator& CGenerator::operator << (const SigParam& param);
 };
+#pragma endregion class_SigParam
 
+
+// << ========================================================================================== >> 
+// <<                                      QuantExpansion                                        >> 
+// << ========================================================================================== >> 
+#pragma region class_QuantExpansion
 struct QuantExpansion {
   vec_MTypeVals_t values;
   const rumur::Ptr<const rumur::TypeExpr> type;
@@ -153,7 +192,7 @@ private:
         for (int i=0; i<n.members.size(), ++i)
           qe.values.push_back(SigParam{
                                 mpz_class(i),
-                                qe.type_id + n.members[i].first
+                                qe.type_id + "::" + n.members[i].first
                               });
       }
       void visit_range(const rumur::Range& n) {
@@ -185,9 +224,13 @@ private:
     }
   }
 };
+#pragma endregion class_QuantExpansion
 
+// << ========================================================================================== >> 
+// <<                                          SigPerm                                           >> 
+// << ========================================================================================== >> 
+#pragma region class_SigPerm
 class SigPerm {
-// << =================================== Member Variables ===================================== >> 
 private:
 
 protected:
@@ -197,20 +240,25 @@ protected:
 
 public:
   const rumur::Ptr<const rumur::Rule> rule; // the "ruleset" we are creating all the signatures for
+  const std::string rule_type;
+  const std::vector<const rumur::Quantifier>& quantifiers;
   const size_t size;
-  const unsigned int param_count;
+  const size_t param_count;
 
 
 // << ============================= Constructors & Deconstructor =============================== >> 
 private:
 protected:
-public:
-  SigPerm(const rumur::Ptr<const rumur::Rule> rule_) 
-    : rule(&rule_), quant_vals_iter(rule.quantifiers.size()), param_count(rule.quantifiers.size())
+  SigPerm(const rumur::Rule rule_, const char* rule_type_) 
+    : rule_type(rule_type_), rule(&rule_), quant_vals_iter(rule_.quantifiers.size()), 
+      param_count(rule_.quantifiers.size()), quantifiers(rule_.quantifiers)
   {
     add_quants(rule.quantifiers);
   }
-
+public:
+  SigPerm(const rumur::SimpleRule rule_) : SigPerm(rule_, "Rule") {}
+  SigPerm(const rumur::StartState rule_) : SigPerm(rule_, "StartState") {}
+  SigPerm(const rumur::PropertyRule rule_) : SigPerm(rule_, "Invariant") {}
 
 // << =================================== Member Functions ===================================== >> 
 private:
@@ -255,12 +303,13 @@ public:
   Iterator end() const { return Iterator(size(), *this); }
 
 
-// << =============================== Nested Classes & Structs ================================= >> 
 protected:
 
 public:
   
-
+  // << ========================================================================================== >> 
+  // <<                                     SigPerm::Iterator                                      >> 
+  // << ========================================================================================== >> 
 
   struct Iterator {
     const Sig operator*() const { return *sig_ptr; }
@@ -304,5 +353,8 @@ public:
     ~Iterator() { delete sig_ptr; }
   };
 };
+#pragma endregion class_SigPerm
+
+
 
 }

@@ -15,52 +15,10 @@
  */
 
 #ifndef __romp__GENERATED_CODE
-#include "c_prefix.c"
-#endif
-
-
-// << =============================== Preprocessor Declarations ================================ >>
-
-#ifndef __romp__GENERATED_CODE
-#ifndef STATE_HISTORY_SIZE
-#define STATE_HISTORY_SIZE 16ul
-#endif
-#ifndef RULES_SIZE
-#define RULES_SIZE 6ul
-#endif
-#ifndef INVARIANTS_SIZE 
-#define INVARIANTS_SIZE 2ul
-#endif
-#ifndef STARTSTATES_SIZE
-#define STARTSTATES_SIZE 2ul
-#endif
-#ifndef _ROMP_STATE_TYPE 
-#define _ROMP_STATE_TYPE ::__model__::__State__
-#endif
+#include "c_prefix.cpp" // FOR PRE-CODEGEN LANGUAGE SUPPORT ONLY !!
 #endif
 
 // << =================================== Type Declarations ==================================== >>
-#ifndef __romp__GENERATED_CODE
-namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!
- class __State__ { // LANGUAGE SERVER SUPPORT ONLY !!
-    size_t test1[16]; // LANGUAGE SERVER SUPPORT ONLY !!
- }; // LANGUAGE SERVER SUPPORT ONLY !!
-} // LANGUAGE SERVER SUPPORT ONLY !!
-#endif
-
-
-
-#ifndef __romp__GENERATED_CODE
-namespace __caller__ { // LANGUAGE SERVER SUPPORT ONLY!!
- ::romp::RuleSet RULE_SETS[RULES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
- ::romp::Invariant INVARIANTS[INVARIANTS_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
- ::romp::Invariant_info INVARIANT_INFOS[INVARIANTS_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
- ::romp::StartState STARTSTATES[STARTSTATES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
-} // LANGUAGE SERVER SUPPORT ONLY !!
-#endif
-
-void launch_single();
-
 
 namespace romp {
 

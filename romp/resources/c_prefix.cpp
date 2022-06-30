@@ -6,40 +6,19 @@
 // #include <stdio.h>
 // #include <stdlib.h>
 #include <string>
+#include <strstream>
 #include <exception>
 #include <vector>
+#include <memory>
 
-/* built-in boolean type */
-typedef bool boolean;
 
-static void failed_assertion_(const char *message) {
-  fprintf(stderr, "failed assertion: %s\n", message);
-  exit(EXIT_FAILURE);
-}
 
-void (*failed_assertion)(const char *) = failed_assertion_;
+// << =============================== Preprocessor Declarations ================================ >>
 
-static void failed_assumption_(const char *message) {
-  fprintf(stderr, "failed assumption: %s\n", message);
-  exit(EXIT_FAILURE);
-}
+#ifndef __romp__GENERATED_CODE
+#include "romp-rw_pregen-fix.hpp" // FOR PRE-CODEGEN LANGUAGE SUPPORT ONLY !! 
+#endif
 
-void (*failed_assumption)(const char *) = failed_assumption_;
-
-static void error_(const char *message) {
-  fprintf(stderr, "error: %s\n", message);
-  exit(EXIT_FAILURE);
-}
-
-void (*error)(const char *) = error_;
-
-static void cover_(const char *message __attribute__((unused))) {}
-
-void (*cover)(const char *) = cover_;
-
-static void liveness_(const char *message __attribute__((unused))) {}
-
-void (*liveness)(const char *) = liveness_;
 
 // various printf wrappers to deal with the user having passed --value-type
 // static __attribute__((unused)) void print_int     (int v)      { printf("%d",          v); }
@@ -69,57 +48,97 @@ void (*liveness)(const char *) = liveness_;
 #define int64_t_VALUE_C(v)  INT64_C(v)
 #define uint64_t_VALUE_C(v) UINT64_C(v)
 
-// pre-declaration of the state object romp will generate.
-namespace __model__ {
-  class __State__;
-}
-
-#ifndef __romp__GENERATED_CODE
-#define __model__filename "<mode-file>"
-#endif
 
 namespace romp {
+
+  typedef _ROMP_STATE_TYPE State_t;
+
+  struct file_position {
+    size_t row;
+    size_t col;
+  };
+  std::ostream& operator << (std::ostream& out, const file_position& fp) { return (out << row << ',' << col); }
+
   struct location {
     std::string model_obj;
     file_position start;
     file_position stop;
   };
-
-  struct file_position {
-    size_t row;
-    size_t col;
+  std::ostream& operator << (std::ostream& out, const location& loc) { 
+    out << ((__model__filename_contains_space) ? "\""__model__filename "\":" : __model__filename ":") 
+        << loc.start << '-' << loc.stop;
+    if (loc.model_obj != "")
+      out << " in \"" << model_obj << "\"";
+    return out; 
   }
 
-  struct ModelException : public std::exception {
-    location loc;
-    std::string msg;
-    virtual char* what() {
-      std::string val;
-      //TODO: make this output a decent string;
-      return val.c_str();
-    } 
+  struct ModelException : public std::nested_exception {
+    const location loc;
+    const std::string msg;
+    ModelException(const std::string msg_, const location loc_) : std::nested_exception(), msg(msg_), loc(loc_) {}
+    const char* what() const noexcept {
+      std::strstream out;
+      this->what(out);
+      return out.str().c_str();
+    }
+    virtual void what(std::ostream& out) const noexcept {
+      out << loc << " :: " << msg;
+    }
   };
 
   struct ModelException_Test : public ModelException {
-    std::string test_string;
-    virtual char* what() override {
-      std::string val;
-      //TODO: make this output a decent string;
-      return val.c_str();
-    }
+    const std::string test_str;
+    ModelException_Test(const std::string test_str_, const std::string msg_, const location loc_)
+      : ModelException(msg_,loc_), test_str(test_str_) {}
+    void what(std::ostream& out) const noexcept {
+      out << loc << " :: " << msg << "  ``" << test_str << "``";
+    } 
+  };
+ 
+  #define __romp__nested_exception__print_prefix "| "
 
+  void fprint_exception(std::ostream& out, const ModelException& ex, std::string& prefix="") noexcept {
+    out << prefix;
+    e.what(out) 
+    out << '\n';
+    try {
+        std::rethrow_if_nested(ex);
+    } catch(const ModelException& mod_ex) {
+      fprint_exception(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
+    } catch(const std::exception& ex) {
+      fprint_exception(ex, prefix + __romp__nested_exception__print_prefix);
+    } catch(...) {}
+  }
+
+  void fprint_exception(std::ostream& out, const std::exception& ex, std::string& prefix="") noexcept {
+    out << prefix << e.what() << '\n';
+    try {
+        std::rethrow_if_nested(ex);
+    } catch(const ModelException& mod_ex) {
+      fprint_exception(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
+    } catch(const std::exception& ex) {
+      fprint_exception(out, out, ex, prefix + __romp__nested_exception__print_prefix);
+    } catch(...) {}
+  }
+
+  std::ostream& operator << (std::ostream& out, const ModelException& ex) {
+    fprint_exception(out, ex);
+    return out;
+  }
+
+  struct RuleSet;
 
   struct Rule {
-    bool (*guard)(const ::__model__::__State__&) throw (ModelException*);
-    void (*action)(::__model__::__State__&) throw (ModelException*);
+    bool (*guard)(const State_t&) throw (ModelException);
+    void (*action)(State_t&) throw (ModelException);
     id_t id;
-    id_t ruleset_id;
+    RuleSet& ruleset;
   };
 
   struct RuleSet {
     id_t id;
     location& loc;
-    Rule rules[];
+    std::vector<Rule> rules;
     const size_t size;
   }; 
 
@@ -131,20 +150,44 @@ namespace romp {
   };
 
   struct Invariant {
-    bool (*check)(const ::__model__::__State__&) throw (ModelException*);
+    bool (*check)(const State_t&) throw (ModelException);
   };
 
   struct StartState {
-    void (*initialize)(::__model__::__State__&) throw (ModelException*);
+    void (*initialize)(State_t&) throw (ModelException);
     id_t id;
     id_t ruleset_id;
     location& loc;
   };
 
-  
-  };
+  // static void failed_assertion_(const char *message) {
+  //   fprintf(stderr, "failed assertion: %s\n", message);
+  //   exit(EXIT_FAILURE);
+  // }
 
+  // void (*failed_assertion)(const char *) = failed_assertion_;
 
+  // static void failed_assumption_(const char *message) {
+  //   fprintf(stderr, "failed assumption: %s\n", message);
+  //   exit(EXIT_FAILURE);
+  // }
+
+  // void (*failed_assumption)(const char *) = failed_assumption_;
+
+  // static void error_(const char *message) {
+  //   fprintf(stderr, "error: %s\n", message);
+  //   exit(EXIT_FAILURE);
+  // }
+
+  // void (*error)(const char *) throw (ModelException) = error_;
+
+  // static void cover_(const char *message __attribute__((unused))) {}
+
+  // void (*cover)(const char *) throw (ModelException) = cover_;
+
+  // static void liveness_(const char *message __attribute__((unused))) {}
+
+  // void (*liveness)(const char *) throw (ModelException) = liveness_;
 
 }
 

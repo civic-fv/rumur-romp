@@ -45,9 +45,14 @@
 #define ROMP_SHOW_TYPE_OPTION_EXPR "options.SHOW_TYPE"
 
 #define ROMP_GENERATED_FILE_PREFACE(p) \
-        "/*" p "*/"
+        "/*\n" p "\n*/\n"
 
 #define ROMP_PREDEFINED_TYPES "boolean"
+
+#define ROMP_STARTSTATE_PREFIX "__StartState__"
+#define ROMP_RULE_GUARD_PREFIX "__Rule_guard__"
+#define ROMP_RULE_ACTION_PREFIX "__Rule_action__"
+#define ROMP_PROPERTYRULE_PREFIX "__Invariant__"
 
 #ifdef _ROMP_ENABLE_CUSTOM_RUMUR_TYPE_TRAVERSAL
 
