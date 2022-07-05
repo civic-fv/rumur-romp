@@ -149,19 +149,21 @@ std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_se
  * 
  */
 template<typename T>
-T rand_choice(unsigned int &rand_seed, T min, T max) {
-  /***TO DO ***/
-  /*
-    Path of random seed:
-    1) user input (some string that can be hashed to a int or nothing)
-        if nothing use time to get a seed  (use time as seed to generate real seed)
-        else hash user input
-    2) use this random seed to generate other random seeds for the random walkers
-   */
-  /*
+T rand_choice(unsigned int &rand_seed, T min, T max,string seed_input) {
+    //to be fed in from the  commandline 
+    int seed;
+    if(seed_input.length() != 0)
+    {
+        seed =stoi(seed_input);
+    else 
+        srand(time(0));
+    }
+    //not done fully
     seed = (((seed ^ (seed >> 3)) >> 12) & 0xffff) | ((seed & 0x7fff) << 16); // modifies the seed
     int choice = seed % (maxWeight-min+1) + min;  // generates the random number
-   */
+    cout<<"seed is"<<seed<<endl;
+    //cout<<"choice is "<<choice<<endl;
+    return 0;
 }
 
 
