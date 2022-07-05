@@ -29,9 +29,9 @@
 
 #define ROMP_CALLABLE_RULE_TYPE "::romp::Rule";
 
-#define ROMP_CALLABLE_INVARIANT_TYPE "::romp::Invariant";
+#define ROMP_CALLABLE_INVARIANT_TYPE "::romp::Invariant"
 
-#define ROMP_CALLABLE_STARTSTATE_TYPE "::romp::StartState";
+#define ROMP_CALLABLE_STARTSTATE_TYPE "::romp::StartState"
 
 #define ROMP_MODEL_EXCEPTION "::romp::ModelException"
 
