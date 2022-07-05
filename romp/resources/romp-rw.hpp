@@ -200,6 +200,7 @@ T rand_choice(unsigned int &rand_seed, T min, T max,string seed_input) {
     else 
         srand(time(0));
     }
+    //not done fully
     seed = (((seed ^ (seed >> 3)) >> 12) & 0xffff) | ((seed & 0x7fff) << 16); // modifies the seed
     int choice = seed % (maxWeight-min+1) + min;  // generates the random number
     cout<<"seed is"<<seed<<endl;
