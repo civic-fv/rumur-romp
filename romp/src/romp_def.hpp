@@ -35,7 +35,7 @@
 
 #define ROMP_MODEL_EXCEPTION "::romp::ModelException"
 
-#define ROMP_MODEL_EXCEPTION_TYPE ROMP_MODEL_EXCEPTION "*"
+#define ROMP_MODEL_TEST_EXCEPTION "::romp::ModelException_Test"
 
 #define ROMP_RESERVED_NAMES "rules", "invariants", "startstates", "__State__", "RandWalker", "to_json", \
                             "__model__", "__caller__", "romp" , "boolean"
