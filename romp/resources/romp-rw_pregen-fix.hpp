@@ -35,7 +35,7 @@
 
 // pre-declaration of the state object romp will generate.
 namespace __model__ {
-  class __State__;
+  struct __State__;
 }
 #define __model__filename "<model-file>"
 #define __model__filename_contains_space false
@@ -57,7 +57,7 @@ namespace __caller__ { // LANGUAGE SERVER SUPPORT ONLY!!
 } // LANGUAGE SERVER SUPPORT ONLY !!
 
 namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!
- class __State__ { // LANGUAGE SERVER SUPPORT ONLY !!
+ struct __State__ { // LANGUAGE SERVER SUPPORT ONLY !!
     size_t test1[16]; // LANGUAGE SERVER SUPPORT ONLY !!
  }; // LANGUAGE SERVER SUPPORT ONLY !!
 } // LANGUAGE SERVER SUPPORT ONLY !!

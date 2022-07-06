@@ -149,7 +149,13 @@ int main(int argc, char **argv) {
   try {
     m = rumur::parse(*in.first);
   } catch (rumur::Error &e) {
-    std::cerr << e.loc << ":" << e.what() << "\n";
+    romp::fprint_exception(std::cerr, e);
+    // std::cerr << e.loc << ":" << e.what() << "\n";
+    return EXIT_FAILURE;
+  } catch (std::exception& ex) {
+    std::cerr << "[[DEV ERROR : BEGIN]]\n";
+    romp::fprint_exception(std::cerr, ex);
+    std::cerr << "[[DEV ERROR : END]]\n";
     return EXIT_FAILURE;
   }
 
@@ -163,7 +169,13 @@ int main(int argc, char **argv) {
     resolve_symbols(*m);
     validate(*m);
   } catch (rumur::Error &e) {
-    std::cerr << e.loc << ":" << e.what() << "\n";
+    romp::fprint_exception(std::cerr, e);
+    // std::cerr << e.loc << ":" << e.what() << "\n";
+    return EXIT_FAILURE;
+  } catch (std::exception& ex) {
+    std::cerr << "[[DEV ERROR : BEGIN]]\n";
+    romp::fprint_exception(std::cerr, ex);
+    std::cerr << "[[DEV ERROR : END]]\n";
     return EXIT_FAILURE;
   }
 
@@ -188,11 +200,14 @@ int main(int argc, char **argv) {
   // } else {
   //   generate_h(*m, comments, pack, out == nullptr ? std::cout : *out);
   // }
-  } catch (rumur::NestedError &e) {
-    std::cerr << e.what();
-    return EXIT_FAILURE;
   } catch (rumur::Error &e) {
-    std::cerr << e.loc << ":" << e.what() << "\n";
+    romp::fprint_exception(std::cerr, e);
+    // std::cerr << e.loc << ":" << e.what() << "\n";
+    return EXIT_FAILURE;
+  } catch (std::exception& ex) {
+    std::cerr << "[[DEV ERROR : BEGIN]]\n";
+    romp::fprint_exception(std::cerr, ex);
+    std::cerr << "[[DEV ERROR : END]]\n";
     return EXIT_FAILURE;
   }
 

@@ -20,70 +20,97 @@
 
 namespace rumur {
 
-const NestedError::format_str NestedError::default_format = "{loc} : {message}\n";
-// const std::regex NestedError::loc_re;
-// const std::regex NestedError::msg_re;
+#define __romp__nested_exception__print_prefix "| "
+
+  void fprint_exception(std::ostream& out, const Error& ex, const std::string& prefix) noexcept {
+    out << prefix << ex.loc << " :: " << ex.what();
+    try {
+        std::rethrow_if_nested(ex);
+    } catch(const Error& mod_ex) {
+      fprint_exception(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
+    } catch(const std::exception& ex) {
+      fprint_exception(out, ex, prefix + __romp__nested_exception__print_prefix);
+    } catch(...) {}
+  }
+
+  void fprint_exception(std::ostream& out, const std::exception& ex, const std::string& prefix) noexcept {
+    out << prefix << ex.what() << '\n';
+    try {
+        std::rethrow_if_nested(ex);
+    } catch(const Error& mod_ex) {
+      fprint_exception(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
+    } catch(const std::exception& ex) {
+      fprint_exception(out, ex, prefix + __romp__nested_exception__print_prefix);
+    } catch(...) {}
+  }
+
+// const NestedError::format_str NestedError::default_format = "{loc} : {message}\n";
+// const std::regex NestedError::loc_re("\\{[Ll][Oo][Cc](?:[Aa][Tt][Ii][Oo][Nn])?\\}");
+// const std::regex NestedError::msg_re("\\{[Mm][Ss][Gg]|[Mm][Ee][Ss][Ss][Aa][Gg][Ee]|[Ww][Hh][Aa][Tt]\\}");
+// const std::regex NestedError::nl_re("\\n");
+// // const std::regex NestedError::loc_re;
+// // const std::regex NestedError::msg_re;
 
 
-NestedError::NestedError(const std::string msg_, const location loc_, const NestedError& er_) 
-  : Error(msg_,loc_), prev_error(new NestedError(er_))
-{}
+// NestedError::NestedError(const std::string msg_, const location loc_, const NestedError& er_) 
+//   : Error(msg_,loc_), prev_error(new NestedError(er_))
+// {}
 
 
-NestedError::NestedError(const char* msg_, const location loc_, const NestedError& er_) 
-  : NestedError(std::string(msg_), loc_, er_) 
-{}
+// NestedError::NestedError(const char* msg_, const location loc_, const NestedError& er_) 
+//   : NestedError(std::string(msg_), loc_, er_) 
+// {}
 
 
-NestedError::NestedError(const std::string msg_, const location loc_) 
-  : Error(msg_,loc_), prev_error(nullptr)
-{}
+// NestedError::NestedError(const std::string msg_, const location loc_) 
+//   : Error(msg_,loc_), prev_error(nullptr)
+// {}
 
 
-NestedError::NestedError(const char* msg_, const location loc_) 
-  : NestedError(std::string(msg_), loc_)
-{}
+// NestedError::NestedError(const char* msg_, const location loc_) 
+//   : NestedError(std::string(msg_), loc_)
+// {}
 
 
-NestedError::NestedError(const std::string msg_, const location loc_, const Error& er_) 
-  : Error(msg_,loc_), prev_error(new NestedError(er_.what(), er_.loc))
-{}
+// NestedError::NestedError(const std::string msg_, const location loc_, const Error& er_) 
+//   : Error(msg_,loc_), prev_error(new NestedError(er_.what(), er_.loc))
+// {}
 
 
-NestedError::NestedError(const char* msg_, const location loc_, const Error& er_) 
-  : NestedError(std::string(msg_), loc_, er_) 
-{}
+// NestedError::NestedError(const char* msg_, const location loc_, const Error& er_) 
+//   : NestedError(std::string(msg_), loc_, er_) 
+// {}
 
 
-char* NestedError::what() const { return what(NestedError::default_format); }
+// char* NestedError::what() const { return what(NestedError::default_format); }
 
 
-char* NestedError::what(const NestedError::format_str& format) const { 
-  std::vector<std::string> msg;
-  format_what("", msg, format);
-  std::strstream str;
-  for (auto line : msg)
-    str << line;
-  return str.str();
-}
+// char* NestedError::what(const NestedError::format_str& format) const { 
+//   std::vector<std::string> msg;
+//   format_what("", msg, format);
+//   std::strstream str;
+//   for (auto line : msg)
+//     str << line;
+//   return str.str();
+// }
 
 
-char* NestedError::what(const NestedError::format_str_ format) const { return what(NestedError::format_str(format)); }
+// char* NestedError::what(const NestedError::format_str_ format) const { return what(NestedError::format_str(format)); }
 
 
-void NestedError::format_what(const std::string& prefix, std::vector<std::string>& msg, const NestedError::format_str& format) {
-  std::strstream tmp;
-  tmp << loc;
-  msg.push_back(std::regex_replace(std::regex_replace(std::regex_replace(format,
-                                                                          NestedError::loc_re,
-                                                                          tmp.str())
-                                                      NestedError::msg_re,
-                                                      Error::what()),
-                                    NestedError::nl_re,
-                                    "\n"+prefix));
-  if (prev_error != nullptr)
-    prev_error->format_what(prefix + "| ", msg, format);
-}
+// void NestedError::format_what(const std::string& prefix, std::vector<std::string>& msg, const NestedError::format_str& format) {
+//   std::strstream tmp;
+//   tmp << loc;
+//   msg.push_back(std::regex_replace(std::regex_replace(std::regex_replace(format,
+//                                                                           NestedError::loc_re,
+//                                                                           tmp.str())
+//                                                       NestedError::msg_re,
+//                                                       Error::what()),
+//                                     NestedError::nl_re,
+//                                     "\n"+prefix));
+//   if (prev_error != nullptr)
+//     prev_error->format_what(prefix + "| ", msg, format);
+// }
 
 
   // FormatNestedException::FormatNestedException(std::exception& error_) : error(error_) {}

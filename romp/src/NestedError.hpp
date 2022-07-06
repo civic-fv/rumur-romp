@@ -22,31 +22,37 @@
 #include <regex>
 #include <ostream>
 
-namespace rumur {
+namespace romp {
 
-class NestedError : public Error {
-public:
-  typedef std::string format_str;
-  typedef char* format_str_;
-private:
-  const std::unique_ptr<const NestedError> prev_error;
-  static const format_str default_format;
-  static const std::regex loc_re("\\{[Ll][Oo][Cc](?:[Aa][Tt][Ii][Oo][Nn])?\\}");
-  static const std::regex msg_re("\\{[Mm][Ss][Gg]|[Mm][Ee][Ss][Ss][Aa][Gg][Ee]|[Ww][Hh][Aa][Tt]\\}");
-  static const std::regex nl_re("\\n");
-public:
-  NestedError(const std::string msg_, const location loc_, const NestedError& er);
-  NestedError(const char* msg_, const location loc_, const NestedError& er);
-  NestedError(const std::string msg_, const location loc_);
-  NestedError(const char* msg_, const location loc_);
-  NestedError(const std::string msg_, const location loc_, const Error& er);
-  NestedError(const char* msg_, const location loc_, const Error& er);
-  char* what() const;
-  char* what(const format_str& format) const;
-  char* what(const format_str_ format) const;
-private:
-  void format_what(const std::string& prefix, std::vector<std::string>& msg, const format_str& format);
-};
+void fprint_exception(std::ostream& out, const rumur::Error& ex) noexcept;
+void fprint_exception(std::ostream& out, const rumur::Error& ex, const std::string& prefix) noexcept;
+
+void fprint_exception(std::ostream& out, const std::exception& ex) noexcept;
+void fprint_exception(std::ostream& out, const std::exception& ex, const std::string& prefix) noexcept;
+
+// class NestedError : public Error {
+// public:
+//   typedef std::string format_str;
+//   typedef char* format_str_;
+// private:
+//   const std::unique_ptr<const NestedError> prev_error;
+//   static const format_str default_format;
+//   static const std::regex loc_re; //("\\{[Ll][Oo][Cc](?:[Aa][Tt][Ii][Oo][Nn])?\\}");
+//   static const std::regex msg_re; //("\\{[Mm][Ss][Gg]|[Mm][Ee][Ss][Ss][Aa][Gg][Ee]|[Ww][Hh][Aa][Tt]\\}");
+//   static const std::regex nl_re; //("\\n");
+// public:
+//   NestedError(const std::string msg_, const location loc_, const NestedError& er);
+//   NestedError(const char* msg_, const location loc_, const NestedError& er);
+//   NestedError(const std::string msg_, const location loc_);
+//   NestedError(const char* msg_, const location loc_);
+//   NestedError(const std::string msg_, const location loc_, const Error& er);
+//   NestedError(const char* msg_, const location loc_, const Error& er);
+//   char* what();
+//   char* what(const format_str& format) const;
+//   char* what(const format_str_ format) const;
+// private:
+//   void format_what(const std::string& prefix, std::vector<std::string>& msg, const format_str& format);
+// };
 
 
 

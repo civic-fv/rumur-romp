@@ -14,11 +14,21 @@
 // #include <streambuf>
 #include <strstream>
 #include <algorithm>
+#include <iomanip>
 
 
 #include "romp_def.hpp"
 
 using namespace rumur;
+
+template< typename T >
+std::string int_to_hex( T i ) {
+  std::stringstream stream;
+  stream << "0x" 
+        //  << std::setfill ('0') << std::setw(sizeof(T)*2) 
+         << std::hex << i;
+  return stream.str();
+}
 
 namespace romp {
 
@@ -74,18 +84,21 @@ public:
     } else {
       std::string sep;
       for (const Ptr<VarDecl> &p : n.parameters) {
-        *this << sep << *p->type << " ";
-        // if this is a var parameter, it needs to be a pointer
+        *this << sep;
+        if (p->readonly)
+          *this << "const ";
+        *this << *p->type; // << " ";
+        // if this is a var parameter, it needs to be a ~~pointer~~ reference
         if (!p->readonly) {
-          (void)is_pointer.insert(p->unique_id);
-          *this << "*";
+          // (void)is_pointer.insert(p->unique_id);  // no need for pointer shenanigans in C++
+          *this << "&"; // "*";
         }
-        *this << p->name;
+        *this << " " << p->name;
         sep = ", ";
       }
     }
     *this << ") ";
-    if (n.is_pure()) *this << "const ";
+    if (n.is_pure()) *this << "const "; // if function never changes the state mark it as const (allowed in guards and invariants)
     *this << " throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
@@ -115,6 +128,7 @@ public:
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
         *this << sep // ;
+              << "const " // quantifier parameters should never be edited
               << *(q.decl->type) << " " << q.name;
         // if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
         //   *this << *t; //t->name;
@@ -158,6 +172,7 @@ public:
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
         *this << sep // ;
+              << "const "  // quantifier parameters should never be edited
               << *(q.decl->type) << " " << q.name;
         /// if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
         //   *this << *t; //t->name;
@@ -203,6 +218,7 @@ public:
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
         *this << sep // ;
+              << "const " // quantifier parameters should never be edited
               << *(q.decl->type) << " " << q.name;
         // if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
         //   *this << *t; //t->name;
@@ -260,6 +276,7 @@ public:
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
         *this << sep // ;
+              << "const " // quantifier parameters should never be edited
               << *(q.decl->type) << " " << q.name;
         /// if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
         //   *this << *t; //t->name;
@@ -321,14 +338,34 @@ public:
 
   void gen_ruleset_array() {
     std::strstream ruleset_array;
-    std::strstream ruleset_name_array;
+    ruleset_array << indentation() << ROMP_CALLABLE_RULESET_DECL " = {";
+    std::string rs_sep = "\n\t\t";
     for (const Ptr<const SimpleRule>& rule : rules) {
+      ruleset_array << rs_sep << ROMP_MAKE_RULESET_STRUCT_HEADER(rule->name, rule->loc);
+      size_t rule_c = 0;
       *this << indentation() << "/* --- Ruleset " << rule->name << " (generated) --- */\n\n";
-      SigPerm sigs(rule);
+      SigPerm sigs(*rule);
       std::strstream _sig_str;
-      for (Sig sig : sigs) {
-
+      std::string r_sep = "";
+      for (const Sig& sig : sigs) {
+        _sig_str << sig;
+        std::string sig_str(_sig_str.str());
+        std::string _guard = "__" + int_to_hex(rule_c) + ROMP_RULE_GUARD_PREFIX + rule->name;
+        std::string _action = "__" + int_to_hex(rule_c) + ROMP_RULE_ACTION_PREFIX + rule->name;
+        ruleset_array << r_sep << "" ROMP_MAKE_RULE_STRUCT(_guard,_action,sig.to_json());
+        *this << indentation()
+              << _guard
+              << "(const State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
+              "return s." << sig_str << "; }\n"
+              << indentation()
+              << _action
+              << "(State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
+              "s." << sig_str << "; }\n";
+        rule_c++;
+        r_sep = ", ";
       }
+      ruleset_array << indentation() << "\t" ROMP_MAKE_RULESET_STRUCT_FOOTER();
+      rs_sep = ",\n\t\t";
     }
   }
 
@@ -373,7 +410,7 @@ public:
     *this << "\n" << indentation() << "namespace " ROMP_MODEL_NAMESPACE_NAME " {\n";
     indent();
 
-    *this << "\n" << indentation() << "class " ROMP_STATE_CLASS_NAME " {\n";
+    *this << "\n" << indentation() << "struct " ROMP_STATE_CLASS_NAME " {\n";
     indent();
 
     *this << "\n" << indentation() << "/* ======= Model State Variables ====== */\n\n";
@@ -422,16 +459,20 @@ public:
   //   return *this;
   // }
 
-  // CGenerator& operator << (const char* str) { out << str; return *this; }
+  CGenerator& operator << (const char* str) { out << str; return *this; }
+  CGenerator& operator << (const std::string str) { out << str; return *this; }
+  CGenerator& operator << (const rumur::Node& n) { dispatch(n); return *this; }
   CGenerator& operator << (const Sig& sig) { out << sig; return *this; }
   CGenerator& operator << (const SigParam& param) { out << param; return *this; }
 };
 
 std::ostream& operator << (std::ostream& out, const Sig& sig) {
   out << sig.perm.rule->name << "(";
-  std:string sep;
-  for (SigParam param : sig)
+  const char* sep = "";
+  for (const SigParam& param : sig) {
     out << sep << param;
+    sep = ", ";
+  }
   return (out << ")");
 }
 

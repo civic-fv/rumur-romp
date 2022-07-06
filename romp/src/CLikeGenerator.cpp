@@ -196,7 +196,7 @@ void CLikeGenerator::visit_forall(const Forall &n) {
 }
 
 void CLikeGenerator::visit_functioncall(const FunctionCall &n) {
-  *this << n.name << "(";
+  *this << ROMP_STATE_TYPE "::" << n.name << "(";
   assert(n.function != nullptr && "unresolved function call in AST");
   auto it = n.function->parameters.begin();
   bool first = true;
@@ -204,9 +204,9 @@ void CLikeGenerator::visit_functioncall(const FunctionCall &n) {
     if (!first) {
       *this << ", ";
     }
-    if (!(*it)->readonly) {
-      *this << "&";
-    }
+    // if (!(*it)->readonly) {  // in C++ we can use references instead of pointers
+    //   *this << "&";
+    // }
     *this << *a;
     first = false;
     it++;

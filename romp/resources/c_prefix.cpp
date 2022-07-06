@@ -57,7 +57,7 @@ namespace romp {
     size_t row;
     size_t col;
   };
-  std::ostream& operator << (std::ostream& out, const file_position& fp) { return (out << row << ',' << col); }
+  std::ostream& operator << (std::ostream& out, const file_position& fp) { return (out << fp.row << ',' << fp.col); }
 
   struct location {
     std::string model_obj;
@@ -68,7 +68,7 @@ namespace romp {
     out << ((__model__filename_contains_space) ? "\""__model__filename "\":" : __model__filename ":") 
         << loc.start << '-' << loc.stop;
     if (loc.model_obj != "")
-      out << " in \"" << model_obj << "\"";
+      out << " in \"" << loc.model_obj << "\"";
     return out; 
   }
 
@@ -79,7 +79,7 @@ namespace romp {
     const char* what() const noexcept {
       std::strstream out;
       this->what(out);
-      return out.str().c_str();
+      return out.str();
     }
     virtual void what(std::ostream& out) const noexcept {
       out << loc << " :: " << msg;
@@ -91,38 +91,46 @@ namespace romp {
     ModelException_Test(const std::string test_str_, const std::string msg_, const location loc_)
       : ModelException(msg_,loc_), test_str(test_str_) {}
     void what(std::ostream& out) const noexcept {
-      out << loc << " :: " << msg << "  ``" << test_str << "``";
+      out << loc << " :: " << msg << "\t:: expression = ``" << test_str << "``";
     } 
   };
  
   #define __romp__nested_exception__print_prefix "| "
 
-  void fprint_exception(std::ostream& out, const ModelException& ex, std::string& prefix="") noexcept {
+  void fprint_exception(std::ostream& out, const ModelException& ex, const std::string& prefix) noexcept;
+  void fprint_exception(std::ostream& out, const std::exception& ex, const std::string& prefix) noexcept;
+
+  void fprint_exception(std::ostream& out, const ModelException& ex, const std::string& prefix) noexcept {
     out << prefix;
-    e.what(out) 
+    ex.what(out);
     out << '\n';
     try {
         std::rethrow_if_nested(ex);
     } catch(const ModelException& mod_ex) {
       fprint_exception(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
     } catch(const std::exception& ex) {
-      fprint_exception(ex, prefix + __romp__nested_exception__print_prefix);
+      fprint_exception(out, ex, prefix + __romp__nested_exception__print_prefix);
     } catch(...) {}
   }
 
-  void fprint_exception(std::ostream& out, const std::exception& ex, std::string& prefix="") noexcept {
-    out << prefix << e.what() << '\n';
+  void fprint_exception(std::ostream& out, const std::exception& ex, const std::string& prefix) noexcept {
+    out << prefix << ex.what() << '\n';
     try {
         std::rethrow_if_nested(ex);
     } catch(const ModelException& mod_ex) {
       fprint_exception(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
     } catch(const std::exception& ex) {
-      fprint_exception(out, out, ex, prefix + __romp__nested_exception__print_prefix);
+      fprint_exception(out, ex, prefix + __romp__nested_exception__print_prefix);
     } catch(...) {}
   }
 
   std::ostream& operator << (std::ostream& out, const ModelException& ex) {
-    fprint_exception(out, ex);
+    fprint_exception(out, ex, "");
+    return out;
+  }
+
+  std::ostream& operator << (std::ostream& out, const std::exception& ex) {
+    fprint_exception(out, ex, "");
     return out;
   }
 
@@ -131,15 +139,13 @@ namespace romp {
   struct Rule {
     bool (*guard)(const State_t&) throw (ModelException);
     void (*action)(State_t&) throw (ModelException);
-    id_t id;
-    RuleSet& ruleset;
+    const char* params_json;
   };
 
   struct RuleSet {
-    id_t id;
-    location& loc;
+    std::string name;
+    location loc;
     std::vector<Rule> rules;
-    const size_t size;
   }; 
 
   struct Invariant_info {

@@ -61,6 +61,7 @@ add_executable(romp
   src/CLikeGenerator.cpp
   src/CodeGenerator.cpp
   src/compares_complex_values.cc
+  src/SigPerm.cpp
   src/generate_c.cpp
   # src/generate_h.cc
   src/main.cc
@@ -68,6 +69,7 @@ add_executable(romp
   src/romp_def.cpp
   src/ModelSplitter.cpp
   src/CTypeGenerator.cpp
+  src/NestedError.cpp
   )
 
 target_include_directories(romp
