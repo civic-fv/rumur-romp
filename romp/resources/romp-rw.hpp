@@ -28,19 +28,19 @@ public:
   const id_t id;
   const unsigned int init_rand_seed;
   unsigned int rand_seed;
-  _ROMP_STATE_TYPE state;
+  State_t state;
   size_t fuel;
   bool valid;
   // tripped thing
-  ModelException* tripped = nullptr;
+  ModelError* tripped = nullptr;
   // how many rules have tried to be applied to this state
   size_t level = 0;
-  // array of intgers representing the rul ID's applied to this state (treated
+  // array of integers representing the rul ID's applied to this state (treated
   // as a circular buffer array)
   id_t history[STATE_HISTORY_SIZE];
   
 
-  RandWalker(_ROMP_STATE_TYPE startstate, unsigned int rand_seed, size_t fuel/* =DEFAULT_FUEL */) 
+  RandWalker(State_t startstate, unsigned int rand_seed, size_t fuel/* =DEFAULT_FUEL */) 
     : state(startstate), 
       rand_seed(rand_seed),
       init_rand_seed(rand_seed),
@@ -83,11 +83,11 @@ public:
       for (int i = 0; i < INVARIANTS_SIZE; i++)
           if (::__caller__::INVARIANTS[i].check(state) == false) {
               valid = false;
-              tripped = new ModelException_Test("", INVARIANTS[i].loc, INVARIANT_INFOS[i].expression);
+              tripped = new ModelPropertyError(PropertyType::INVARIANT, "", INVARIANTS[i].loc, INVARIANT_INFOS[i].expression);
           }           
-    } catch(ModelException* ex) {
+    } catch(ModelError& ex) {
       valid = false;
-      tripped = ex;
+      tripped = ex; // need to look into this one, probs broken with std::nested_exceptions
       // TODO: handle error data
     }
   }
@@ -105,10 +105,10 @@ id_t RandWalker::next_id = 0u;
  * To do - how to get the size of startstate
  * 
  */
-std::vector<_ROMP_STATE_TYPE> gen_startstates() throw (ModelException*) {
-  std::vector<_ROMP_STATE_TYPE> states;
+std::vector<State_t> gen_startstates() throw (ModelError) {
+  std::vector<State_t> states;
   for (int i=0; i<STARTSTATES_SIZE; i++) {
-    states.push_back(_ROMP_STATE_TYPE());
+    states.push_back(State_t());
     ::__caller__::STARTSTATES[i].initialize(states[states.size()-1]);
   }
   return states;
@@ -128,11 +128,11 @@ unsigned int genrandomseed(unsigned int &root_seed) {
  * To do - how to get the size of startstate
  * 
  */
-std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_seed, size_t fuel) throw (ModelException*) {
+std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_seed, size_t fuel) throw (ModelError) {
   std::vector<RandWalker> rws;
   auto startstates = gen_startstates();
   for(int i=0; i<rw_count; i++) {
-    auto copied_startstate = _ROMP_STATE_TYPE(startstates[i%startstates.size()]);
+    auto copied_startstate = State_t(startstates[i%startstates.size()]);
     RandWalker rw1(copied_startstate, get_random_seed(root_seed), fuel);
   }
   return rws;
@@ -142,7 +142,7 @@ std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_se
 //   use the copy constructor (always has the signature)
 //    ClassName(const ClassName &obj)
 //  this means your's should look like:
-//    auto copied_state = _ROMP_STATE_TYPE(startstates[i%startstates.size()]);
+//    auto copied_state = State_t(startstates[i%startstates.size()]);
 
 /**
  * @brief helper function rand_choice 
@@ -176,19 +176,14 @@ T rand_choice(unsigned int &rand_seed, T min, T max,string seed_input) {
  * @param thread_count the max number of threads to use to accomplish all said random walks.
  */
 void launch_OpenMP(size_t rw_count, unsigned int rand_seed, size_t fuel, size_t thread_count) {
+  std::vector<RandWalker> rws;
   try {
-    auto rws = gen_random_walkers(rw_count, root_seed, fuel);
-
-
-
-
-
-
-
-  } catch (ModelException* ex) {
-    std::error << "\nModel raised an error when initializing our start state!! (message below)\n"
+    rws = gen_random_walkers(rw_count, root_seed, fuel);
+  } catch (const ModelError& ex) {
+    std::cerr << "\nModel raised an error when initializing our start state(s)!! (message below)\n"
                << ex.what << std::endl;
   }
+  //TODO: launch the random walkers !!
 }
 
 
@@ -230,10 +225,10 @@ void launch_OpenMPI(unsigned int rand_seed, size_t fuel);
 void launch_single(unsigned int rand_seed, size_t fuel) {
   /* ----> to do how to obtain the total no of rule set (treating rules as singleton rules )*/
   unsigned int _seed_cpy = rand_seed;
-  _ROMP_STATE_TYPE start_state;
+  State_t start_state;
   try {
     ::__caller__::STARTSTATES[rand_choice(_seed_cpy, 0ul, STARTSTATES_SIZE)].initialize(start_state);
-  } catch (ModelException* ex) {
+  } catch (const ModelError& ex) {
     std::error << "\nModel raised an error when initializing our start state!! (message below)\n"
                << ex.what << std::endl;
     return;

@@ -18,6 +18,7 @@
 
 #include <cstddef>
 #include <string>
+#include <unordered_set>
 // #include <stack>
 
 #include "romp_def.hpp"
@@ -45,6 +46,9 @@ namespace romp {
     
 
   protected:
+
+    static const std::unordered_set<std::string> RESERVED_NAMES;
+
     // get a white space string for the current indentation level
     std::string indentation() const;
 

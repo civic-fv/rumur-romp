@@ -19,7 +19,8 @@ class __attribute__((visibility("hidden"))) CLikeGenerator
 protected:
   std::ostream &out;
   bool pack;
-  static const std::unordered_set<std::string> reserved_type_names;
+  std::unordered_set<std::string> reserved_type_names;
+  
 
 public:
   // mapping of Enum unique_ids to the name of a TypeDecl to them

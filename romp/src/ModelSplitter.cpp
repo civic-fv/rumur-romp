@@ -23,7 +23,7 @@
 #include "options.h"
 #include <cassert>
 #include <cstddef>
-#include <cstdio>
+// #include <cstdio>
 #include <ctype.h>
 #include <gmpxx.h>
 #include <rumur/rumur.h>
@@ -44,6 +44,7 @@ using namespace rumur;
 // <<                               CONSTRUCTORS & DECONSTRUCTORS                                >> 
 // << ========================================================================================== >> 
 
+// ModelSplitter::ModelSplitter(rumur::Symtab& symtab_) : symtab(symtab_) {}
 ModelSplitter::~ModelSplitter() {}
 
 
@@ -91,7 +92,7 @@ ModelSplitter::~ModelSplitter() {}
 
 const std::string ModelSplitter::gen_new_anon_name() {
   char buff[24];
-  sprintf(buff, "anon0x%x_t", anon_id++);
+  std::sprintf(buff, "anon0x%x_t", anon_id++);
   return std::string(buff);
 }
 
@@ -99,7 +100,7 @@ void ModelSplitter::make_name_unique(std::string &name) {
   if (cTypeNames.find(name) == cTypeNames.end())
     return;
   char buff[name.size()+24];
-  sprintf(buff, (name+"__0x%x").c_str(), anon_id++);
+  std::sprintf(buff, (name+"__0x%x").c_str(), anon_id++);
   name = std::string(buff);
 }
 

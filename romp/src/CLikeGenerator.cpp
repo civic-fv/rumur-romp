@@ -844,7 +844,8 @@ size_t CLikeGenerator::emit_trailing_comments(const Node &n) {
   return count;
 }
 
-const std::unordered_set<std::string> CLikeGenerator::reserved_type_names{ROMP_PREDEFINED_TYPES};
+// const std::unordered_set<std::string> CLikeGenerator::reserved_type_names{ROMP_PREDEFINED_TYPES, ROMP_RESERVED_NAMES};
+
 
 void CLikeGenerator::check_type_ref(const Node &p, const Ptr<TypeExpr> &t) const {
   if (t->is_boolean()) return;

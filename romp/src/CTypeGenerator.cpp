@@ -27,7 +27,7 @@ namespace romp {
 
 
 void CTypeGenerator::visit_typedecl(const TypeDecl &n) {
-  if (CLikeGenerator::reserved_type_names.find(n.name) != CLikeGenerator::reserved_type_names.end())
+  if (used_names.find(n.name) != used_names.end())
     throw Error("Tried to define a type with a reserved/built-in type name!!", n.loc);
   if (emitted_tDecls.find(n.name) != emitted_tDecls.end())
     throw Error("Tried to redefine an already defined type!", n.loc);

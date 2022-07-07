@@ -61,6 +61,7 @@ private: // ---- Private Class Members ---- //
   // rumur::location loc;
   
   std::unordered_set<std::string> cTypeNames{ROMP_RESERVED_NAMES};
+  // rumur::Symtab& symtab
   // std::unordered_map<size_t,std::string> cTypeName;  // might end up not needing this
 
 
@@ -70,6 +71,7 @@ private: // ---- Private Class Members ---- //
   // << ============================= Constructors & Deconstructor =============================== >> 
 public:
   ModelSplitter() {}
+  // ModelSplitter(rumur::Symtab& symtab_);
   ~ModelSplitter();
 
 

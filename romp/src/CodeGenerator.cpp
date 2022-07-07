@@ -7,6 +7,8 @@
 
 namespace romp {
 
+const std::unordered_set<std::string> CodeGenerator::RESERVED_NAMES{ROMP_RESERVED_NAMES, ROMP_RESERVED_NAMES};
+
 std::string CodeGenerator::M_FUNCTION__FUNC_ATTRS = "";
 
 std::string CodeGenerator::M_RULE_GUARD__FUNC_ATTRS = "";
