@@ -104,13 +104,13 @@ argclass::argclass(int ac, char** av)
   for (i=1; i<ac; i++) 
     {
       if (strcmp(av[i], "-l") == 0) {
-	print_license = TRUE;
-	continue;
+	      print_license = TRUE;
+	      continue;
       }  
       if (strcmp(av[i], "-h") == 0) {
-	help = TRUE;
-	PrintInfo();
-	exit(1);
+	      help = TRUE;
+	      PrintInfo();
+	      exit(1);
       } 
       if ( av[i][0]!='-' && !initialized_filename)
 	{
