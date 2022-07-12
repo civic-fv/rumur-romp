@@ -22,7 +22,7 @@
 
 namespace romp {
 
-class RandWalker {
+class RandWalker : public ::romp::IRandWalker {
 public:
   static id_t next_id;
   const id_t id;
@@ -46,7 +46,7 @@ public:
       init_rand_seed(rand_seed),
       fuel(fuel),
       id(RandWalker::next_id++) 
-  {} 
+  { state.__rw__ = *this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ } 
 
   /**
    * @brief to pick a rule in random for simulation step

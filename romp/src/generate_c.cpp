@@ -1,4 +1,5 @@
 #include "generate_c.hpp"
+#include "../../common/escape.h"
 #include "CLikeGenerator.hpp"
 #include "CTypeGenerator.hpp"
 #include "ModelSplitter.hpp"
@@ -35,15 +36,29 @@ namespace romp {
 class CGenerator : public CLikeGenerator {
 
 private:
+  static const std::unordered_set<std::string> RESERVED_VAR_NAMES; //{ROMP_RESERVED_NAMES};
   // std::vector<std::string> state_vars;
   std::vector<Ptr<const SimpleRule>> rules;
-  std::vector<Ptr<const PropertyRule>> invariants;
+  std::vector<Ptr<const PropertyRule>> property_rules;
   std::vector<Ptr<const StartState>> startstates;
+  // std::strstream rule_info_list;
+  // std::strstream startstate_info_list;
+  // std::strstream prop_info_list;
+  // std::strstream error_info_list;
+  id_t next_property_id = 0u;
+  id_t next_cover_id = 0u;
+  id_t next_liveness_id = 0u;
+  id_t next_error_id = 0u;
 
 public:
   CGenerator(const std::vector<rumur::Comment> &comments_, std::ostream &out_,
              bool pack_)
-      : CLikeGenerator(comments_, out_, pack_) {}
+      : CLikeGenerator(comments_, out_, pack_) 
+  { 
+    // prop_info_list << ROMP_CALLABLE_PROPERTIES_DECL " = {";
+    // startstate_info_list << ROMP_CALLABLE_STARTSTATES_DECL " = {";
+    // error_info_list << ROMP_CALLABLE_STARTSTATES_DECL " = {";
+  }
 
   void visit_constdecl(const ConstDecl &n) final {
     *this << indentation() << "const ";
@@ -98,10 +113,13 @@ public:
       }
     }
     *this << ") ";
-    if (n.is_pure()) *this << "const "; // if function never changes the state mark it as const (allowed in guards and invariants)
+    if (n.is_pure()) *this << "const "; // if function never changes the state mark it as const (allowed in guards and property_rules)
     *this << " throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
+    
+    *this << indentation() << "try {\n";
+    indent(); 
 
     for (const Ptr<Decl> &d : n.decls) {
       emit_leading_comments(*d);
@@ -111,14 +129,19 @@ public:
       emit_leading_comments(*s);
       *this << *s;
     }
+
     dedent();
-    *this << "}\n";
+    *this << indentation() << "} catch (::std::exception& ex) { ::std::throw_with_nested( " 
+                          ROMP_MAKE_MODEL_EXCEPTION("[func/proc] " + n.name, n) " ); }\n";
+
+    dedent();
+    *this << "}\n"; 
   }
 
   void visit_propertyrule(const PropertyRule &n) final {
-    invariants.push_back(Ptr<const PropertyRule>(&n));
+    property_rules.push_back(Ptr<const PropertyRule>(&n));
     // function prototype
-    *this << indentation() << CodeGenerator::M_INVARIANT__FUNC_ATTRS << "\n"
+    *this << indentation() << CodeGenerator::M_PROPERTY__FUNC_ATTRS << "\n"
           << indentation() << "bool " ROMP_PROPERTYRULE_PREFIX << n.name << "(";
 
     // parameters
@@ -142,18 +165,58 @@ public:
     *this << ") const throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
+    
+    *this << indentation() << "try {\n";
+    indent(); 
 
     // any aliases this property uses
     for (const Ptr<AliasDecl> &a : n.aliases) {
       *this << *a;
     }
 
-    *this << indentation() << "return " << *n.property.expr << ";\n";
+    *this << indentation() << "return ";
+    std::string prop_type = "[property] ";
+    switch (n.property.category) {
+      case Property::ASSERTION:
+        *this << ROMP_PROPERTY_HANDLER_INVAR "("
+              " (" << *n.property.expr << "), " 
+              << next_property_id++ << "u"
+              ");";
+        prop_type = "[invariant] ";
+        break;
+      case Property::ASSUMPTION:
+        *this << ROMP_PROPERTY_HANDLER_ASSUME "("
+              " (" << *n.property.expr << "), " 
+              << next_property_id++ << "u"
+              ");";
+        break;
+      case Property::COVER:
+        *this << ROMP_PROPERTY_HANDLER_COVER "("
+              " (" << *n.property.expr << "), " 
+              << next_cover_id++ << "u, "
+              << next_property_id++ << "u"
+              ");";
+        prop_type = "[cover] ";
+        break;
+      case Property::LIVENESS:
+        *this << ROMP_PROPERTY_HANDLER_LIVENESS "("
+              " (" << *n.property.expr << "), " 
+              << next_liveness_id++ << "u, "
+              << next_property_id++ << "u"
+              ");";
+        prop_type = "[liveness] ";
+        break;
+    }
+    *this << "(" << *n.property.expr << ");\n";
 
     // clean up any aliases we defined
     for (const Ptr<AliasDecl> &a : n.aliases) {
       *this << "#undef " << a->name << "\n";
     }
+
+    dedent();
+    *this << indentation() << "} catch (::std::exception& ex) { ::std::throw_with_nested( " 
+                          ROMP_MAKE_MODEL_EXCEPTION(prop_type + n.name, n) " ); }\n";
 
     dedent();
     *this << indentation() << "}\n";
@@ -186,6 +249,9 @@ public:
     *this << ") const throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
+    
+    *this << indentation() << "try {\n";
+    indent(); 
 
     // any aliases that are defined in an outer scope
     for (const Ptr<AliasDecl> &a : n.aliases) {
@@ -204,6 +270,10 @@ public:
     for (const Ptr<AliasDecl> &a : n.aliases) {
       *this << "#undef " << a->name << "\n";
     }
+
+    dedent();
+    *this << indentation() << "} catch (::std::exception& ex) { ::std::throw_with_nested( " 
+                          ROMP_MAKE_MODEL_EXCEPTION("[rule guard] " + n.name, n) " ); }\n";
 
     dedent();
     *this << indentation() << "}\n\n";
@@ -233,6 +303,9 @@ public:
     *this << ") throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
+    
+    *this << indentation() << "try {\n";
+    indent(); 
 
     // aliases, variables, local types, etc.
     for (const Ptr<AliasDecl> &a : n.aliases) {
@@ -258,6 +331,10 @@ public:
     for (const Ptr<AliasDecl> &a : n.aliases) {
       *this << "#undef " << a->name << "\n";
     }
+
+    dedent();
+    *this << indentation() << "} catch (::std::exception& ex) { ::std::throw_with_nested( " 
+                          ROMP_MAKE_MODEL_EXCEPTION("[rule action] " + n.name, n) " ); }\n";
 
     dedent();
     *this << indentation() << "}\n";
@@ -317,13 +394,19 @@ public:
     }
 
     dedent();
+    *this << indentation() << "} catch (::std::exception& ex) { ::std::throw_with_nested( " 
+                          ROMP_MAKE_MODEL_EXCEPTION("[startstate] " + n.name, n) " ); }\n";
+
+    dedent();
     *this << indentation() << "}\n\n";
   }
 
   void visit_vardecl(const VarDecl &n) final {
-      *this << indentation() << *n.type << " " << n.name << ";";
-      emit_trailing_comments(n);
-      *this << "\n";
+    if (CGenerator::RESERVED_VAR_NAMES.find(n.name) != CGenerator::RESERVED_VAR_NAMES.end())
+      throw Error("``"+n.name+"`` is a reserved name!",n.loc);
+    *this << indentation() << *n.type << " " << n.name << ";";
+    emit_trailing_comments(n);
+    *this << "\n";
   }
 
 
@@ -338,13 +421,13 @@ public:
 
   void gen_ruleset_array() {
     std::strstream ruleset_array;
-    ruleset_array << indentation() << ROMP_CALLABLE_RULESET_DECL " = {";
+    ruleset_array << indentation() << ROMP_CALLABLE_RULESETS_DECL " = {";
     std::string rs_sep = "\n\t\t";
     for (const Ptr<const SimpleRule>& rule : rules) {
-      ruleset_array << rs_sep << ROMP_MAKE_RULESET_STRUCT_HEADER(rule->name, rule->loc);
+      ruleset_array << rs_sep << ROMP_MAKE_RULESET_STRUCT_HEADER(rule->name, *rule);
       size_t rule_c = 0;
       *this << indentation() << "/* --- Ruleset " << rule->name << " (generated) --- */\n\n";
-      SigPerm sigs(*rule);
+      SigPerm sigs(rule);
       std::strstream _sig_str;
       std::string r_sep = "";
       for (const Sig& sig : sigs) {
@@ -352,7 +435,7 @@ public:
         std::string sig_str(_sig_str.str());
         std::string _guard = "__" + int_to_hex(rule_c) + ROMP_RULE_GUARD_PREFIX + rule->name;
         std::string _action = "__" + int_to_hex(rule_c) + ROMP_RULE_ACTION_PREFIX + rule->name;
-        ruleset_array << r_sep << "" ROMP_MAKE_RULE_STRUCT(_guard,_action,sig.to_json());
+        ruleset_array << r_sep << ROMP_MAKE_RULE_STRUCT(_guard,_action,sig.to_json());
         *this << indentation()
               << _guard
               << "(const State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
@@ -367,11 +450,18 @@ public:
       ruleset_array << indentation() << "\t" ROMP_MAKE_RULESET_STRUCT_FOOTER();
       rs_sep = ",\n\t\t";
     }
+    // *this << "\n#undef " ROMP_RULESETS_LEN "\n"; 
+    *this << "\n#define " ROMP_RULESETS_LEN " " << rules.size() << "\n"; 
+    *this << "\n\n" << indentation() << "// All of the rule sets in one place\n" 
+          << ruleset_array.str() << "};\n\n";
   }
 
 
-  void gen_invariant_array() {
-    for (const Ptr<const PropertyRule>& invar : invariants) {
+  void gen_property_array() {
+    std::strstream prop_list;
+    
+    prop_list << ROMP_CALLABLE_PROPERTIES_DECL " = {";
+    for (const Ptr<const PropertyRule>& invar : property_rules) {
       int tmp = 0;
     }
   }
@@ -445,7 +535,7 @@ public:
 
     *this << "\n\n" << indentation() << "/* ======= Romp Callable Lists ====== */\n\n";
     // gen_ruleset_array();
-    // gen_invariant_array();
+    // gen_property_array();
     // gen_startstate_array();
 
     dedent();
@@ -461,10 +551,14 @@ public:
 
   CGenerator& operator << (const char* str) { out << str; return *this; }
   CGenerator& operator << (const std::string str) { out << str; return *this; }
+  CGenerator& operator << (const int val) { out << val; return *this; }
   CGenerator& operator << (const rumur::Node& n) { dispatch(n); return *this; }
   CGenerator& operator << (const Sig& sig) { out << sig; return *this; }
   CGenerator& operator << (const SigParam& param) { out << param; return *this; }
 };
+
+const std::unordered_set<std::string> CGenerator::RESERVED_VAR_NAMES{ROMP_RESERVED_NAMES};
+
 
 std::ostream& operator << (std::ostream& out, const Sig& sig) {
   out << sig.perm.rule->name << "(";
@@ -510,7 +604,7 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
                                      "\tPlease build with the following command:\n") "\n";
 
   out << "\n#define __romp__GENERATED_CODE\n\n";
-  out << "\n#define _ROMP_STATE_TYPE\n\n";
+  out << "\n#define _ROMP_STATE_TYPE " ROMP_STATE_TYPE "\n\n";
   out << "\n#define __model__filename \"" << in_filename << "\"\n\n";
   auto _tmp = trim(in_filename);
   auto _count = std::count(_tmp.begin(), _tmp.end(), ' ');
@@ -523,7 +617,7 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
   // output_embedded_code_file(out, resources_lib_nlohmann_json_hpp, resources_lib_nlohmann_json_hpp_len);
   out << "\n#pragma endregion inline_library_includes\n\n" << std::flush;
 
-  out << "namespace " ROMP_MODEL_NAMESPACE_NAME " { class " ROMP_STATE_CLASS_NAME "; }\n\n";
+  out << "namespace " ROMP_MODEL_NAMESPACE_NAME " { struct " ROMP_STATE_CLASS_NAME "; } // helpful pre-definition\n\n";
 
   out << "\n#pragma region model_prefixes\n\n";
   // write the static prefix to the beginning of the source file

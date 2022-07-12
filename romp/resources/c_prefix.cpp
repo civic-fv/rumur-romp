@@ -34,7 +34,7 @@
 
 #ifndef __romp__GENERATED_CODE
 #include "romp-rw_pregen-fix.hpp" // FOR PRE-CODEGEN LANGUAGE SUPPORT ONLY !! 
-#include "romp-json.hpp" // FOR PRE-CODEGEN LANGUAGE SUPPORT ONLY !! 
+// #include "romp-json.hpp" // FOR PRE-CODEGEN LANGUAGE SUPPORT ONLY !! 
 #endif
 
 
@@ -173,7 +173,7 @@ namespace romp {
   };
   
 
-  template<class O> void __jprint_exception(ojstream<O> out& json, const std::exception& ex) noexcept;
+  template<class O> void __jprint_exception(ojstream<O>& json, const std::exception& ex) noexcept;
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const ModelPropertyError& ex) noexcept { 
     json << "{\"$type\":\"romp::ModelPropertyError\","
              "\"loc\":" << ex.loc << ","
@@ -211,9 +211,10 @@ namespace romp {
     __jprint_exception(json, ex);
     return (json << '}');
   }
-  template<class O> void __jprint_exception(ojstream<O> out& json, const std::exception& ex) noexcept {
+  template<class O> void __jprint_exception(ojstream<O>& json, const std::exception& ex) noexcept {
     try {
         std::rethrow_if_nested(ex);
+        json << ",\"cause\":null";
     } catch(const ModelPropertyError& mod_test_ex) {
       json << ",\"cause\":" << mod_test_ex;
     } catch(const ModelError& mod_ex) {
@@ -272,61 +273,99 @@ namespace romp {
   struct Rule {
     bool (*guard)(const State_t&) throw (ModelError);
     void (*action)(State_t&) throw (ModelError);
-    const char* params_json;
+    const std::string json;
   };
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Rule& r) noexcept { return (json << r.json); }
+  std::ostream& operator << (std::ostream& out, const Rule& r) noexcept { return (out << r.json); }
 
   struct RuleSet {
+    std::vector<Rule> rules;
     std::string name;
     location loc;
-    std::vector<Rule> rules;
   }; 
 
-  struct Invariant_info {
-    id_t id;
-    id_t ruleset_id;
-    location& loc;
-    std::string expression;
+  // template<class O> ojstream<O>& operator << (ojstream<O>& json, const RuleSet& rs) noexcept { return (json << r.json); }
+  std::ostream& operator << (std::ostream& out, const RuleSet& rs) noexcept { return (out << rs.name << " @(" << rs.loc << ")"); }
+
+  struct Property {
+    const bool (*check)(const State_t&) throw (ModelError);
+    const std::string json;
+    const prop_id;
+    const location loc;
+    const std::string name;
   };
 
-  struct Invariant {
-    bool (*check)(const State_t&) throw (ModelError);
-  };
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Property& p) noexcept { return (json << p.json); }
+  std::ostream& operator << (std::ostream& out, const Property& p) noexcept { return (out << p.name << " @(" << p.loc << ")"); }
 
   struct StartState {
     void (*initialize)(State_t&) throw (ModelError);
-    id_t id;
-    id_t ruleset_id;
-    location& loc;
+    const std::string json;
+    const std::string name;
+    const location loc;
   };
 
-  // static void failed_assertion_(const char *message) {
-  //   fprintf(stderr, "failed assertion: %s\n", message);
-  //   exit(EXIT_FAILURE);
-  // }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartState& s) noexcept { return (json << s.json); }
+  std::ostream& operator << (std::ostream& out, const StartState& s) noexcept { return (out << s.name << " @(" << s.loc << ")"); }
 
-  // void (*failed_assertion)(const char *) = failed_assertion_;
 
-  // static void failed_assumption_(const char *message) {
-  //   fprintf(stderr, "failed assumption: %s\n", message);
-  //   exit(EXIT_FAILURE);
-  // }
+  // typedef bool (*failed_assertion_handler_t)(const char *) throw (ModelPropertyError);
 
-  // void (*failed_assumption)(const char *) = failed_assumption_;
+  // typedef bool (*failed_assumption_handler_t)(const char *) throw (ModelPropertyError);
 
-  // static void error_(const char *message) {
-  //   fprintf(stderr, "error: %s\n", message);
-  //   exit(EXIT_FAILURE);
-  // }
+  // typedef bool (*error_handler_t)(const char *) throw (ModelPropertyError);
 
-  // void (*error)(const char *) throw (ModelError) = error_;
+  // typedef bool (*cover_handler_t)(const char *) throw (ModelPropertyError);
 
-  // static void cover_(const char *message __attribute__((unused))) {}
+  // typedef bool (*liveness_handler_t)(const char *) throw (ModelPropertyError);
 
-  // void (*cover)(const char *) throw (ModelError) = cover_;
-
-  // static void liveness_(const char *message __attribute__((unused))) {}
-
-  // void (*liveness)(const char *) throw (ModelError) = liveness_;
+  class IRandWalker {
+    /**
+     * @brief the handler the model will call when it reaches an inline `assert`/`invariant` statement
+     * @param eval_expr the expression to be evaluated (technically it will be evaluated before reaching this)
+     * @param prop_id the id given to the property (value based upon the order it was processed by the code gen tool)
+     * @return \c bool - the negation of whether or not the model calling this function should return an error or not.  ( \c true - do NOT, \c false DO)
+     */
+    virtual bool assertion_handler(bool eval_expr, id_t prop_id) = 0;
+    /**
+     * @brief the handler the model will call when it reaches a global rule `assert`/`invariant`
+     * @param eval_expr the expression to be evaluated (technically it will be evaluated before reaching this)
+     * @param prop_id the id given to the property (value based upon the order it was processed by the code gen tool)
+     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true - do NOT, \c false DO)
+     */
+    virtual bool invariant_handler(bool eval_expr, id_t prop_id) = 0;
+    /**
+     * @brief the handler the model will call when it reaches an `assumption` statement
+     * @param eval_expr the expression to be evaluated (technically it will be evaluated before reaching this)
+     * @param prop_id the id given to the property (value based upon the order it was processed by the code gen tool)
+     * @return \c bool - whether or not the caller should report an error. ( \c true - do NOT, \c false DO)
+     */
+    virtual bool assumption_handler(bool eval_expr, id_t prop_id) = 0;
+    /**
+     * @brief the handler the model will call when a `cover` statement is reached
+     * @param eval_expr the expression to be evaluated (technically it will be evaluated before reaching this)
+     * @param cover_id the id given to this specific `cover` statement (value based upon the order it was processed by the code gen tool)
+     * @param prop_id the id given to the property (value based upon the order it was processed by the code gen tool)
+     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true - do NOT, \c false DO)
+     */
+    virtual bool cover_handler(bool eval_expr, id_t cover_id, id_t prop_id) = 0;
+    /**
+     * @brief the handler the model will call when a `liveness` statement is reached
+     * @param eval_expr the expression to be evaluated (technically it will be evaluated before reaching this)
+     * @param liveness_id the id given to this specific `liveness` statement (value based upon the order it was processed by the code gen tool)
+     * @param prop_id the id given to the property (value based upon the order it was processed by the code gen tool)
+     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true - do NOT, \c false DO)
+     */
+    virtual bool liveness_handler(bool eval_expr, id_t liveness_id, id_t prop_id) = 0;
+    /**
+     * @brief the handler the model will call it reaches an `error` statement
+     * @param error_id the id given to the error statement (value based upon the order it was processed by the code gen tool)
+     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true - DO, \c false do NOT)
+     */
+    virtual bool error_handler(id_t error_id) = 0;
+    friend State_t;
+  };
 
 }
 

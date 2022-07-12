@@ -19,7 +19,8 @@ class __attribute__((visibility("hidden"))) CLikeGenerator
 protected:
   std::ostream &out;
   bool pack;
-  std::unordered_set<std::string> reserved_type_names;
+  
+  std::unordered_set<std::string> reserved_type_names{ROMP_RESERVED_NAMES};
   
 
 public:
@@ -72,7 +73,7 @@ public:
   void visit_element(const rumur::Element &n) final;
   void visit_enum(const rumur::Enum &n); // final;
   void visit_eq(const rumur::Eq &n) final;
-  void visit_errorstmt(const rumur::ErrorStmt &n) final;
+  void visit_errorstmt(const rumur::ErrorStmt &n); // final;
   void visit_exists(const rumur::Exists &n) final;
   void visit_exprid(const rumur::ExprID &n) final;
   void visit_field(const rumur::Field &n) final;
@@ -97,7 +98,7 @@ public:
   void visit_number(const rumur::Number &n) final;
   void visit_or(const rumur::Or &n) final;
   void visit_procedurecall(const rumur::ProcedureCall &n) final;
-  void visit_property(const rumur::Property &) final;
+  void visit_property(const rumur::Property &); // final;
   void visit_propertystmt(const rumur::PropertyStmt &n) final;
   void visit_put(const rumur::Put &n) final;
   void visit_quantifier(const rumur::Quantifier &n) ; //final;

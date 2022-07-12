@@ -23,8 +23,11 @@
 #ifndef RULES_SIZE
 #define RULES_SIZE 6ul
 #endif
-#ifndef INVARIANTS_SIZE 
-#define INVARIANTS_SIZE 2ul
+#ifndef PROPERTIES_SIZE 
+#define PROPERTIES_SIZE 2ul
+#endif
+#ifndef LIVENESS_TESTS_SIZE
+#define LIVENESS_TESTS_SIZE 2ul
 #endif
 #ifndef STARTSTATES_SIZE
 #define STARTSTATES_SIZE 2ul
@@ -43,23 +46,26 @@ namespace __model__ {
 namespace romp {
   struct RuleSet;
   struct Rule;
-  struct Invariant;
-  // struct Invariant_info;
+  struct Property;
+  // struct Property_info;
+  // typedef const std::string Property_info;
   struct StartState;
+  class IRandWalker;
   // struct StartState_info;
 }
 
 namespace __caller__ { // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::RuleSet RULE_SETS[RULES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
- ::romp::Invariant INVARIANTS[INVARIANTS_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
-//  ::romp::Invariant_info INVARIANT_INFOS[INVARIANTS_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
+ ::romp::Property PROPERTIES[PROPERTIES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
+//  ::romp::Property_info PROPERTY_PARAMS[PROPERTIES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
  ::romp::StartState STARTSTATES[STARTSTATES_SIZE]; // LANGUAGE SERVER SUPPORT ONLY!!
 } // LANGUAGE SERVER SUPPORT ONLY !!
 
 namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!
- struct __State__ { // LANGUAGE SERVER SUPPORT ONLY !!
+  struct __State__ { // LANGUAGE SERVER SUPPORT ONLY !!
+    IRandomWalker& __rw__; // LANGUAGE SERVER SUPPORT ONLY !!
     size_t test1[16]; // LANGUAGE SERVER SUPPORT ONLY !!
- }; // LANGUAGE SERVER SUPPORT ONLY !!
+  }; // LANGUAGE SERVER SUPPORT ONLY !!
 } // LANGUAGE SERVER SUPPORT ONLY !!
 
 #endif

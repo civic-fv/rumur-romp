@@ -38,7 +38,7 @@ namespace romp {
     // function attributes to prepend before the definition of any murphi start_state's C/C++ function.
     static std::string M_STARTSTATE__FUNC_ATTRS;
     // function attributes to prepend before the definition of any murphi invariant's (property-rule) C/C++ function.
-    static std::string M_INVARIANT__FUNC_ATTRS;
+    static std::string M_PROPERTY__FUNC_ATTRS;
 
   private:
     size_t indent_level = 0; // current indentation level

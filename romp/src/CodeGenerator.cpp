@@ -16,7 +16,7 @@ std::string CodeGenerator::M_RULE_ACTION__FUNC_ATTRS = "";
 
 std::string CodeGenerator::M_STARTSTATE__FUNC_ATTRS = "";
 
-std::string CodeGenerator::M_INVARIANT__FUNC_ATTRS = "";
+std::string CodeGenerator::M_PROPERTY__FUNC_ATTRS = "";
 
 
 std::string CodeGenerator::indentation() const {

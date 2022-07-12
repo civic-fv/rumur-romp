@@ -133,34 +133,34 @@ private:
 protected:
   static std::unordered_map<std::string,const std::shared_ptr<const QuantExpansion>> quant_vals_cache;
   std::vector<const std::shared_ptr<const QuantExpansion>> quant_vals;
- size_t _size = 1;
+  size_t _size = 1;
   
 
 public:
   const rumur::Ptr<const rumur::Rule> rule; // the "ruleset" we are creating all the signatures for
   const std::string rule_type;
-  const std::vector<const rumur::Quantifier>& quantifiers;
+  const std::vector<rumur::Quantifier>& quantifiers;
   const size_t param_count;
 
 
 // << ============================= Constructors & Deconstructor =============================== >> 
 private:
 protected:
-  SigPerm(const rumur::Ptr<rumur::Rule> rule_, const char* rule_type_);
+  SigPerm(const rumur::Ptr<const rumur::Rule> rule_, const char* rule_type_);
 public:
-  SigPerm(const rumur::Ptr<rumur::SimpleRule> rule_) : SigPerm(rule_, "Rule") {}
-  SigPerm(const rumur::Ptr<rumur::StartState> rule_) : SigPerm(rule_, "StartState") {}
-  SigPerm(const rumur::Ptr<rumur::PropertyRule> rule_) : SigPerm(rule_, "Invariant") {}
+  SigPerm(const rumur::Ptr<const rumur::SimpleRule> rule_) : SigPerm(rule_, "Rule") {}
+  SigPerm(const rumur::Ptr<const rumur::StartState> rule_) : SigPerm(rule_, "StartState") {}
+  SigPerm(const rumur::Ptr<const rumur::PropertyRule> rule_) : SigPerm(rule_, "Invariant") {}
 
 // << =================================== Member Functions ===================================== >> 
 private:
-  void add_quants(const std::vector<const rumur::Quantifier>& qs);
+  void add_quants(const std::vector<rumur::Quantifier>& qs);
 
   void add_quant(const rumur::Quantifier& q) ;
 
   static void add_quant(const std::string& name, const rumur::Quantifier& q);
   
-  std::vector<std::vector<const SigParam>::iterator> get_init_param_iters();
+  std::vector<std::vector<const SigParam>::iterator> get_init_param_iters() const;
 
 protected:
   
@@ -193,15 +193,17 @@ public:
     Sig* sig_ptr;
     const SigPerm& perm;
     std::vector<std::vector<const SigParam>::iterator> param_iters;
-  public:
+  // public:
     // construct a "begin" iterator (ONLY)
-    Iterator(const SigPerm& perm_) 
-      : index(0ul), perm(perm_), param_iters(perm_.get_init_param_iters()) 
-    {}
+    Iterator(const SigPerm& perm_, std::vector<std::vector<const SigParam>::iterator> param_iters_);
     // construct an "end" iterator (ONLY)
-    Iterator(size_t index_, const SigPerm& perm_) : index(perm_.size), perm(perm_) {}
-    ~Iterator() { delete sig_ptr; }
+    Iterator(const SigPerm& perm_); // : index(perm_.size), perm(perm_) {}
+    friend SigPerm;
+  public:
+    ~Iterator();
   };
+
+  friend Iterator;
 
 public:
   size_t size() const;

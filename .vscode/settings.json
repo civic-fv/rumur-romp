@@ -1,5 +1,6 @@
 {
     "cmake.configureOnOpen": true,
+    "git.mergeEditor": true,
     "files.associations": {
         "known_hosts": "plaintext",
         "*.tcc": "cpp",
@@ -389,11 +390,13 @@
         "sympy",
         "tcolorbox",
         "themeing",
+        "trav",
         "typeexpr",
         "typeexprid",
         "unessisary",
         "vals",
         "Varadharaaj",
+        "vardecl",
         "vscode",
         "vscode's",
         "Wireshark",
