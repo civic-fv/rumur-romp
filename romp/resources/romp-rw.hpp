@@ -22,6 +22,18 @@
 
 namespace romp {
 
+/**
+ * @brief helper function rand_choice 
+ * 
+ */
+template<typename T>
+T rand_choice(unsigned int &seed, T min, T max) {
+    //not done fully
+    seed = (((seed ^ (seed >> 3)) >> 12) & 0xffff) | ((seed & 0x7fff) << 16); // modifies the seed
+    int choice = seed % (maxWeight-min+1) + min;  // generates the random number
+    return choice;
+}
+
 class RandWalker : public ::romp::IRandWalker {
 public:
   static id_t next_id;
@@ -37,7 +49,7 @@ public:
   size_t level = 0;
   // array of integers representing the rul ID's applied to this state (treated
   // as a circular buffer array)
-  id_t history[STATE_HISTORY_SIZE];
+  id_t history[_ROMP_STATE_HISTORY_LEN];
   
 
   RandWalker(State_t startstate, unsigned int rand_seed, size_t fuel/* =DEFAULT_FUEL */) 
@@ -53,7 +65,7 @@ public:
    * 
    */
   RuleSet& rand_ruleset(){
-    //returns a  
+    return ::__caller__::RULE_SETS[rand_choice<size_t>(rand_seed,0ul,_ROMP_RULESETS_LEN)]; 
   }
   /**
    * @brief to pick a rule in random for simulation step
@@ -61,6 +73,7 @@ public:
    */
   Rule& rand_rule(const RuleSet& rs){
     //returns a  
+  }
   
   /**
    * @brief call if rule is applied to store what rule made the change in the
@@ -68,11 +81,11 @@ public:
    * @param id the id of the rule that was applied.
    */
   void rule_applied(id_t id) {
-    history[level % STATE_HISTORY_SIZE] = id;
+    history[level % _ROMP_STATE_HISTORY_LEN] = id;
     level++;
   }
   
-  void sim1Step() {
+  void sim1Step() noexcept {
     //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
     RuleSet& rs= rand_ruleset();
     Rule& r= rand_rule(rs);
@@ -80,15 +93,19 @@ public:
     try {
       if (r.guard(state) == true) //how to pass this rules and guard ?? for every state ?
           r.action(state);
-      for (int i = 0; i < INVARIANTS_SIZE; i++)
+      for (int i = 0; i < _ROMP_INVARIANTS_LEN; i++)
           if (::__caller__::INVARIANTS[i].check(state) == false) {
               valid = false;
               tripped = new ModelPropertyError(PropertyType::INVARIANT, "", INVARIANTS[i].loc, INVARIANT_INFOS[i].expression);
           }           
-    } catch(ModelError& ex) {
+    } catch(ModelError& me) {
       valid = false;
-      tripped = ex; // need to look into this one, probs broken with std::nested_exceptions
+      tripped = me; // need to look into this one, probs broken with std::nested_exceptions
       // TODO: handle error data
+    } catch (std::exception& ex) {
+      std::err << "unexpected exception outside of model \t[dev-error]\n" << ex.what() << std::endl;
+    } catch (...) {
+      std::err << "unexpected UNKNOWN exception outside of model \t[dev-error]\n";
     }
   }
 
@@ -107,8 +124,8 @@ id_t RandWalker::next_id = 0u;
  */
 std::vector<State_t> gen_startstates() throw (ModelError) {
   std::vector<State_t> states;
-  for (int i=0; i<STARTSTATES_SIZE; i++) {
-    states.push_back(State_t());
+  for (int i=0; i<_ROMP_STARTSTATES_LEN; i++) {
+    states.push_back(State_t{});
     ::__caller__::STARTSTATES[i].initialize(states[states.size()-1]);
   }
   return states;
@@ -144,27 +161,7 @@ std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_se
 //  this means your's should look like:
 //    auto copied_state = State_t(startstates[i%startstates.size()]);
 
-/**
- * @brief helper function rand_choice 
- * 
- */
-template<typename T>
-T rand_choice(unsigned int &rand_seed, T min, T max,string seed_input) {
-    //to be fed in from the  commandline 
-    int seed;
-    if(seed_input.length() != 0)
-    {
-        seed =stoi(seed_input);
-    else 
-        srand(time(0));
-    }
-    //not done fully
-    seed = (((seed ^ (seed >> 3)) >> 12) & 0xffff) | ((seed & 0x7fff) << 16); // modifies the seed
-    int choice = seed % (maxWeight-min+1) + min;  // generates the random number
-    cout<<"seed is"<<seed<<endl;
-    //cout<<"choice is "<<choice<<endl;
-    return 0;
-}
+
 
 
 /**
@@ -227,7 +224,7 @@ void launch_single(unsigned int rand_seed, size_t fuel) {
   unsigned int _seed_cpy = rand_seed;
   State_t start_state;
   try {
-    ::__caller__::STARTSTATES[rand_choice(_seed_cpy, 0ul, STARTSTATES_SIZE)].initialize(start_state);
+    ::__caller__::STARTSTATES[rand_choice(_seed_cpy, 0ul, _ROMP_STARTSTATES_LEN)].initialize(start_state);
   } catch (const ModelError& ex) {
     std::error << "\nModel raised an error when initializing our start state!! (message below)\n"
                << ex.what << std::endl;
@@ -251,10 +248,10 @@ void launch_single(unsigned int rand_seed, size_t fuel) {
 //           rule.id); // this keeps track of history and other overhead
 //       // These could possibly be parallelized even better for GPU using
 //       // shared memory. (not implemented here, could introduce data races)
-//       for (int i = 0; i < INVARIANTS_SIZE; i++)
+//       for (int i = 0; i < _ROMP_INVARIANTS_LEN; i++)
 //         states[s].valid |= State::INVARIANTS[i](
 //             states[i]); // this will need to change after we figure shit out
-//       for (int a = 0; a < ASSERTIONS_SIZE; a++)
+//       for (int a = 0; a < _ROMP_ASSERTIONS_LEN; a++)
 //         states[s].valid |= State::ASSERTIONS[a](
 //             states[i]); // this will need to change after we figure shit out
 //     }
