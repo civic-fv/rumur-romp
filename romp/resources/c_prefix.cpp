@@ -68,6 +68,8 @@
 
 
 namespace romp {
+  struct Options;
+  extern Options options;
   struct RuleInfo; struct PropertyInfo; struct StartStateInfo; struct MErrorInfo; struct FunctInfo;
   struct RuleSet; struct StartState; struct Property;
 }
