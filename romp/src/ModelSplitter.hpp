@@ -26,6 +26,7 @@
 // #include <unordered_map>
 #include <unordered_set>
 #include <rumur/rumur.h>
+#include <strstream>
 #include "romp_def.hpp"
 
 
@@ -49,11 +50,21 @@ namespace romp {
 class ModelSplitter : public rumur::BaseTraversal {
 
   // << ===================================== Class Members ====================================== >> 
-public: // ---- Public Class Members ---- //
+protected: // ---- Public Class Members ---- //
   std::vector<rumur::Ptr<rumur::Decl>> global_decls;
   std::vector<rumur::Ptr<rumur::VarDecl>> state_var_decls;
   std::vector<rumur::Ptr<rumur::Function>> funct_decls;
   std::vector<rumur::Ptr<rumur::Rule>> rule_decls;
+  std::strstream funct_info_list;
+  std::strstream rule_info_list;
+  std::strstream startstate_info_list;
+  std::strstream prop_info_list;
+  id_t next_property_id = 0u;
+  id_t next_invar_id = 0u;
+  id_t next_assume_id = 0u;
+  id_t next_cover_id = 0u;
+  id_t next_liveness_id = 0u;
+  friend class ::romp::CGenerator;
 
 
 private: // ---- Private Class Members ---- //
@@ -70,7 +81,7 @@ private: // ---- Private Class Members ---- //
 
   // << ============================= Constructors & Deconstructor =============================== >> 
 public:
-  ModelSplitter() {}
+  ModelSplitter(); // {}
   // ModelSplitter(rumur::Symtab& symtab_);
   ~ModelSplitter();
 

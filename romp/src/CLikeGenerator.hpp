@@ -98,8 +98,8 @@ public:
   void visit_number(const rumur::Number &n) final;
   void visit_or(const rumur::Or &n) final;
   void visit_procedurecall(const rumur::ProcedureCall &n) final;
-  void visit_property(const rumur::Property &); // final;
-  void visit_propertystmt(const rumur::PropertyStmt &n) final;
+  void visit_property(const rumur::Property &) final;
+  void visit_propertystmt(const rumur::PropertyStmt &n); // final;
   void visit_put(const rumur::Put &n) final;
   void visit_quantifier(const rumur::Quantifier &n) ; //final;
   void visit_range(const rumur::Range &); // final;

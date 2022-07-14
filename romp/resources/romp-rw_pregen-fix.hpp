@@ -26,6 +26,9 @@
 #ifndef _ROMP_PROPERTIES_LEN 
 #define _ROMP_PROPERTIES_LEN 2ul
 #endif
+#ifndef _ROMP_PROPERTY_RULES_LEN 
+#define _ROMP_PROPERTY_RULES_LEN 2ul
+#endif
 #ifndef _ROMP_LIVENESS_TESTS_LEN
 #define _ROMP_LIVENESS_TESTS_LEN 2ul
 #endif
@@ -44,21 +47,23 @@ namespace __model__ {
 #define __model__filename_contains_space false
 
 namespace romp {
+  struct RuleInfo;
   struct RuleSet;
   struct Rule;
+  struct PropertyInfo;
   struct Property;
   // struct Property_info;
   // typedef const std::string Property_info;
+  struct StartStateInfo;
   struct StartState;
   class IRandWalker;
   // struct StartState_info;
 }
 
 namespace __caller__ { // LANGUAGE SERVER SUPPORT ONLY!!
- ::romp::RuleSet RULE_SETS[_ROMP_RULES_LEN]; // LANGUAGE SERVER SUPPORT ONLY!!
- ::romp::Property PROPERTIES[_ROMP_PROPERTIES_LEN]; // LANGUAGE SERVER SUPPORT ONLY!!
-//  ::romp::Property_info PROPERTY_PARAMS[_ROMP_PROPERTIES_LEN]; // LANGUAGE SERVER SUPPORT ONLY!!
- ::romp::StartState STARTSTATES[_ROMP_STARTSTATES_LEN]; // LANGUAGE SERVER SUPPORT ONLY!!
+ const ::romp::RuleSet RULE_SETS[_ROMP_RULES_LEN]; // LANGUAGE SERVER SUPPORT ONLY!!
+ const ::romp::Property PROPERTIES[_ROMP_PROPERTY_RULES_LEN]; // LANGUAGE SERVER SUPPORT ONLY!!
+ const ::romp::StartState STARTSTATES[_ROMP_STARTSTATES_LEN]; // LANGUAGE SERVER SUPPORT ONLY!!
 } // LANGUAGE SERVER SUPPORT ONLY !!
 
 namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!

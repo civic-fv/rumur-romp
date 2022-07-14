@@ -127,7 +127,7 @@ void CTypeGenerator::emit_json_converter__enum(const std::string &name, const En
 }
 
 
-void CTypeGenerator::visit_range(const Range &) { *this << value_type; }
+void CTypeGenerator::visit_range(const Range &) { *this << "range_t"; }
 
 
 void CTypeGenerator::emit_json_converter__range(const std::string &name, const Range &te) {
@@ -170,7 +170,7 @@ void CTypeGenerator::emit_json_converter__record(const std::string &name, const 
 }
 
 
-void CTypeGenerator::visit_scalarset(const Scalarset &) { *this << value_type; }
+void CTypeGenerator::visit_scalarset(const Scalarset &) { *this << "scalarset_t"; }
 
 
 void CTypeGenerator::emit_json_converter__scalarset(const std::string &name, const Scalarset &te) {

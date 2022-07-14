@@ -40,7 +40,6 @@ struct Sig;
 struct SigParam;
 struct QuantExpansion;
 
-
 //TODO fix this mess !!
 using vec_MTypeVals_t = ::std::vector<const ::romp::SigParam&>;
 using QuantExpansion_Iter_t = ::romp::vec_MTypeVals_t::iterator ;
@@ -150,7 +149,7 @@ protected:
 public:
   SigPerm(const rumur::Ptr<const rumur::SimpleRule> rule_) : SigPerm(rule_, "Rule") {}
   SigPerm(const rumur::Ptr<const rumur::StartState> rule_) : SigPerm(rule_, "StartState") {}
-  SigPerm(const rumur::Ptr<const rumur::PropertyRule> rule_) : SigPerm(rule_, "Invariant") {}
+  SigPerm(const rumur::Ptr<const rumur::PropertyRule> rule_) : SigPerm(rule_, "PropertyRule") {}
 
 // << =================================== Member Functions ===================================== >> 
 private:
@@ -169,6 +168,9 @@ protected:
 protected:
 
 public:
+
+  std::string to_string() const;
+  std::string to_json() const;
   
   // << ========================================================================================== >> 
   // <<                                     SigPerm::Iterator                                      >> 

@@ -391,7 +391,6 @@ void CLikeGenerator::visit_propertystmt(const PropertyStmt &n) {
     break;
 
   case Property::LIVENESS:
-    throw Error("liveness properties are not supported as statements only rules!", n.loc);
     *this << indentation() << "if " << *n.property.expr << " {\n";
     indent();
     *this << indentation() << "liveness(\""

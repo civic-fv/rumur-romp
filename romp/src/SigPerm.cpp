@@ -31,40 +31,24 @@ namespace romp {
     : index(index_), params(params_), perm(perm_) {}
 
   std::string Sig::to_string() const {
+    if (perm.param_count > 0) {
     std::strstream buf;
-    buf << "{\"$type\":\"" << perm.rule_type << "\","
-           "\"name\":\"" << perm.rule->name << "\","
-           "\"loc\":{\"$type\":\"location\","
-                      "\"file\":\"" << *perm.rule->loc.begin.filename << "\","
-                      "\"inside\":\"global\","
-                      "\"start\":["<< perm.rule->loc.begin.row << "," << perm.rule->loc.begin.column << "],"  
-                      "\"end\":["<< perm.rule->loc.end.row << "," << perm.rule->loc.end.column << "]},"
-           "\"quantifiers\":";
+    // buf << "quantifiers(";
     std::string sep = "";
-    if (perm.param_count > 0) 
-      buf << '[';
       for (int i=0; i<perm.param_count; ++i) {
-        buf << sep << "\"" << escape(params[i].value_str) << "\"" ;
-        sep = ", ";
+        buf << sep << perm.quantifiers[i].name << ":=" << escape(params[i].value_str);
+        sep = "; ";
       }
-      buf << ']';
-    } else { buf << "null"; }
-    buf << '}';
+      // buf << ')';
     return buf.str(); 
+    } else { return ""; }
   }
 
   std::string Sig::to_json() const {  
-    std::strstream buf;
-    buf << "{\"$type\":\"" << perm.rule_type << "\","
-           "\"name\":\"" << perm.rule->name << "\","
-           "\"loc\":{\"$type\":\"location\","
-                      "\"file\":\"" << *perm.rule->loc.begin.filename << "\","
-                      "\"inside\":\"global\","
-                      "\"start\":["<< perm.rule->loc.begin.row << "," << perm.rule->loc.begin.column << "],"  
-                      "\"end\":["<< perm.rule->loc.end.row << "," << perm.rule->loc.end.column << "]},"
-           "\"quantifiers\":";
-    std::string sep = "";
     if (perm.param_count > 0) {
+    std::strstream buf;
+    // buf << "\"quantifiers\":";
+    std::string sep = "";
       buf << '[';
       for (int i=0; i<perm.param_count; ++i) {
         buf << sep << "{\"" << perm.quantifiers[i].name << "\":"
@@ -72,9 +56,8 @@ namespace romp {
         sep = ",";
       }
       buf << ']';
-    } else { buf << "null"; }
-    buf << '}';
-    return buf.str(); 
+      return buf.str(); 
+    } else { return "null"; }
   }
 
   // << ========================================================================================== >> 
@@ -92,7 +75,7 @@ namespace romp {
     // if (auto _tid = dynamic_cast<const rumur::TypeExprID*>(qe.type.get())) {
     //   return "{\"type\":\"" + _tid->referent->name + ": " + _tid->referent->value->to_string() + "\","
     //                 "\"value\":""\"" + value_str +"\"}";
-    return "{\"type\":\"" + qe.type_id + "\",\"value\":""\"" + value_str +"\"}"; 
+    return "{\"type\":\"" + qe.type_id + "\",\"value\":""\"" + escape(value_str) +"\"}"; 
   }
 
   // << ========================================================================================== >> 
@@ -259,6 +242,11 @@ namespace romp {
   size_t SigPerm::size() const { return _size; }
   SigPerm::Iterator SigPerm::begin() const { return Iterator(*this, get_init_param_iters()); }
   SigPerm::Iterator SigPerm::end() const { return Iterator(*this); }
+
+  // std::string SigPerm::to_string() const {
+  // 
+  // }
+  
 
 
   // << ========================================================================================== >> 

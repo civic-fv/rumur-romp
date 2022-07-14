@@ -62,17 +62,15 @@ public:
 
   /**
    * @brief to pick a rule in random for simulation step
-   * 
    */
-  RuleSet& rand_ruleset(){
+  const RuleSet& rand_ruleset(){
     return ::__caller__::RULE_SETS[rand_choice<size_t>(rand_seed,0ul,_ROMP_RULESETS_LEN)]; 
   }
   /**
    * @brief to pick a rule in random for simulation step
-   * 
    */
-  Rule& rand_rule(const RuleSet& rs){
-    //returns a  
+  const Rule& rand_rule(const RuleSet& rs){
+    return rs.rules[rand_choice<size_t>(rand_seed,0ul,rs.rules.size())];  
   }
   
   /**
@@ -87,20 +85,20 @@ public:
   
   void sim1Step() noexcept {
     //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
-    RuleSet& rs= rand_ruleset();
-    Rule& r= rand_rule(rs);
+    const RuleSet& rs= rand_ruleset();
+    const Rule& r= rand_rule(rs);
     fuel--;
     try {
-      if (r.guard(state) == true) //how to pass this rules and guard ?? for every state ?
+      if (r.guard(state) == true)
           r.action(state);
-      for (int i = 0; i < _ROMP_INVARIANTS_LEN; i++)
-          if (::__caller__::INVARIANTS[i].check(state) == false) {
+      for (const Property& prop : ::__caller__::PROPERTIES)
+          if (prop.check(state) == false) {
               valid = false;
-              tripped = new ModelPropertyError(PropertyType::INVARIANT, "", INVARIANTS[i].loc, INVARIANT_INFOS[i].expression);
-          }           
+              tripped = new ModelPropertyError(prop);
+          }        
     } catch(ModelError& me) {
       valid = false;
-      tripped = me; // need to look into this one, probs broken with std::nested_exceptions
+      tripped = me/* .clone() */; // need to look into this one, probs broken with std::nested_exceptions
       // TODO: handle error data
     } catch (std::exception& ex) {
       std::err << "unexpected exception outside of model \t[dev-error]\n" << ex.what() << std::endl;

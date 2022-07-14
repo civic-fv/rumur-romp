@@ -44,7 +44,12 @@ using namespace rumur;
 // <<                               CONSTRUCTORS & DECONSTRUCTORS                                >> 
 // << ========================================================================================== >> 
 
-// ModelSplitter::ModelSplitter(rumur::Symtab& symtab_) : symtab(symtab_) {}
+ModelSplitter::ModelSplitter() {
+  funct_info_list << ROMP_INFO_FUNCTS_DECL " = {";
+  rule_info_list << ROMP_INFO_RULESETS_DECL " = {";
+  prop_info_list << ROMP_INFO_PROPERTIES_DECL " = {";
+  startstate_info_list << ROMP_INFO_STARTSTATES_DECL " = {";
+}
 ModelSplitter::~ModelSplitter() {}
 
 
@@ -75,6 +80,11 @@ ModelSplitter::~ModelSplitter() {}
 // << ========================================================================================== >> 
 // <<                                 PRIVATE HELPER FUNCTIONS                                   >> 
 // << ========================================================================================== >> 
+
+// bool operator == (const rumur::location& l, const rumur::location& r) {
+//   return (l.begin.line == r.begin.line && l.begin.column == r.begin.column
+//        && l.end.column == r.end.column && l.end.line == r.end.line);
+// }
 
 // template< typename T >
 // std::string int_to_hex( T i )
@@ -146,6 +156,88 @@ void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
         throw Error("Unexpected item in the global scope!!", c->loc);
   }
 }
+
+std::string to_json(const Rule& rule, const std::string rule_type) {
+  std::strstream buf;
+  buf << "{\"$type\":\"" << rule_type << "\",";
+  if (auto _prop = dynamic_cast<const rumur::PropertyRule*>(&rule)) {
+    buf << "\"type\":\"";
+    switch (_prop->property.category) {
+      case rumur::Property::ASSERTION:
+        buf << "invariant"; break;
+      case rumur::Property::ASSUMPTION:
+        buf << "assume"; break;
+      case rumur::Property::COVER:
+        buf << "cover"; break;
+      case rumur::Property::LIVENESS:
+        buf << "liveness"; break;
+    }
+    buf << "\",\"expr\":\"" << escape(_prop->property.expr->to_string()) << "\",";
+  } else if (auto _r = dynamic_cast<const rumur::SimpleRule*>(&rule))
+    buf << "\"expr\":\"" << escape(_r->guard->to_string()) << "\",";
+  buf << "\"label\":\"" << escape(rule.name) << "\","
+          "\"loc\":{\"$type\":\"location\","
+                    "\"file\":\"" << *rule.loc.begin.filename << "\","
+                    // "\"inside\":\"global\","
+                    "\"start\":["<< rule.loc.begin.line << "," << rule.loc.begin.column << "],"  
+                    "\"end\":["<< rule.loc.end.line << "," << rule.loc.end.column << "]}";
+  return buf.str();
+}
+
+std::string to_json(const Function& rule) {
+  std::strstream buf;
+  buf << "{\"$type\":\"" << ((rule.return_type == nullptr) 
+                              ? "procedure" 
+                              : "function\","
+                                "\"return-type\":\"" + escape(rule.return_type->to_string())) << "\","
+      << "\"label\":\"" << escape(rule.name) << "\","
+         "\"params\":[";
+  std::string sep = "";
+  for (auto& p : rule.parameters) {
+    buf << sep << "{\"$type\":\"param\","
+                   "\"id\":\"" << escape(p->name) << "\","
+                   "\"type\":\"" << escape(p->type->to_string()) << "\"}";
+    sep = ",";
+  }
+  buf << "],\"loc\":{\"$type\":\"location\","
+                    "\"file\":\"" << escape(*rule.loc.begin.filename) << "\","
+                    // "\"inside\":\"global\","
+                    "\"start\":["<< rule.loc.begin.line << "," << rule.loc.begin.column << "],"  
+                    "\"end\":["<< rule.loc.end.line << "," << rule.loc.end.column << "]}}";
+  return buf.str();
+}
+
+std::string to_string(const Function& f) {
+  std::strstream buf;
+  buf << ((f.return_type != nullptr) ? "function " : "procedure ")
+      << escape(f.name) << '(';
+  if (f.parameters.size() >= 1) {
+    const VarDecl* _p = f.parameters[0].get();
+    const VarDecl* p = nullptr;
+    if (_p->readonly) buf << "var ";
+    buf << escape(_p->name);
+    if (f.parameters.size() >= 2)
+      for (int i=1; i<f.parameters.size(); ++i) {
+        p = f.parameters[i].get();
+        if (_p->readonly == p->readonly && _p->type->loc == _p->type->loc)
+          buf << ',' << escape(p->name);
+        else {
+          buf << ": " << escape(_p->type->to_string()) << "; ";
+          if (p->readonly)
+            buf << "var ";
+          buf << escape(p->name);
+        }
+        _p = p;
+      }
+    buf << ": " << escape(p->type->to_string());
+  }
+  if (f.return_type != nullptr)
+    buf << ") : " << f.return_type->to_string() << ';';
+  else buf << ");";
+  return buf.str();
+}
+
+
 
 
 
@@ -285,16 +377,18 @@ void ModelSplitter::visit_vardecl(VarDecl &n) {
 
 void ModelSplitter::visit_function(Function &n) {
   //TODO: handle the cases of non-TypeExprID TypeExpr values
+  funct_info_list << ROMP_MAKE_FUNCT_INFO_STRUCT(n, to_json(n), to_string(n)) ",";
 
-  if (auto et_id = dynamic_cast<TypeExprID *>(n.return_type.get())) {
-    // do nothing
-  } else {
-    
-    std::string name = gen_new_anon_name();
-    Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(n.return_type->clone()), n.return_type->loc));
-    insert_to_global_decls(decl);
-    n.return_type = Ptr<TypeExprID>(new TypeExprID(name, decl, n.return_type->loc));
-  }
+  if (n.return_type != nullptr)
+    if (auto et_id = dynamic_cast<TypeExprID *>(n.return_type.get())) {
+      // do nothing
+    } else {
+      
+      std::string name = gen_new_anon_name();
+      Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(n.return_type->clone()), n.return_type->loc));
+      insert_to_global_decls(decl);
+      n.return_type = Ptr<TypeExprID>(new TypeExprID(name, decl, n.return_type->loc));
+    }
 
   for (Ptr<VarDecl> &p : n.parameters)
     if (auto et_id = dynamic_cast<TypeExprID *>(p->type.get())) {
@@ -392,6 +486,16 @@ void ModelSplitter::visit_and_check_quantifier(Rule& r, Quantifier& q) {
 
 
 void ModelSplitter::visit_propertyrule(PropertyRule &n) {
+  std::string pt;
+  id_t id;
+  switch (n.property.category) {
+    case Property::ASSERTION: pt = ROMP_PROPERTY_TYPE_INVAR; id=next_invar_id++; break;
+    case Property::ASSUMPTION: pt = ROMP_PROPERTY_TYPE_ASSUME; id=next_assume_id++; break;
+    case Property::COVER: pt = ROMP_PROPERTY_TYPE_COVER; id=next_cover_id; break;
+    case Property::LIVENESS: pt = ROMP_PROPERTY_TYPE_LIVENESS; id=next_liveness_id++; break;
+  }
+  prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,id,n.name,pt,to_json(n,"property")) ",";
+  ++next_property_id;
   for (Quantifier& q : n.quantifiers)
     _visit_quantifier(q);
 }
@@ -399,6 +503,7 @@ void ModelSplitter::visit_propertyrule(PropertyRule &n) {
 
 void ModelSplitter::visit_simplerule(SimpleRule &n) {
   //TODO: handle the cases of non-TypeExprId TypeExpr values
+  rule_info_list << ROMP_MAKE_RULE_INFO_STRUCT(n,to_json(n,"rule")) ",";
   for (Quantifier& q : n.quantifiers)
     _visit_quantifier(q);
     // if (q.type != nullptr) 
@@ -459,6 +564,7 @@ void ModelSplitter::visit_aliasrule(rumur::AliasRule &n) {
 
 void ModelSplitter::visit_startstate(StartState &n) {
   //TODO: handle the cases of non-TypeExprId TypeExpr values
+  startstate_info_list << ROMP_MAKE_STARTSTATE_INFO_STRUCT(n,to_json(n,"startstate")) ",";
   for (Quantifier &q : n.quantifiers) 
   if (q.type != nullptr) 
     if (auto _td = dynamic_cast<TypeExprID *>(q.type.get())) {

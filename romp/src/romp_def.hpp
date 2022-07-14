@@ -39,22 +39,48 @@
 
 #define ROMP_TYPE_NAMESPACE "__type__"
 
-// #define ROMP_CALLABLE_RULE_DECL "const ::romp::Rule ";
+// #define ROMP_CALLER_RULE_DECL "const ::romp::Rule ";
 #define ROMP_RULESETS_LEN "_ROMP_RULESETS_LEN"
-#define ROMP_CALLABLE_RULESETS_DECL "const " ROMP_UTIL_NAMESPACE "::RuleSet RULESETS["ROMP_RULESETS_LEN"]";
+#define ROMP_CALLER_RULESETS_VAR_NAME "RULESETS"
+#define ROMP_CALLER_RULESETS_DECL "const " ROMP_UTIL_NAMESPACE "::RuleSet " ROMP_CALLER_RULESETS_VAR_NAME "[" ROMP_RULESETS_LEN "]";
+#define ROMP_CALLER_RULESETS_VAR "::"ROMP_CALLER_NAMESPACE_NAME "::" ROMP_CALLER_RULESETS_VAR_NAME
+// #define ROMP_RULESET_INFOS_LEN "_ROMP_RULESET_INFO_LEN"
+#define ROMP_INFO_RULESETS_VAR_NAME "RULESET_INFOS"
+#define ROMP_INFO_RULESETS_DECL "const " ROMP_UTIL_NAMESPACE "::RuleSetInfo " ROMP_INFO_RULESETS_VAR_NAME "[" ROMP_RULESETS_LEN "]";
+#define ROMP_INFO_RULESETS_VAR "::" ROMP_INFO_NAMESPACE_NAME "::" ROMP_INFO_RULESETS_VAR_NAME
 
-#define ROMP_PROPERTIES_LEN "_ROMP_PROPERTIES_LEN"
-#define ROMP_CALLABLE_PROPERTIES_DECL "const " ROMP_UTIL_NAMESPACE "::Property PROPERTIES["ROMP_PROPERTIES_LEN"]"
+#define ROMP_PROPERTY_RULES_LEN "_ROMP_PROPERTY_RULES_LEN"
+#define ROMP_CALLER_PROPERTIES_VAR_NAME "PROPERTIES"
+#define ROMP_CALLER_PROPERTIES_DECL "const " ROMP_UTIL_NAMESPACE "::Property " ROMP_CALLER_PROPERTIES_VAR_NAME "[" ROMP_PROPERTIES_LEN "]"
+#define ROMP_PROPERTY_INFOS_LEN "_ROMP_PROPERTIES_LEN"
+#define ROMP_INFO_PROPERTIES_VAR_NAME "PROPERTY_INFOS"
+#define ROMP_INFO_PROPERTIES_DECL "const " ROMP_UTIL_NAMESPACE "::PropertyInfo " ROMP_INFO_PROPERTIES_VAR_NAME "[" ROMP_PROPERTIES_LEN "]"
+#define ROMP_INFO_PROPERTIES_VAR "::" ROMP_INFO_NAMESPACE_NAME "::" ROMP_INFO_PROPERTIES_VAR_NAME
 
-#define ROMP_STARTSTATES_LEN "_ROMP_STARTSTATES_LEN"
-#define ROMP_CALLABLE_STARTSTATES_DECL "const " ROMP_UTIL_NAMESPACE "::StartState STARTSTATES["ROMP_STARTSTATES_LEN"]"
+#define ROMP_STARTSTATE_RULES_LEN "_ROMP_STARTSTATES_LEN"
+#define ROMP_CALLER_STARTSTATE_VAR_NAME "STARTSTATES"
+#define ROMP_CALLER_STARTSTATES_DECL "const " ROMP_UTIL_NAMESPACE "::StartState " ROMP_CALLER_STARTSTATE_VAR_NAME "[" ROMP_STARTSTATES_LEN "]"
+#define ROMP_STARTSTATE_INFOS_LEN "_ROMP_STARTSTATE_INFO_LEN"
+#define ROMP_INFO_STARTSTATE_VAR_NAME "STARTSTATE_INFOS"
+#define ROMP_INFO_STARTSTATES_DECL "const " ROMP_UTIL_NAMESPACE "::StartStateInfo " ROMP_INFO_STARTSTATE_VAR_NAME "[" ROMP_STARTSTATES_LEN "]"
+#define ROMP_INFO_STARTSTATES_VAR "::" ROMP_INFO_NAMESPACE_NAME "::" ROMP_INFO_STARTSTATE_VAR_NAME
+
+#define ROMP_ERRORS_LEN "_ROMP_ERRORS_LEN"
+#define ROMP_INFO_ERRORS_VAR_NAME "ERROR_INFOS"
+#define ROMP_INFO_ERRORS_DECL "const " ROMP_UTIL_NAMESPACE "::MErrorInfo " ROMP_INFO_ERRORS_VAR_NAME "[" ROMP_ERRORS_LEN "]"
+#define ROMP_INFO_ERRORS_VAR "::" ROMP_INFO_NAMESPACE_NAME "::" ROMP_INFO_ERRORS_VAR_NAME
+
+#define ROMP_FUNCTS_LEN "_ROMP_FUNCTS_LEN"
+#define ROMP_INFO_FUNCTS_VAR_NAME "FUNCT_INFOS"
+#define ROMP_INFO_FUNCTS_DECL "const " ROMP_UTIL_NAMESPACE "::FunctInfo " ROMP_INFO_FUNCTS_VAR_NAME "[" ROMP_FUNCTS_LEN "]"
+#define ROMP_INFO_FUNCTS_VAR "::" ROMP_INFO_NAMESPACE_NAME "::" ROMP_INFO_FUNCTS_VAR_NAME
 
 // #define ROMP_STARTSTATES_LEN "ROMP_ERRORS_LEN"
-// #define ROMP_CALLABLE_STARTSTATES_DECL "const " ROMP_UTIL_NAMESPACE "::ErrorInfo STARTSTATES["ROMP_STARTSTATES_LEN"]"
+// #define ROMP_CALLER_STARTSTATES_DECL "const " ROMP_UTIL_NAMESPACE "::ErrorInfo STARTSTATES["ROMP_STARTSTATES_LEN"]"
 
 #define ROMP_MODEL_EXCEPTION_TYPE "" ROMP_UTIL_NAMESPACE "::" "ModelError"
 
-#define ROMP_MODEL_TEST_EXCEPTION_TYPE "" ROMP_UTIL_NAMESPACE "::" "ModelPropertyError"
+#define ROMP_MODEL_PROPERTY_EXCEPTION_TYPE "" ROMP_UTIL_NAMESPACE "::" "ModelPropertyError"
 
 #define ROMP_JSON_TYPE "nlohmann::json"
 
@@ -70,18 +96,6 @@
 #define ROMP_RULE_ACTION_PREFIX "__Rule_action__"
 #define ROMP_PROPERTYRULE_PREFIX "__Property__"
 
-#define ROMP_MAKE_LOCATION_STRUCT(_name,_loc) "{\"" << escape(_name) << "\","\
-                                  "{" << (const int)_loc.begin.line << "," << (const int)_loc.begin.column << "},"\
-                                  "{" << (const int)_loc.end.line << "," << (const int)_loc.end.column << "}}"
-
-#define ROMP_MAKE_RULESET_STRUCT_HEADER(_name,_n) "{" << (_name) << ", " ROMP_MAKE_LOCATION_STRUCT((_name),(_n).loc) ", {" 
-#define ROMP_MAKE_RULESET_STRUCT_FOOTER(...) "}}" 
-#define ROMP_MAKE_RULE_STRUCT(_guard, _action, _params) "{" + (_guard) + "," + (_action) + ",\"" + _params + "\"}"
-
-
-#define ROMP_MAKE_MODEL_EXCEPTION(_name, _n) ROMP_MODEL_EXCEPTION_TYPE "(" \
-                                             "\"Exception caught! see trace for details...\", " ROMP_MAKE_LOCATION_STRUCT((_name),(_n).loc) ")"
-
 #define ROMP_PROPERTY_TYPE_BASE ROMP_UTIL_NAMESPACE "::PropertyType"
 #define ROMP_PROPERTY_TYPE_INVAR ROMP_PROPERTY_TYPE_BASE "::INVARIANT"
 #define ROMP_PROPERTY_TYPE_ASSERT ROMP_PROPERTY_TYPE_BASE "::ASSERTION"
@@ -89,16 +103,42 @@
 #define ROMP_PROPERTY_TYPE_COVER ROMP_PROPERTY_TYPE_BASE "::COVER"
 #define ROMP_PROPERTY_TYPE_LIVENESS ROMP_PROPERTY_TYPE_BASE "::LIVENESS"
 
-#define ROMP_PROPERTY_HANDLER_BASE "this->" ROMP_RAND_WALKER_VAR
-#define ROMP_PROPERTY_HANDLER_INVAR ROMP_PROPERTY_HANDLER_BASE "." "invariant_handler"
-#define ROMP_PROPERTY_HANDLER_ASSERT ROMP_PROPERTY_HANDLER_BASE "." "assertion_handler"
-#define ROMP_PROPERTY_HANDLER_ASSUME ROMP_PROPERTY_HANDLER_BASE "." "assumption_handler"
-#define ROMP_PROPERTY_HANDLER_COVER ROMP_PROPERTY_HANDLER_BASE "." "cover_handler"
-#define ROMP_PROPERTY_HANDLER_LIVENESS ROMP_PROPERTY_HANDLER_BASE "." "liveness_handler"
-#define ROMP_ERROR_HANDLER ROMP_PROPERTY_HANDLER_BASE "." "error_handler"
+#define ROMP_MAKE_LOCATION_STRUCT(_loc) "{{" << (_loc).begin.line << "," << (_loc).begin.column << "},"\
+                                         "{" << (_loc).end.line << "," << (_loc).end.column << "}}"
 
-#define ROMP_MAKE_MODEL_TEST_EXCEPTION(_label, _type, _n) ROMP_MODEL_TEST_EXCEPTION_TYPE "(" \
-                                                          (_type) "," << (_n).property
+#define ROMP_MAKE_RULE_INFO_STRUCT(_n, _json) "{" << (_n).name << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << escape(_json) << "\"}"
+#define ROMP_MAKE_PROPERTY_INFO_STRUCT(_n, _id, _name, _pt, _json) "{" << (_name) << "," << (_pt) << ",\"" << escape((_n).property.expr->to_string()) << "\"," << (_id) << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << escape(_json) << "\"}"
+#define ROMP_MAKE_STARTSTATE_INFO_STRUCT(_n, _json) "{" << (_n).name << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << escape(_json) << "\"}"
+#define ROMP_MAKE_ERROR_INFO_STRUCT(_n, _inFunct, _json) "{" << (_n).message << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << (_inFunct) << ",\"" << escape(_json) << "\"}"
+#define ROMP_MAKE_FUNCT_INFO_STRUCT(_n, _json, _str) "{" << (_n).name << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << escape(_json) << "\",\"" << escape(_str) << "\"}"
+
+#define ROMP_MAKE_RULESET_STRUCT_HEADER(_info_id) "{" ROMP_INFO_RULESETS_VAR"[" <<(_info_id)<<"]" ",{" 
+#define ROMP_MAKE_RULESET_STRUCT_FOOTER(...) "}}" 
+#define ROMP_MAKE_RULE_STRUCT(_guard, _action, _info_id, _json, _str) "{" << (_guard) << "," << (_action) << "," ROMP_INFO_RULESETS_VAR "[" <<(_info_id)<<"],\"" << escape(_json) << "\",\"" << escape(_str) << "\"}"
+#define ROMP_MAKE_PROPERTY_STRUCT(_check, _info_id, _json, _str) "{" << (_check) << "," ROMP_INFO_PROPERTIES_VAR "[" <<(_info_id)<<"],\"" << escape(_json) << "\",\"" << escape(_str) << "\"}"
+#define ROMP_MAKE_STARTSTATE_STRUCT(_init, _info_id, _json, _str) "{" << (_init) << "," ROMP_INFO_STARTSTATE_VAR "[" <<(_info_id)<<"],\"" << escape(_json) << "\",\"" << escape(_str) << "\"}"
+
+
+#define ROMP_MAKE_MODEL_EXCEPTION(_n) ROMP_MODEL_EXCEPTION_TYPE "(" \
+                                             "\"Exception caught! see trace for details...\", " ROMP_MAKE_LOCATION_STRUCT((_n).loc) ")"
+#define ROMP_MAKE_PROPERTY_EXCEPTION(_n) ROMP_PROPERTY_EXCEPTION_TYPE "(" \
+                                             "\"Exception caught! see trace for details...\", " ROMP_MAKE_LOCATION_STRUCT((_n).loc) ")"
+
+#define _ROMP_PROPERTY_HANDLER_BASE "this->" ROMP_STATE_RAND_WALKER_VAR
+#define _ROMP_PROPERTY_HANDLER_INVAR _ROMP_PROPERTY_HANDLER_BASE "." "invariant_handler"
+#define _ROMP_PROPERTY_HANDLER_ASSERT _ROMP_PROPERTY_HANDLER_BASE "." "assertion_handler"
+#define _ROMP_PROPERTY_HANDLER_ASSUME _ROMP_PROPERTY_HANDLER_BASE "." "assumption_handler"
+#define _ROMP_PROPERTY_HANDLER_COVER _ROMP_PROPERTY_HANDLER_BASE "." "cover_handler"
+#define _ROMP_PROPERTY_HANDLER_LIVENESS _ROMP_PROPERTY_HANDLER_BASE "." "liveness_handler"
+#define _ROMP_ERROR_HANDLER _ROMP_PROPERTY_HANDLER_BASE "." "error_handler"
+
+#define ROMP_ASSERTION_HANDLER(_n,_id) _ROMP_PROPERTY_HANDLER_ASSERT "(" << *((_n).property.expr) << "," << (_id) << "u" ")"
+#define ROMP_INVARIANT_HANDLER(_n,_id) _ROMP_PROPERTY_HANDLER_INVAR "(" << *((_n).property.expr) << "," << (_id) << "u" ")"
+#define ROMP_ASSUMPTION_HANDLER(_n,_id) _ROMP_PROPERTY_HANDLER_ASSUME "(" << *((_n).property.expr) << "," << (_id) << "u" ")"
+#define ROMP_COVER_HANDLER(_n,_id,_cn) _ROMP_PROPERTY_HANDLER_COVER "(" << *((_n).property.expr) << "," << (_ln) << "u," << (_id) << "u" ")"
+#define ROMP_LIVENESS_HANDLER(_n,_id,_ln) _ROMP_PROPERTY_HANDLER_LIVENESS "(" << *((_n).property.expr) << "," << (_ln) << "u," << (_id) << "u" ")"
+#define ROMP_ERROR_HANDLER(_id) "this->" _ROMP_ERROR_HANDLER "(" << (_id) << "u" ")"
+
 
 #define ROMP_RESERVED_NAMES "" ROMP_STATE_CLASS_NAME, "to_json", \
                             ROMP_MODEL_NAMESPACE_NAME, ROMP_CALLER_NAMESPACE_NAME, ROMP_UTIL_NAMESPACE_NAME, \

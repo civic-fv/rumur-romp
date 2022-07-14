@@ -17,7 +17,7 @@
 // #include <assert.h>
 // #include <stdbool.h>
 #include <cstddef>
-// #include <stdio.h>
+#include <cstdio>
 // #include <stdlib.h>
 #include <string>
 #include <fstream>
@@ -67,6 +67,24 @@
 #define uint64_t_VALUE_C(v) UINT64_C(v)
 
 
+namespace romp {
+  struct RuleInfo; struct PropertyInfo; struct StartStateInfo; struct MErrorInfo; struct FunctInfo;
+  struct RuleSet; struct StartState; struct Property;
+}
+
+namespace __caller__ {
+  extern const ::romp::RuleSet RULESETS[];
+  extern const ::romp::StartState STARTSTATES[];
+  extern const ::romp::Property PROPERTIES[];
+}
+
+namespace __info__ { // LANGUAGE SERVER SUPPORT ONLY!!
+  extern const ::romp::RuleInfo RULE_SET_INFOS[];
+  extern const ::romp::PropertyInfo PROPERTY_INFOS[]; 
+  extern const ::romp::StartStateInfo STARTSTATE_INFOS[]; 
+  extern const ::romp::MErrorInfo ERROR_INFOS[]; 
+  extern const ::romp::FunctInfo FUNCT_INFOS[]; 
+}
 
 namespace romp {
 
@@ -81,7 +99,7 @@ namespace romp {
     ~ojstream() { out.close(); }
     template<typename... Args> ojstream(Args &&...args) 
       : out(O(std::forward<Args>(args)...)) {}
-    // template<typename T> 
+    template<typename T> 
     // friend ojstream<O>& operator << (ojstream<O>& json, const T& val);
     ojstream<O>& operator << (const std::string& str) { out << str; return *this; }
     ojstream<O>& operator << (const char* str) { out << str; return *this; }
@@ -114,7 +132,7 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const file_position& fp) { return (out << fp.row << ',' << fp.col); }
 
   struct location {
-    std::string model_obj;
+    // std::string model_obj;
     file_position start;
     file_position end;
   };
@@ -122,7 +140,7 @@ namespace romp {
   ojstream<O>& operator << (ojstream<O>& json, const location& loc) { 
     return (json << "{\"$type\":\"location\","
             << "\"file\":\"" __model__filename "\","
-            << (loc.model_obj != "") ? "\"inside\":\""+loc.model_obj+"\"," : ""
+            // << (loc.model_obj != "") ? "\"inside\":\""+loc.model_obj+"\"," : ""
             << "start" << ':' << loc.start << ',' 
             << "\"end\":" << loc.end
             << '}'); 
@@ -130,26 +148,18 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const location& loc) { 
     out << ((__model__filename_contains_space) ? "\""__model__filename "\":" : __model__filename ":") 
         << loc.start << '-' << loc.end;
-    if (loc.model_obj != "")
-      out << " in \"" << loc.model_obj << "\"";
+    // if (loc.model_obj != "")
+    //   out << " in ``" << loc.model_obj << "``";
     return out; 
   }
 
-
-  struct ModelError : public std::logic_error {
-    const location loc;
-    const std::string msg;
-    ModelError(const std::string msg_, const location loc_) : /* std::logic_error(), */ msg(msg_), loc(loc_) {}
-    virtual ModelError* clone() { return new ModelError(*this); }
-    const char* what() const noexcept {
-      std::strstream out;
-      this->what(out);
-      return out.str();
-    }
-    virtual void what(std::ostream& out) const noexcept {
-      out << loc << " :: " << msg;
-    }
-  };
+  // struct IInfo {
+  //   virtual void to_json(json_file_t& json) { this->to_json(json.out); }
+  //   virtual void to_json(json_str_t& json) { this->to_json(json.out); }
+  //   virtual void to_string(std::ostream& out) = 0;
+  // protected:
+  //   virtual void to_json(std::ostream& json) = 0;
+  // };
 
   typedef enum { INVARIANT, ASSERTION, ASSUMPTION, COVER, LIVENESS } PropertyType;
   std::ostream& operator << (std::ostream& out, const PropertyType& val) { 
@@ -161,14 +171,149 @@ namespace romp {
       case PropertyType::INVARIANT: return out << "invariant";
       default: return out << "UNKNOWN";}
    }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const PropertyType& val) { json.out << val; return json; }
+
+  struct PropertyInfo {
+    PropertyType type;
+    std::string label;
+    std::string expr;
+    // size_t prop_id;
+    id_t id;
+    location loc;
+    std::string json_h; // missing closing '}' so you can insert other fields if necessary
+  };
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const PropertyInfo& pi) noexcept { return (json << pi.json_h << '}'); }
+  std::ostream& operator << (std::ostream& out, const PropertyInfo& pi) noexcept { return (out << pi.type << " \"" << pi.name << "\" " << pi.expr << " @(" << pi.loc << ")"); }
+
+   struct Property {
+    bool (*check)(const State_t&) throw (ModelError);
+    const PropertyInfo& info;
+    const std::string quant_json;
+    const std::string quant_str;
+  };
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Property& p) noexcept { return (json << p.info.json_h << ",\"quantifiers\":" << p.quants_json << '}'); }
+  std::ostream& operator << (std::ostream& out, const Property& p) noexcept { 
+    out << p.info.type << " \"" << p.info.label << "\" ";
+    if (p.quant_str.size() > 0)
+      out << " Quantifiers(" << p.quant_str << ") ";
+    return (out << "@(" << p.info.loc << ')'); 
+  }
+
+  struct RuleInfo {
+    std::string label;
+    location loc;
+    std::string json_h; 
+  };
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const RuleInfo& ri) noexcept { return (json << ri.json_h << '}'); }
+  std::ostream& operator << (std::ostream& out, const RuleInfo& ri) noexcept { return (out << "rule \""<< ri.label << "\" @(" << ri.loc << ")"); }
+
+  struct Rule {
+    bool (*guard)(const State_t&) throw (ModelError);
+    void (*action)(State_t&) throw (ModelError);
+    RuleInfo& info;
+    const std::string quant_json;
+    const std::string quant_str;
+  };
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Rule& r) noexcept { return (json << r.info.json_h << ",\"quantifiers\":" << r.quant_json << '}'); }
+  std::ostream& operator << (std::ostream& out, const Rule& r) noexcept { 
+    out << "rule \"" << r.info.label << "\" ";
+    if (r.quant_str.size() > 0)
+      out << " Quantifiers(" << r.quant_str << ") ";
+    return (out << "@(" << r.info.loc << ')');
+  }
+
+  struct RuleSet {
+    RuleInfo& info;
+    std::vector<Rule> rules;
+  }; 
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const RuleSet& rs) noexcept { return (json << rs.info); }
+  std::ostream& operator << (std::ostream& out, const RuleSet& rs) noexcept { return (out << rs.info); }
+
+  struct StartStateInfo {
+    const std::string label;
+    location loc;
+    const std::string json_h;
+  };
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartStateInfo& si) noexcept { return (json << si.json_h << '}'); }
+  std::ostream& operator << (std::ostream& out, const StartStateInfo& si) noexcept { return (out << "startstate \""<< si.label << "\" @(" << si.loc << ")"); }
+
+  struct StartState {
+    void (*initialize)(State_t&) throw (ModelError);
+    StartStateInfo& info;
+    const std::string quant_json;
+    const std::string quant_str;
+  };
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartState& s) noexcept { return (json << s.info.json_h << ",\"quantifiers\":" << s.quant_json << '}'); }
+  std::ostream& operator << (std::ostream& out, const StartState& s) noexcept {
+    out << "startstate \"" << s.info.label << "\" ";
+    if (s.quant_str.size() > 0)
+      out << " Quantifiers(" << s.quant_str << ") ";
+    return (out << "@(" << s.info.loc << ')');
+  }
+
+  struct MErrorInfo {
+    const std::string label;
+    location loc;
+    bool isFunct;
+    const std::string json;
+  };
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const MErrorInfo& ei) noexcept { return (json << ei.json_h); }
+  std::ostream& operator << (std::ostream& out, const MErrorInfo& ei) noexcept { return (out << "error \""<< ei.label << "\" @(" << ei.loc << ")"); }
+  
+  struct FunctInfo {
+    const std::string label;
+    location loc;
+    const std::string json;
+    const std::string signature;
+  };
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const FunctInfo& fi) noexcept { return (json << ei.json_h); }
+  std::ostream& operator << (std::ostream& out, const FunctInfo& fi) noexcept { return (out << fi.signature << " @(" << ei.loc << ")"); }
+
+  enum ModelObjType { RULE, STARTSTATE, PROPERTY, FUNCTION, ERROR };
+
+  struct ModelError : public std::logic_error {
+    const ModelObjType type;
+    const id_t id;
+    const id_t qid;
+    ModelError(ModelObjType type_, id_t id_, id_t qid_) : type(type_), id(id_), qid(quid_) {}
+    virtual ModelError* clone() { return new ModelError(*this); }
+    const char* what() const noexcept {
+      std::strstream out;
+      this->what(out);
+      return out.str();
+    }
+    virtual void what(std::ostream& out) const noexcept {
+      switch (type) {
+        case ModelObjType::RULE:
+          out << ::__info__::RULE_SET_INFOS[id];
+          return;
+        case ModelObjType::STARTSTATE:
+          out << ::__info__::STARTSTATE_INFOS[id];
+          return;
+        case ModelObjType::PROPERTY:
+          out << ::__info__::STARTSTATE_INFOS[id];
+          return;
+        
+      }
+    }
+  };
 
   struct ModelPropertyError : public ModelError {
-    const std::string test_str;
-    const PropertyType prop_type;
-    ModelPropertyError(const PropertyType prop_type, const std::string test_str_, const std::string msg_, const location loc_)
-      : ModelError(msg_,loc_), test_str(test_str_), prop_type(prop_type_) {}
+    const PropertyInfo& prop_info;
+    ModelPropertyError(const PropertyInfo& prop_)
+      : ModelError("",prop_.info.loc), prop(prop_) {}
+    virtual ModelError* clone() { return new ModelPropertyError(*this); }
     void what(std::ostream& out) const noexcept {
-      out << loc << " :: " << prop_type << " \"" << msg << "\" " << test_str;
+      out << prop;
     } 
   };
   
@@ -179,7 +324,7 @@ namespace romp {
              "\"loc\":" << ex.loc << ","
              "\"property:\":{" 
                  "\"$type\":\"property\",\"property-type\":\"" << ex.prop_type << "\","
-                 "\"label\":\"" << ex.msg "\","
+                 "\"label\":\"" << ex.prop.info.name "\","
                  "\"test-expr\":\"" << ex.test_str << "\"},"
                  "\"what\":\""; ex.what(json.out); json << '"';
     __jprint_exception(json, ex);
@@ -249,7 +394,8 @@ namespace romp {
   }
 
   void fprint_exception(std::ostream& out, const std::exception& ex, const size_t level) noexcept {
-    out << prefix << ex.what() << '\n';
+    out << std::string(level, __romp__nested_exception__print_prefix)
+        << ex.what() << '\n';
     try {
         std::rethrow_if_nested(ex);
     } catch(const ModelError& mod_ex) {
@@ -269,56 +415,6 @@ namespace romp {
     return out;
   }
 
-
-  struct Rule {
-    bool (*guard)(const State_t&) throw (ModelError);
-    void (*action)(State_t&) throw (ModelError);
-    const std::string json;
-  };
-
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Rule& r) noexcept { return (json << r.json); }
-  std::ostream& operator << (std::ostream& out, const Rule& r) noexcept { return (out << r.json); }
-
-  struct RuleSet {
-    std::vector<Rule> rules;
-    std::string name;
-    location loc;
-  }; 
-
-  // template<class O> ojstream<O>& operator << (ojstream<O>& json, const RuleSet& rs) noexcept { return (json << r.json); }
-  std::ostream& operator << (std::ostream& out, const RuleSet& rs) noexcept { return (out << rs.name << " @(" << rs.loc << ")"); }
-
-  struct Property {
-    const bool (*check)(const State_t&) throw (ModelError);
-    const std::string json;
-    const prop_id;
-    const location loc;
-    const std::string name;
-  };
-
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Property& p) noexcept { return (json << p.json); }
-  std::ostream& operator << (std::ostream& out, const Property& p) noexcept { return (out << p.name << " @(" << p.loc << ")"); }
-
-  struct StartState {
-    void (*initialize)(State_t&) throw (ModelError);
-    const std::string json;
-    const std::string name;
-    const location loc;
-  };
-
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartState& s) noexcept { return (json << s.json); }
-  std::ostream& operator << (std::ostream& out, const StartState& s) noexcept { return (out << s.name << " @(" << s.loc << ")"); }
-
-
-  // typedef bool (*failed_assertion_handler_t)(const char *) throw (ModelPropertyError);
-
-  // typedef bool (*failed_assumption_handler_t)(const char *) throw (ModelPropertyError);
-
-  // typedef bool (*error_handler_t)(const char *) throw (ModelPropertyError);
-
-  // typedef bool (*cover_handler_t)(const char *) throw (ModelPropertyError);
-
-  // typedef bool (*liveness_handler_t)(const char *) throw (ModelPropertyError);
 
   class IRandWalker {
     /**
