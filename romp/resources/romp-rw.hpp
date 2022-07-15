@@ -35,14 +35,12 @@ T rand_choice(unsigned int &seed, T min, T max) {
 }
 
 class RandWalker : public ::romp::IRandWalker {
-public:
+private:
   static id_t next_id;
   const id_t id;
   const unsigned int init_rand_seed;
   unsigned int rand_seed;
   State_t state;
-  size_t fuel;
-  bool valid;
   json_file_t* json;
   // tripped thing
   IModelError* tripped = nullptr;
@@ -55,9 +53,9 @@ public:
   static init_state(unsigned int& seed, json_file_t* json) noexcept {
     try {
       // TODO: (ANDREW) generate startstate randomly from rand_seed
-    } catch (IModelError& me) {
+    } catch (const IModelError& me) {
        __handle_init_exception(json,me);
-    } catch (std::exception& ex) {
+    } catch (const std::exception& ex) {
       __handle_init_exception(json,ex);
     } catch (...) {
       std::cerr << "unknown non std::exception was thrown while initializing a Random Walker!\n" << std::flush;
@@ -74,6 +72,11 @@ public:
       //TODO something else
     }
   }
+
+public:
+  size_t fuel;
+  bool valid;
+  void (*RandWalker::sim1Step)();
 
   RandWalker(State_t startstate, unsigned int rand_seed_, size_t fuel/* =DEFAULT_FUEL */) 
     : state(startstate), 
@@ -95,7 +98,6 @@ public:
 
   ~RandWalker() { *json << "]}"; json->out.close(); delete json; }
 
-  void (*RandWalker::sim1Step)();
 
 private:
 
