@@ -30,6 +30,9 @@ namespace options {
 enum trace_category_t { // to do for trace
   TC_VERBOSE, TC_TRIPPED_STATES, TC_RW_PATH
 };
+enum property_category_t // to do define 
+ {  TC_NODEADLOCK, TC_LIVENESS, TC_COVER , TC_ATTEMPT_GAURD
+};
 
 struct Options {
   size_t threads = 0;    // mpz_class ??
@@ -57,7 +60,7 @@ void print_help() {
               parameter  or  pass  0, the number of threads will be chosen based on the available
               hardware threads on the platform on which you generate the model.\n\
 \t-w    \t\t   \tnumber of random walkers to be launched by the verifier\n\
-\t-n    \t\t   \tno deadlock detection\n\
+\t-u    \t\t   \tsingle random walker\n\
 \t-s    \t\t   \trandom seed to be fed into the random walker. If not provided, default seed is considered.\n");
 }
 static void parse_args(int argc, char **argv) {
@@ -68,7 +71,7 @@ static void parse_args(int argc, char **argv) {
       OPT_DEPTH = 128,
       // OPT_NO_DEADLOCK_DETECTION,
       OPT_TRACE,
-
+      OPT_PROPERTY
     };
 
   static struct options opts[] = {
@@ -85,7 +88,7 @@ static void parse_args(int argc, char **argv) {
 
   int option_index = 0;
   int c = getopt_long(
-      argc, argv, "hd:t:w:s:", opts,
+      argc, argv, "hud:t:w:s:", opts,
       &option_index); // compund letters args ?? also not for trace//depth ??
   extern char *optarg;
 
@@ -99,10 +102,12 @@ static void parse_args(int argc, char **argv) {
     exit(EXIT_SUCCESS);
     break;
 
-  case 'ndl': // --no-deadlock-detection ...
+  /*case 'ndl': // --no-deadlock-detection ...
     // define ndl;
     exit(EXIT_FAILURE);
     break;
+
+  */
 
   case 't': { // --threads ...
     bool valid = true;
@@ -134,6 +139,14 @@ static void parse_args(int argc, char **argv) {
     }
     break;
   }
+
+  case 'u': { // --single random walker in a thread 
+      options.threads = 1; // assigning thread value to be one and also rw to be one 
+      options.random_walkers =1;// to launch do i need to specify 
+      exit(EXIT_SUCCESS); 
+    break;
+  }
+
   case 's': { //  random seed for the random walkers
     bool valid = true;
     try {
@@ -168,6 +181,43 @@ static void parse_args(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
     break;
+
+    case OPT_PROPERTY: // --property ...
+    if (strcmp(optarg, "nodeadlock") == 0) {
+      options.traces |= TC_NODEADLOCK;
+    } else if (strcmp(optarg, "liveness") == 0) {
+      options.traces |= TC_LIVENESS;
+    } else if (strcmp(optarg, "cover") == 0) {
+      options.traces |= TC_COVER;
+    } 
+    else if (strcmp(optarg, "attempt_gaurd") == 0) {
+      options.traces |= TC_ATTEMPT_GAURD;
+    } else {
+      std::cerr << "invalid --property argument \"" << optarg << "\"\n"
+                << "valid arguments are \"nodeadlock\", \"liveness\", "
+                   "\"cover\",\"attempt_gaurd\"\n";
+      exit(EXIT_FAILURE);
+    }
+    break;
+
+    case OPT_RESULT: // --trace ...
+    if (strcmp(optarg, "history") == 0) {
+      options.traces |= TC_HISTORY;
+    } else if (strcmp(optarg, "all") == 0) {
+      options.traces |= TC_ALL;
+    } else if (strcmp(optarg, "assume") == 0) {
+      options.traces |= TC_ASSUMPTIONS;
+    } 
+    else if (strcmp(optarg, "output") == 0) { // todo must take an argument for directory ?? is this okay 
+      options.traces |= TC_OUTPUT;
+    } else {
+      std::cerr << "invalid --result argument \"" << optarg << "\"\n"
+                << "valid arguments are \"history\", \"all\", "
+                   "\"assume\",\"output\"\n";
+      exit(EXIT_FAILURE);
+    }
+    break;
+
 
   case OPT_DEPTH: { // --depth ...
     bool valid = true;
