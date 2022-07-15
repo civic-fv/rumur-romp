@@ -45,21 +45,23 @@ private:
   std::strstream prop_info_list;
   std::strstream error_info_list;
   id_t next_property_rule_id = 0u;
+  id_t next_rule_id = 0u;
+  id_t next_startstate_id = 0u;
+  id_t next_funct_id = 0u;
   id_t next_property_id = 0u;
   id_t next_cover_id = 0u;
   id_t next_liveness_id = 0u;
   id_t next_assert_id = 0u;
   id_t next_assume_id = 0u;
   id_t next_error_id = 0u;
+  bool processing_global_prop = false;
   enum {GLOBAL, RULE, FUNCT} inType = GLOBAL;
-  union {Rule& rule; Function& funct; nullptr_t null;} inside;
 
 public:
   CGenerator(const std::vector<rumur::Comment> &comments_, std::ostream &out_,
              bool pack_)
       : CLikeGenerator(comments_, out_, pack_) 
   { 
-    inside.null = nullptr;
     error_info_list << ROMP_INFO_ERRORS_DECL " = {";
   }
 
@@ -90,7 +92,7 @@ public:
 
   void visit_function(const Function &n) final {
     inType = FUNCT;
-    inside.funct = n;
+    id_t id = next_funct_id++;
     *this << indentation() << CodeGenerator::M_FUNCTION__FUNC_ATTRS << "\n"
           << indentation();
     if (n.return_type == nullptr) {
@@ -136,23 +138,21 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (::std::exception& ex) { ::std::throw_with_nested( " 
-                          ROMP_MAKE_MODEL_EXCEPTION("[func/proc] " + n.name, n) " ); }\n";
+    *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
+                          ROMP_MAKE_MODEL_ERROR_FUNCT(n,id) " ); }\n";
 
     dedent();
     *this << "}\n"; 
     inType = GLOBAL;
-    inside.null = nullptr;
   }
 
   void visit_propertyrule(const PropertyRule &n) final {
     inType = RULE;
-    inside.rule = n;
     id_t prop_id = next_property_rule_id++;
     property_rules.push_back(Ptr<const PropertyRule>::make(n));
     // function prototype
     *this << indentation() << CodeGenerator::M_PROPERTY__FUNC_ATTRS << "\n"
-          << indentation() << "bool " ROMP_PROPERTYRULE_PREFIX << n.name << "(";
+          << indentation() << "void " ROMP_PROPERTYRULE_PREFIX << n.name << "(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -184,40 +184,12 @@ public:
       *this << *a;
     }
 
-    *this << indentation() << "return ";
-    std::string prop_type = "[property] ";
-    switch (n.property.category) {
-      case Property::ASSERTION:
-        *this << ROMP_PROPERTY_HANDLER_INVAR "("
-              " (" << *n.property.expr << "), " 
-              << next_property_id++ << "u"
-              ");";
-        prop_type = "[invariant] ";
-        break;
-      case Property::ASSUMPTION:
-        *this << ROMP_PROPERTY_HANDLER_ASSUME "("
-              " (" << *n.property.expr << "), " 
-              << next_property_id++ << "u"
-              ");";
-        break;
-      case Property::COVER:
-        *this << ROMP_PROPERTY_HANDLER_COVER "("
-              " (" << *n.property.expr << "), " 
-              << next_cover_id++ << "u, "
-              << next_property_id++ << "u"
-              ");";
-        prop_type = "[cover] ";
-        break;
-      case Property::LIVENESS:
-        *this << ROMP_PROPERTY_HANDLER_LIVENESS "("
-              " (" << *n.property.expr << "), " 
-              << next_liveness_id++ << "u, "
-              << next_property_id++ << "u"
-              ");";
-        prop_type = "[liveness] ";
-        break;
-    }
-    *this << "(" << *n.property.expr << ");\n";
+    processing_global_prop = true;
+    const auto stmt = Ptr<PropertyStmt>::make(n.property,n.name,n.loc);
+    *this << indentation() // << "return ";
+          << *stmt;
+    processing_global_prop = false;
+    // *this << "(" << *n.property.expr << ");\n";
 
     // clean up any aliases we defined
     for (const Ptr<AliasDecl> &a : n.aliases) {
@@ -225,19 +197,18 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (::std::exception& ex) { ::std::throw_with_nested( " 
-                          ROMP_MAKE_MODEL_EXCEPTION(prop_type + n.name, n) " ); }\n";
+    *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
+                          ROMP_MAKE_MODEL_ERROR_PROPERTY(n,prop_id) " ); }\n";
 
     dedent();
     *this << indentation() << "}\n";
     inType = GLOBAL;
-    inside.null = nullptr;
   }
 
   void visit_simplerule(const SimpleRule &n) final {
     inType = RULE;
-    inside.rule = n;
     rules.push_back(Ptr<const SimpleRule>(&n));
+    id_t id = next_rule_id++;
 
     *this << indentation() << CodeGenerator::M_RULE_GUARD__FUNC_ATTRS << "\n"
           << indentation() << "bool " ROMP_RULE_GUARD_PREFIX << n.name << "(";
@@ -286,8 +257,8 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (::std::exception& ex) { ::std::throw_with_nested( " 
-                          ROMP_MAKE_MODEL_EXCEPTION("[rule guard] " + n.name, n) " ); }\n";
+    *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
+                          ROMP_MAKE_MODEL_ERROR_GUARD(n,id) " ); }\n";
 
     dedent();
     *this << indentation() << "}\n\n";
@@ -347,19 +318,18 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (::std::exception& ex) { ::std::throw_with_nested( " 
-                          ROMP_MAKE_MODEL_EXCEPTION("[rule action] " + n.name, n) " ); }\n";
+    *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
+                          ROMP_MAKE_MODEL_ERROR_RULE_ACTION(n,id) " ); }\n";
 
     dedent();
     *this << indentation() << "}\n";
     inType = GLOBAL;
-    inside.null = nullptr;
   }
 
   void visit_startstate(const StartState &n) final {
     inType = RULE;
-    inside.rule = n;
     startstates.push_back(Ptr<const StartState>(&n));
+    id_t id = next_startstate_id++;
     
     *this << indentation() << CodeGenerator::M_STARTSTATE__FUNC_ATTRS 
           << " void " ROMP_STARTSTATE_PREFIX << n.name << "(";
@@ -412,13 +382,12 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (::std::exception& ex) { ::std::throw_with_nested( " 
-                          ROMP_MAKE_MODEL_EXCEPTION("[startstate] " + n.name, n) " ); }\n";
+    *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
+                          ROMP_MAKE_MODEL_ERROR_STARTSTATE(n, id) " ); }\n";
 
     dedent();
     *this << indentation() << "}\n\n";
     inType = GLOBAL;
-    inside.null = nullptr;
   }
 
   void visit_vardecl(const VarDecl &n) final {
@@ -494,17 +463,18 @@ public:
       int tmp = 0;
       SigPerm sigs(prop);
       for (auto& sig : sigs) {
-        std::string _check = ROMP_PROPERTYRULE_PREFIX + prop->name + "__" + int_to_hex();
+        std::string _check = ROMP_PROPERTYRULE_PREFIX + prop->name + "__" + int_to_hex(count);
         out << indentation() 
             << CodeGenerator::M_PROPERTY__FUNC_ATTRS
-            << " bool "
+            << " void "
             << _check
             << "(const State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
                "return s." ROMP_PROPERTYRULE_PREFIX << sig << "; }\n";
-        prop_list << sep << ROMP_MAKE_PROPERTY_STRUCT(_check,info_id,sig.to_json(),sig.to_string());
+        prop_list << sep << ROMP_MAKE_PROPERTY_STRUCT(_check,_lid,sig.to_json(),sig.to_string());
         sep = ", ";
+        ++count;
       }
-      count += sigs.size();
+      ++_lid;
     }
     *this << "\n\n#define " ROMP_PROPERTY_RULES_LEN " (" << count <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"; 
     *this << "\n" << indentation() << "// All of the rule sets in one place\n" 
@@ -529,11 +499,12 @@ public:
             << " void "
             << _init
             << "(State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
-               "return s." ROMP_PROPERTYRULE_PREFIX << sig << "; }\n";
+               "return s." ROMP_STARTSTATE_PREFIX << sig << "; }\n";
         prop_list << sep << ROMP_MAKE_STARTSTATE_STRUCT(_init,info_id,sig.to_json(),sig.to_string());
         sep = ", ";
         ++count;
       }
+      ++info_id;
     }
     *this << "\n\n#define " ROMP_STARTSTATE_RULES_LEN " (" << count <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"; 
     *this << "\n" << indentation() << "// All of the rule sets in one place\n" 
@@ -541,54 +512,58 @@ public:
   }
 
   void visit_propertystmt(const PropertyStmt &n) {
-    id_t id = next_property_id++;
-    switch (n.property.category) {
+    id_t id = ((not processing_global_prop) ? (next_property_id++) : (next_property_rule_id-1));
 
+    *this << indentation() << "if (";
+    indent();
+
+    switch (n.property.category) {
     case Property::ASSERTION:
-      prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,next_assert_id++,n->message,ROMP_PROPERTY_TYPE_ASSERT,to_json(n,"assert")) ",";
-      *this << indentation() << "if (not " << ROMP_ASSERTION_HANDLER(n,prop_id) << ")\n";
-      indent();
-      *this << indentation() << "failed_assertion(\""
-            << escape(n.message == "" ? n.property.expr->to_string() : n.message)
-            << "\");\n";
-      dedent();
-      // *this << indentation() << "}";
+      *this << ROMP_ASSERTION_HANDLER(n,id) << ")\n"
+            << indentation() << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
+      if (not processing_global_prop)
+        prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,id,n.message,ROMP_PROPERTY_TYPE_ASSERT, to_json(n,"assert")) ",";
       break;
 
     case Property::ASSUMPTION:
-      *this << indentation() << "if (!" << *n.property.expr << ") {\n";
-      indent();
-      *this << indentation() << "failed_assumption(\""
-            << escape(n.message == "" ? n.property.expr->to_string() : n.message)
-            << "\");\n";
-      dedent();
-      *this << indentation() << "}";
+      *this << ROMP_ASSUMPTION_HANDLER(n,id) << ")\n"
+            << indentation() << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
+      if (not processing_global_prop)
+        prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,id,n.message,ROMP_PROPERTY_TYPE_ASSUME, to_json(n,"assume")) ",";
       break;
 
     case Property::COVER:
-      *this << indentation() << "if " << *n.property.expr << " {\n";
-      indent();
-      *this << indentation() << "cover(\""
-            << escape(n.message == "" ? n.property.expr->to_string() : n.message)
-            << "\");\n";
-      dedent();
-      *this << indentation() << "}";
+      id_t _id = next_cover_id++;
+      *this << ROMP_COVER_HANDLER(n,id,_id) << ")\n"
+            << indentation() << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
+      if (not processing_global_prop)
+        prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,_id,n.message,ROMP_PROPERTY_TYPE_COVER, to_json(n,"cover")) ",";
       break;
 
     case Property::LIVENESS:
-      throw Error("liveness properties are not supported as statements only global rules!", n.loc);
-      *this << indentation() << "if " << *n.property.expr << " {\n";
-      indent();
-      *this << indentation() << "liveness(\""
-            << escape(n.message == "" ? n.property.expr->to_string() : n.message)
-            << "\");\n";
-      dedent();
-      *this << indentation() << "}";
+      if (not processing_global_prop)
+        throw Error("liveness properties are NOT supported as embedded statements only global rules!", n.loc);
+      id_t _id = next_liveness_id++;
+      *this << ROMP_LIVENESS_HANDLER(n,id,_id) << ")\n"
+            << indentation() << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
+      // prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,_id,n.message,ROMP_PROPERTY_TYPE_LIVENESS, to_json(n,"liveness")) ",";
       break;
     }
+    dedent();
 
     emit_trailing_comments(n);
     *this << "\n";
+  }
+
+  void CLikeGenerator::visit_errorstmt(const ErrorStmt &n) {
+    id_t id = next_error_id++;
+    *this << indentation() << "if (" ROMP_ERROR_HANDLER(id) ")\n";
+    indent();
+    *this << indentation() << "throw " ROMP_MAKE_MODEL_ERROR_ERROR(n,id) ";\n";
+    dedent();
+    emit_trailing_comments(n);
+    *this << "\n";
+    error_info_list << ROMP_MAKE_ERROR_INFO_STRUCT(n,(inType==FUNCT),to_json(n)) ",";
   }
 
   void visit_model(const Model &n) {
@@ -659,7 +634,7 @@ public:
     indent();
     *this << "#define " ROMP_FUNCTS_LEN " (" << sorter.funct_decls.size()  "ul) // the number of functions & procedures in the model\n"
           << indentation() << "// the info/metadata about the functions/procedures in the model\n"
-          << indentation() << sorter.funct_info_list.str() << '];\n'
+          << indentation() << sorter.funct_info_list.str() << '};\n'
           << "#define " ROMP_ERRORS_LEN " (" << next_error_id << "ul) // the number of error statements in the model\n"
           << indentation() << "// the info/metadata about the murphi error statements in the model\n"
           << indentation() << error_info_list.str() << '};\n'

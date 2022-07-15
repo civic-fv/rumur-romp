@@ -78,9 +78,13 @@
 // #define ROMP_STARTSTATES_LEN "ROMP_ERRORS_LEN"
 // #define ROMP_CALLER_STARTSTATES_DECL "const " ROMP_UTIL_NAMESPACE "::ErrorInfo STARTSTATES["ROMP_STARTSTATES_LEN"]"
 
-#define ROMP_MODEL_EXCEPTION_TYPE "" ROMP_UTIL_NAMESPACE "::" "ModelError"
+#define ROMP_MODEL_EXCEPTION_TYPE ROMP_UTIL_NAMESPACE "::" "IModelError"
 
-#define ROMP_MODEL_PROPERTY_EXCEPTION_TYPE "" ROMP_UTIL_NAMESPACE "::" "ModelPropertyError"
+#define ROMP_MODEL_ERROR_TYPE_PROPERTY ROMP_UTIL_NAMESPACE "::" "ModelPropertyError"
+#define ROMP_MODEL_ERROR_TYPE_RULE ROMP_UTIL_NAMESPACE "::" "ModelRuleError"
+#define ROMP_MODEL_ERROR_TYPE_STARTSTATE ROMP_UTIL_NAMESPACE "::" "ModelStartStateError"
+#define ROMP_MODEL_ERROR_TYPE_FUNCT ROMP_UTIL_NAMESPACE "::" "ModelFunctError"
+#define ROMP_MODEL_ERROR_TYPE_ERROR ROMP_UTIL_NAMESPACE "::" "ModelMErrorError"
 
 #define ROMP_JSON_TYPE "nlohmann::json"
 
@@ -119,10 +123,14 @@
 #define ROMP_MAKE_STARTSTATE_STRUCT(_init, _info_id, _json, _str) "{" << (_init) << "," ROMP_INFO_STARTSTATE_VAR "[" <<(_info_id)<<"],\"" << escape(_json) << "\",\"" << escape(_str) << "\"}"
 
 
-#define ROMP_MAKE_MODEL_EXCEPTION(_n) ROMP_MODEL_EXCEPTION_TYPE "(" \
-                                             "\"Exception caught! see trace for details...\", " ROMP_MAKE_LOCATION_STRUCT((_n).loc) ")"
-#define ROMP_MAKE_PROPERTY_EXCEPTION(_n) ROMP_PROPERTY_EXCEPTION_TYPE "(" \
-                                             "\"Exception caught! see trace for details...\", " ROMP_MAKE_LOCATION_STRUCT((_n).loc) ")"
+#define ROMP_MAKE_MODEL_ERROR_PROPERTY(_n,_id) ROMP_MODEL_ERROR_TYPE_PROPERTY "(" << (_id) << ")"
+#define ROMP_MAKE_MODEL_ERROR_RULE(_n,_id) ROMP_MODEL_ERROR_TYPE_RULE "(" << (_id) << ")"
+#define ROMP_MAKE_MODEL_ERROR_RULE_GUARD(_n,_id) ROMP_MODEL_ERROR_TYPE_RULE "(" << (_id) << "," ROMP_MODEL_ERROR_TYPE_RULE "::GUARD)"
+#define ROMP_MAKE_MODEL_ERROR_RULE_ACTION(_n,_id) ROMP_MODEL_ERROR_TYPE_RULE "(" << (_id) << "," ROMP_MODEL_ERROR_TYPE_RULE "::ACTION)"
+#define ROMP_MAKE_MODEL_ERROR_STARTSTATE(_n,_id) ROMP_MODEL_ERROR_TYPE_STARTSTATE "(" << (_id) << ")"
+#define ROMP_MAKE_MODEL_ERROR_FUNCT(_n,_id) ROMP_MODEL_ERROR_TYPE_FUNCT "(" << (_id) << ")"
+#define ROMP_MAKE_MODEL_ERROR_ERROR(_n,_id) ROMP_MODEL_ERROR_TYPE_ERROR "(" << (_id) << ")"
+
 
 #define _ROMP_PROPERTY_HANDLER_BASE "this->" ROMP_STATE_RAND_WALKER_VAR
 #define _ROMP_PROPERTY_HANDLER_INVAR _ROMP_PROPERTY_HANDLER_BASE "." "invariant_handler"

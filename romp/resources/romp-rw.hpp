@@ -44,7 +44,7 @@ public:
   size_t fuel;
   bool valid;
   // tripped thing
-  ModelError* tripped = nullptr;
+  IModelError* tripped = nullptr;
   // how many rules have tried to be applied to this state
   size_t level = 0;
   // array of integers representing the rul ID's applied to this state (treated
@@ -96,7 +96,7 @@ public:
               valid = false;
               tripped = new ModelPropertyError(prop);
           }        
-    } catch(ModelError& me) {
+    } catch(IModelError& me) {
       valid = false;
       tripped = me/* .clone() */; // need to look into this one, probs broken with std::nested_exceptions
       // TODO: handle error data
@@ -120,7 +120,7 @@ id_t RandWalker::next_id = 0u;
  * To do - how to get the size of startstate
  * 
  */
-std::vector<State_t> gen_startstates() throw (ModelError) {
+std::vector<State_t> gen_startstates() throw (IModelError) {
   std::vector<State_t> states;
   for (int i=0; i<_ROMP_STARTSTATES_LEN; i++) {
     states.push_back(State_t{});
@@ -143,7 +143,7 @@ unsigned int genrandomseed(unsigned int &root_seed) {
  * To do - how to get the size of startstate
  * 
  */
-std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_seed, size_t fuel) throw (ModelError) {
+std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_seed, size_t fuel) throw (IModelError) {
   std::vector<RandWalker> rws;
   auto startstates = gen_startstates();
   for(int i=0; i<rw_count; i++) {
@@ -174,7 +174,7 @@ void launch_OpenMP(size_t rw_count, unsigned int rand_seed, size_t fuel, size_t 
   std::vector<RandWalker> rws;
   try {
     rws = gen_random_walkers(rw_count, root_seed, fuel);
-  } catch (const ModelError& ex) {
+  } catch (const IModelError& ex) {
     std::cerr << "\nModel raised an error when initializing our start state(s)!! (message below)\n"
                << ex.what << std::endl;
   }
@@ -223,7 +223,7 @@ void launch_single(unsigned int rand_seed, size_t fuel) {
   State_t start_state;
   try {
     ::__caller__::STARTSTATES[rand_choice(_seed_cpy, 0ul, _ROMP_STARTSTATES_LEN)].initialize(start_state);
-  } catch (const ModelError& ex) {
+  } catch (const IModelError& ex) {
     std::error << "\nModel raised an error when initializing our start state!! (message below)\n"
                << ex.what << std::endl;
     return;

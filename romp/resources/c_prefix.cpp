@@ -26,6 +26,7 @@
 #include <vector>
 #include <memory>
 #include <utility>
+#include <functional>
 #include <type_traits>
 
 
@@ -92,16 +93,40 @@ namespace romp {
 
   typedef _ROMP_STATE_TYPE State_t;
 
+  static std::string octal(char c) {
+    char buffer[sizeof("\\000")];
+    snprintf(buffer, sizeof(buffer), "\\%03o", c);
+    return buffer;
+  }
+
+  std::string escape_str(const std::string &s) {
+    std::string out;
+    for (const char &c : s) {
+      if (iscntrl(c) || c == '\\' || c == '\"') {
+        out += "\\" + octal(c);
+      } else {
+        out += c;
+      }
+    }
+    return out;
+  }
+
+  struct IModelError;
+  template<class O> void __jprint_exception(ojstream<O>& json, const std::exception& ex) noexcept;
+
   template <class O>
   struct ojstream {
     static_assert(std::is_base_of<std::ostream, O>::value, "O must inherit from std::ostream");
     O out;
   protected: ojstream(O out_) : out(out_) {}
+    // int ex_level = 0;
   public:
-    ~ojstream() { out.close(); }
+    ~ojstream() { out << ']}\n' << std::flush; out.close(); } // probs move this to random walker
     template<typename... Args> ojstream(Args &&...args) 
-      : out(O(std::forward<Args>(args)...)) {}
-    template<typename T> 
+      : out(O(std::forward<Args>(args)...)) {
+      out << "{\"$type\":\"romp-trace\""; // probs move this to random walker
+    }
+    // template<typename T> 
     // friend ojstream<O>& operator << (ojstream<O>& json, const T& val);
     ojstream<O>& operator << (const std::string& str) { out << str; return *this; }
     ojstream<O>& operator << (const char* str) { out << str; return *this; }
@@ -116,12 +141,23 @@ namespace romp {
     ojstream<O>& operator << (const unsigned short val) { out << val; return *this; }
     ojstream<O>& operator << (const short val) { out << val; return *this; }
     ojstream<O>& operator << (const bool val) { out << (val) ? "true" : "false"; return *this; }
+    ojstream<O>& operator << (const IModelError& me) noexcept;
+    ojstream<O>& operator << (const std::exception& ex) noexcept { 
+      // if (ex_level++ == 0) out << "],\"error-trace\":["
+      out << "{\"$type\":\"exception\","
+              "\"what\":\"" << escape_str(ex.what()) << "\"}";
+      __jprint_exception(*this,ex);
+      // if (--ex_level == 0) out << "],";
+      return *this; 
+    }
+    char* str() { if () }
   };
+
 
   typedef ojstream<std::ofstream> json_file_t;
   typedef ojstream<std::strstream> json_str_t;
 
-  template<> char* json_str_t::str() { return this->str(); }
+  // template<> char* json_str_t::str() { return out.str(); }
 
   struct file_position {
     size_t row;
@@ -155,6 +191,26 @@ namespace romp {
     return out; 
   }
 
+  struct IModelError : public std::logic_error {
+    IModelError() : std::logic_error("this is a model error (you should never see this)") {}
+    const char* what() const noexcept {
+      std::strstream out;
+      this->what(out);
+      return out.str();
+    }
+    virtual void what(std::ostream& out) const noexcept = 0;
+    virtual void to_json(json_file_t& json) const noexcept = 0;
+    virtual void to_json(json_str_t& json) const noexcept = 0;
+  };
+  template<class O>
+  ojstream<O>& ojstream<O>::operator << (const IModelError& me) noexcept { 
+    // if (ex_level++ == 0) out << "],\"error-trace\":["
+    me.to_json(out); 
+    __jprint_exception(*this,me);
+    // if (--ex_level == 0) out << ']';
+    return *this; 
+  }
+
   // struct IInfo {
   //   virtual void to_json(json_file_t& json) { this->to_json(json.out); }
   //   virtual void to_json(json_str_t& json) { this->to_json(json.out); }
@@ -176,8 +232,8 @@ namespace romp {
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const PropertyType& val) { json.out << val; return json; }
 
   struct PropertyInfo {
-    PropertyType type;
     std::string label;
+    PropertyType type;
     std::string expr;
     // size_t prop_id;
     id_t id;
@@ -186,13 +242,34 @@ namespace romp {
   };
 
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const PropertyInfo& pi) noexcept { return (json << pi.json_h << '}'); }
-  std::ostream& operator << (std::ostream& out, const PropertyInfo& pi) noexcept { return (out << pi.type << " \"" << pi.name << "\" " << pi.expr << " @(" << pi.loc << ")"); }
+  std::ostream& operator << (std::ostream& out, const PropertyInfo& pi) noexcept { return (out << pi.type << " \"" << pi.label << "\" " << pi.expr << " @(" << pi.loc << ")"); }
 
    struct Property {
-    bool (*check)(const State_t&) throw (ModelError);
+    void (*check)(const State_t&) throw (IModelError);
     const PropertyInfo& info;
     const std::string quant_json;
     const std::string quant_str;
+  };
+
+  struct ModelPropertyError : public IModelError {
+    ModelPropertyError(const Property& prop_) : isProp(true) { data.prop = &prop_; }
+    ModelPropertyError(const PropertyInfo& info_) : isProp(false) { data.info = &info_; }
+    ModelPropertyError(id_t id) : isProp(false) { data.info = &(::__info__::PROPERTY_INFOS[id]); }
+    void what(std::ostream& out) const noexcept { if (isProp) out << *data.prop; else out << *data.info; }
+    virtual void to_json(json_file_t& json) const noexcept { _to_json(json); }
+    virtual void to_json(json_str_t& json) const noexcept { _to_json(json); }
+  private:
+    union {const Property* prop; const PropertyInfo* info;} data;
+    const bool isProp;
+    template<class O>
+    void _to_json(ojstream<O>& json) const noexcept { 
+      json << "{\"$type\":\"model-error\","
+               "\"type\":\"property\","
+              //  "\"what\":\""<< escape_str(what()) << "\","
+               "\"inside\":";
+      if (isProp) json << *data.prop; else json << *data.info;
+      json << '}';
+    } 
   };
 
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const Property& p) noexcept { return (json << p.info.json_h << ",\"quantifiers\":" << p.quants_json << '}'); }
@@ -213,8 +290,8 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const RuleInfo& ri) noexcept { return (out << "rule \""<< ri.label << "\" @(" << ri.loc << ")"); }
 
   struct Rule {
-    bool (*guard)(const State_t&) throw (ModelError);
-    void (*action)(State_t&) throw (ModelError);
+    bool (*guard)(const State_t&) throw (IModelError);
+    void (*action)(State_t&) throw (IModelError);
     RuleInfo& info;
     const std::string quant_json;
     const std::string quant_str;
@@ -236,6 +313,31 @@ namespace romp {
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const RuleSet& rs) noexcept { return (json << rs.info); }
   std::ostream& operator << (std::ostream& out, const RuleSet& rs) noexcept { return (out << rs.info); }
 
+  struct ModelRuleError : public IModelError {
+    enum Where {UNKNOWN,GUARD,ACTION};
+    ModelRuleError(const Rule& rule_) : isRule(true), where(UNKNOWN) { data.rule = &rule_; }
+    ModelRuleError(const RuleInfo& info_) : isRule(false), where(UNKNOWN) { data.info = &info_; }
+    ModelRuleError(const RuleSet& rule_set_) : isRule(false), where(UNKNOWN) { data.info = &(rule_set_.info); }
+    ModelRuleError(id_t id) : isRule(false), where(UNKNOWN) { data.info = &(::__info__::RULE_SET_INFOS[id]); }
+    ModelRuleError(id_t id, Where where_) : isRule(false), where(where_) { data.info = &(::__info__::RULE_SET_INFOS[id]); }
+    void what(std::ostream& out) const noexcept { if (isRule) out << *data.rule; else out << *data.info; }
+    virtual void to_json(json_file_t& json) const noexcept { _to_json(json); }
+    virtual void to_json(json_str_t& json) const noexcept { _to_json(json); }
+  private:
+    union {const Rule* rule; const RuleInfo* info;} data;
+    const bool isRule;
+    const Where where;
+    template<class O>
+    void _to_json(ojstream<O>& json) const noexcept { 
+      json << "{\"$type\":\"model-error\","
+               "\"type\":\"rule" << ((where==UNKNOWN) ? "" : ((where==GUARD) ? "-guard" : "-action")) << "\","
+              //  "\"what\":\""<< escape_str(what()) << "\","
+               "\"inside\":";
+      if (isRule) json << *data.rule; else json << *data.info;
+      json << '}'; 
+    } 
+  };
+  
   struct StartStateInfo {
     const std::string label;
     location loc;
@@ -246,7 +348,7 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const StartStateInfo& si) noexcept { return (out << "startstate \""<< si.label << "\" @(" << si.loc << ")"); }
 
   struct StartState {
-    void (*initialize)(State_t&) throw (ModelError);
+    void (*initialize)(State_t&) throw (IModelError);
     StartStateInfo& info;
     const std::string quant_json;
     const std::string quant_str;
@@ -260,6 +362,27 @@ namespace romp {
     return (out << "@(" << s.info.loc << ')');
   }
 
+  struct ModelStartStateError : public IModelError {
+    ModelStartStateError(const StartState& rule_) : isStartState(true) { data.rule = &rule_; }
+    ModelStartStateError(const StartStateInfo& info_) : isStartState(false) { data.info = &info_; }
+    ModelStartStateError(id_t id) : isStartState(false) { data.info = &(::__info__::STARTSTATE_INFOS[id]); }
+    void what(std::ostream& out) const noexcept { if (isStartState) out << *data.rule; else out << *data.info; }
+    virtual void to_json(json_file_t& json) const noexcept { _to_json(json); }
+    virtual void to_json(json_str_t& json) const noexcept { _to_json(json); }
+  private:
+    union {const StartState* rule; const StartStateInfo* info;} data;
+    const bool isStartState;
+    template<class O>
+    void _to_json(ojstream<O>& json) const noexcept { 
+      json << "{\"$type\":\"model-error\","
+               "\"type\":\"startstate\","
+              //  "\"what\":\""<< escape_str(what()) << "\","
+               "\"inside\":";
+      if (isStartState) json << *data.rule; else json << *data.info;
+      json << '}'; 
+    } 
+  };
+
   struct MErrorInfo {
     const std::string label;
     location loc;
@@ -270,6 +393,23 @@ namespace romp {
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const MErrorInfo& ei) noexcept { return (json << ei.json_h); }
   std::ostream& operator << (std::ostream& out, const MErrorInfo& ei) noexcept { return (out << "error \""<< ei.label << "\" @(" << ei.loc << ")"); }
   
+  struct ModelMErrorError : public IModelError {
+    ModelMErrorError(const MErrorInfo& info_) : info(info_) {}
+    ModelMErrorError(id_t id) : info(::__info__::ERROR_INFOS[id]) {}
+    void what(std::ostream& out) const noexcept { out << info; }
+    virtual void to_json(json_file_t& json) const noexcept { _to_json(json); }
+    virtual void to_json(json_str_t& json) const noexcept { _to_json(json); }
+  private:
+    const MErrorInfo& info;
+    template<class O>
+    void _to_json(ojstream<O>& json) const noexcept { 
+      json << "{\"$type\":\"model-error\","
+               "\"type\":\"error-statement\","
+              //  "\"what\":\"" << escape_str(what()) << "\","
+               "\"inside\":" << info << '}'; 
+    } 
+  };
+
   struct FunctInfo {
     const std::string label;
     location loc;
@@ -277,144 +417,65 @@ namespace romp {
     const std::string signature;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const FunctInfo& fi) noexcept { return (json << ei.json_h); }
-  std::ostream& operator << (std::ostream& out, const FunctInfo& fi) noexcept { return (out << fi.signature << " @(" << ei.loc << ")"); }
-
-  enum ModelObjType { RULE, STARTSTATE, PROPERTY, FUNCTION, ERROR };
-
-  struct ModelError : public std::logic_error {
-    const ModelObjType type;
-    const id_t id;
-    const id_t qid;
-    ModelError(ModelObjType type_, id_t id_, id_t qid_) : type(type_), id(id_), qid(quid_) {}
-    virtual ModelError* clone() { return new ModelError(*this); }
-    const char* what() const noexcept {
-      std::strstream out;
-      this->what(out);
-      return out.str();
-    }
-    virtual void what(std::ostream& out) const noexcept {
-      switch (type) {
-        case ModelObjType::RULE:
-          out << ::__info__::RULE_SET_INFOS[id];
-          return;
-        case ModelObjType::STARTSTATE:
-          out << ::__info__::STARTSTATE_INFOS[id];
-          return;
-        case ModelObjType::PROPERTY:
-          out << ::__info__::STARTSTATE_INFOS[id];
-          return;
-        
-      }
-    }
-  };
-
-  struct ModelPropertyError : public ModelError {
-    const PropertyInfo& prop_info;
-    ModelPropertyError(const PropertyInfo& prop_)
-      : ModelError("",prop_.info.loc), prop(prop_) {}
-    virtual ModelError* clone() { return new ModelPropertyError(*this); }
-    void what(std::ostream& out) const noexcept {
-      out << prop;
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const FunctInfo& fi) noexcept { return (json << fi.json_h); }
+  std::ostream& operator << (std::ostream& out, const FunctInfo& fi) noexcept { return (out << fi.signature << " @(" << fi.loc << ")"); }
+  
+  struct ModelFunctError : public IModelError {
+    ModelFunctError(const FunctInfo& info_) : info(info_) {}
+    ModelFunctError(id_t id) : info(::__info__::FUNCT_INFOS[id]) {}
+    void what(std::ostream& out) const noexcept { out << info; }
+    virtual void to_json(json_file_t& json) const noexcept { _to_json(json); }
+    virtual void to_json(json_str_t& json) const noexcept { _to_json(json); }
+  private:
+    const FunctInfo& info;
+    template<class O>
+    void _to_json(ojstream<O>& json) const noexcept { 
+      json << "{\"$type\":\"model-error\","
+               "\"type\":\"function\","
+              //  "\"what\":\"" << escape_str(what()) << "\","
+               "\"inside\":" << info << '}';
     } 
   };
-  
 
-  template<class O> void __jprint_exception(ojstream<O>& json, const std::exception& ex) noexcept;
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const ModelPropertyError& ex) noexcept { 
-    json << "{\"$type\":\"romp::ModelPropertyError\","
-             "\"loc\":" << ex.loc << ","
-             "\"property:\":{" 
-                 "\"$type\":\"property\",\"property-type\":\"" << ex.prop_type << "\","
-                 "\"label\":\"" << ex.prop.info.name "\","
-                 "\"test-expr\":\"" << ex.test_str << "\"},"
-                 "\"what\":\""; ex.what(json.out); json << '"';
-    __jprint_exception(json, ex);
-    return (json << '}');
-  }
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const ModelError& ex) noexcept { 
-    json << "{\"$type\":\"romp::ModelError\","
-             "\"loc\":" << ex.loc << ","
-             "\"message\":\"" << ex.msg << "\","
-             "\"what\":\""; ex.what(json.out); json << '"';
-    __jprint_exception(json, ex);
-    return (json << '}');
-  }
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const std::runtime_error& ex) noexcept {
-    json << "{\"$type\":\"std::runtime_error\","
-             "\"what\":\"" << me.what() << "\"";
-    __jprint_exception(json, ex);
-    return (json << '}');
-  }
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const std::logic_error& ex) noexcept {
-    json << "{\"$type\":\"std::logic_error\","
-             "\"what\":\"" << me.what() << "\"";
-    __jprint_exception(json, ex);
-    return (json << '}');
-  }
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const std::exception& ex) noexcept {
-    json << "{\"$type\":\"std::exception\","
-             "\"what\":\"" << me.what() << "\"";
-    __jprint_exception(json, ex);
-    return (json << '}');
-  }
+
   template<class O> void __jprint_exception(ojstream<O>& json, const std::exception& ex) noexcept {
     try {
         std::rethrow_if_nested(ex);
-        json << ",\"cause\":null";
-    } catch(const ModelPropertyError& mod_test_ex) {
-      json << ",\"cause\":" << mod_test_ex;
-    } catch(const ModelError& mod_ex) {
-      json << ",\"cause\":" << mod_ex;
-    } catch(const std::runtime_error& re) {
-      json << ",\"cause\":" << re;
-    } catch(const std::logic_error& le) {
-      json << ",\"cause\":" << le;
+    } catch(const IModelError& mod_ex) {
+      json << ',' << mod_ex;
     } catch(const std::exception& ex) {
-      json << ",\"cause\":" << ex;
+      json << ',' << ex;
     } catch(...) {
-      json << ",\"cause\":\"unknown\"";
+      json << ",{\"$type\":\"trace-error\",\"what\":\"unknown non-exception type thrown !!\"}";
     }
   }
  
 #define __romp__nested_exception__print_prefix '|'
 
-  void fprint_exception(std::ostream& out, const ModelError& ex, const size_t level) noexcept;
-  void fprint_exception(std::ostream& out, const std::exception& ex, const size_t level) noexcept;
+  void __fprint_exception(std::ostream& out, const std::exception& ex/* , const size_t level */) noexcept;
 
-  void fprint_exception(std::ostream& out, const ModelError& ex, const size_t level) noexcept {
-    out << std::string(level, __romp__nested_exception__print_prefix);
+  std::ostream& operator << (std::ostream& out, const IModelError& ex) noexcept {
     ex.what(out);
     out << '\n';
-    try {
-        std::rethrow_if_nested(ex);
-    } catch(const ModelError& mod_ex) {
-      fprint_exception(out, mod_ex, level+1);
-    } catch(const std::exception& ex) {
-      fprint_exception(out, ex, level+1);
-    } catch(...) {}
-  }
-
-  void fprint_exception(std::ostream& out, const std::exception& ex, const size_t level) noexcept {
-    out << std::string(level, __romp__nested_exception__print_prefix)
-        << ex.what() << '\n';
-    try {
-        std::rethrow_if_nested(ex);
-    } catch(const ModelError& mod_ex) {
-      fprint_exception(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
-    } catch(const std::exception& ex) {
-      fprint_exception(out, ex, prefix + __romp__nested_exception__print_prefix);
-    } catch(...) {}
-  }
-
-  std::ostream& operator << (std::ostream& out, const ModelError& ex) noexcept {
-    fprint_exception(out, ex, 0);
+    __fprint_exception(out, ex);
     return out;
   }
 
   std::ostream& operator << (std::ostream& out, const std::exception& ex) noexcept {
-    fprint_exception(out, ex, 0);
+    out << ex.what() << '\n';
+    __fprint_exception(out, ex);
     return out;
+  }
+
+  void __fprint_exception(std::ostream& out, const std::exception& ex/* , const size_t level */) noexcept {
+    // out << std::string(level, __romp__nested_exception__print_prefix);
+    try {
+        std::rethrow_if_nested(ex);
+    } catch(const IModelError& mod_ex) {
+      out << __romp__nested_exception__print_prefix << mod_ex;
+    } catch(const std::exception& ex) {
+      out << __romp__nested_exception__print_prefix << ex;
+    } catch(...) {}
   }
 
 
@@ -423,21 +484,21 @@ namespace romp {
      * @brief the handler the model will call when it reaches an inline `assert`/`invariant` statement
      * @param eval_expr the expression to be evaluated (technically it will be evaluated before reaching this)
      * @param prop_id the id given to the property (value based upon the order it was processed by the code gen tool)
-     * @return \c bool - the negation of whether or not the model calling this function should return an error or not.  ( \c true - do NOT, \c false DO)
+     * @return \c bool - the negation of whether or not the model calling this function should return an error or not.  ( \c true = DO throw, \c false = do NOT throw)
      */
     virtual bool assertion_handler(bool eval_expr, id_t prop_id) = 0;
     /**
      * @brief the handler the model will call when it reaches a global rule `assert`/`invariant`
      * @param eval_expr the expression to be evaluated (technically it will be evaluated before reaching this)
      * @param prop_id the id given to the property (value based upon the order it was processed by the code gen tool)
-     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true - do NOT, \c false DO)
+     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true = DO throw, \c false = do NOT throw)
      */
     virtual bool invariant_handler(bool eval_expr, id_t prop_id) = 0;
     /**
      * @brief the handler the model will call when it reaches an `assumption` statement
      * @param eval_expr the expression to be evaluated (technically it will be evaluated before reaching this)
      * @param prop_id the id given to the property (value based upon the order it was processed by the code gen tool)
-     * @return \c bool - whether or not the caller should report an error. ( \c true - do NOT, \c false DO)
+     * @return \c bool - whether or not the caller should report an error. ( \c true = DO throw, \c false = do NOT throw)
      */
     virtual bool assumption_handler(bool eval_expr, id_t prop_id) = 0;
     /**
@@ -445,7 +506,7 @@ namespace romp {
      * @param eval_expr the expression to be evaluated (technically it will be evaluated before reaching this)
      * @param cover_id the id given to this specific `cover` statement (value based upon the order it was processed by the code gen tool)
      * @param prop_id the id given to the property (value based upon the order it was processed by the code gen tool)
-     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true - do NOT, \c false DO)
+     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true = DO throw, \c false = do NOT throw)
      */
     virtual bool cover_handler(bool eval_expr, id_t cover_id, id_t prop_id) = 0;
     /**
@@ -453,13 +514,13 @@ namespace romp {
      * @param eval_expr the expression to be evaluated (technically it will be evaluated before reaching this)
      * @param liveness_id the id given to this specific `liveness` statement (value based upon the order it was processed by the code gen tool)
      * @param prop_id the id given to the property (value based upon the order it was processed by the code gen tool)
-     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true - do NOT, \c false DO)
+     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true = DO throw, \c false = do NOT throw)
      */
     virtual bool liveness_handler(bool eval_expr, id_t liveness_id, id_t prop_id) = 0;
     /**
      * @brief the handler the model will call it reaches an `error` statement
      * @param error_id the id given to the error statement (value based upon the order it was processed by the code gen tool)
-     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true - DO, \c false do NOT)
+     * @return \c bool - the negation of whether or not the caller should report an error. ( \c true = DO throw, \c false = do NOT throw)
      */
     virtual bool error_handler(id_t error_id) = 0;
     friend State_t;
