@@ -99,7 +99,7 @@ static void parse_args(int argc, char **argv) {
       argc, argv, "hud:t:w:s:", opts,
       &option_index); // compund letters args ?? also not for trace//depth ??
   extern char *optarg;
-
+ge
   if (c == -1)
     break;
 
