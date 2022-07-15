@@ -25,6 +25,6 @@ int main(int argc, char **argv) {
   ::romp::options::parse_args(argc, argv);
 
   // Parse input model
-  // TODO shit to figure out ??
+  // TODO   figure out ??
   return EXIT_SUCCESS;
 }
