@@ -62,29 +62,30 @@ void print_help() {
 }
 static void parse_args(int argc, char **argv) {
 
-  for (;;) // as an infinite loop consider changing to finite loop with argc as
+  //for (;;) // as an infinite loop consider changing to finite loop with argc as
            // check ??
     enum {
-      OPT_DEPTH = 100,
+      OPT_DEPTH = 128,
       // OPT_NO_DEADLOCK_DETECTION,
       OPT_TRACE,
+
     };
 
   static struct options opts[] = {
       {"depth", required_argument, 0, 'd'}, // whats the point of 0 in here ?
-      {"nodeadlock-detection", required_argument, 0, 'ndl'}, // not required of args right ??
+      //{"nodeadlock-detection", required_argument, 0, 'ndl'}, // not required of args right ??
       {"help", no_argument, 0, 'h'},
       {"threads", required_argument, 0, 't'},
       {"rand-walker", required_argument, 0, 'w'},
       {"rand-seed", required_argument, 0, 's'},
       {"trace", optional_argument, 0, 't'},  
-      {"trace-level", required_argument, 0, 'tl'},  // how to do the trace like trace with options ???
+      //{"trace-level", required_argument, 0, 'tl'},  // how to do the trace like trace with options ???
       {0, 0, 0, 0}, // for no args kind
   };
 
   int option_index = 0;
   int c = getopt_long(
-      argc, argv, "hndlt:w:s:", opts,
+      argc, argv, "hd:t:w:s:", opts,
       &option_index); // compund letters args ?? also not for trace//depth ??
   extern char *optarg;
 
