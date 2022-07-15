@@ -39,6 +39,7 @@ struct Options {
   size_t depth = 0;      // what has to be default value  ??
   size_t random_walkers; // any default value needed if not provided ?
   unsigned int rand_seed = time(NULL); // the random seed to se (defaults to current system time)
+  std::string seed_str;
 };
 
 Options options;
