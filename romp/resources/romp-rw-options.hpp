@@ -33,6 +33,9 @@ enum trace_category_t { // to do for trace
 enum property_category_t // to do define 
  {  TC_NODEADLOCK, TC_LIVENESS, TC_COVER , TC_ATTEMPT_GAURD
 };
+enum result_category_t{
+    TC_HISTORY, TC_ALL, TC_ASSUMPTIONS, TC_OUTPUT
+};
 
 struct Options {
   size_t threads = 0;    // mpz_class ??
@@ -40,6 +43,9 @@ struct Options {
   size_t random_walkers; // any default value needed if not provided ?
   unsigned int rand_seed = time(NULL); // the random seed to se (defaults to current system time)
   std::string seed_str;
+  /*
+  define for properties and path needs to be done 
+  */
 };
 
 Options options;
@@ -72,7 +78,8 @@ static void parse_args(int argc, char **argv) {
       OPT_DEPTH = 128,
       // OPT_NO_DEADLOCK_DETECTION,
       OPT_TRACE,
-      OPT_PROPERTY
+      OPT_PROPERTY,
+      OPT_RESULT
     };
 
   static struct options opts[] = {
@@ -185,14 +192,14 @@ static void parse_args(int argc, char **argv) {
 
     case OPT_PROPERTY: // --property ...
     if (strcmp(optarg, "nodeadlock") == 0) {
-      options.traces |= TC_NODEADLOCK;
+      options.property |= TC_NODEADLOCK;
     } else if (strcmp(optarg, "liveness") == 0) {
-      options.traces |= TC_LIVENESS;
+      options.property |= TC_LIVENESS;
     } else if (strcmp(optarg, "cover") == 0) {
-      options.traces |= TC_COVER;
+      options.property |= TC_COVER;
     } 
     else if (strcmp(optarg, "attempt_gaurd") == 0) {
-      options.traces |= TC_ATTEMPT_GAURD;
+      options.property |= TC_ATTEMPT_GAURD;
     } else {
       std::cerr << "invalid --property argument \"" << optarg << "\"\n"
                 << "valid arguments are \"nodeadlock\", \"liveness\", "
@@ -201,16 +208,16 @@ static void parse_args(int argc, char **argv) {
     }
     break;
 
-    case OPT_RESULT: // --trace ...
+    case OPT_RESULT: // --result ...
     if (strcmp(optarg, "history") == 0) {
-      options.traces |= TC_HISTORY;
+      options.result|= TC_HISTORY;
     } else if (strcmp(optarg, "all") == 0) {
-      options.traces |= TC_ALL;
+      options.result |= TC_ALL;
     } else if (strcmp(optarg, "assume") == 0) {
-      options.traces |= TC_ASSUMPTIONS;
+      options.result|= TC_ASSUMPTIONS;
     } 
     else if (strcmp(optarg, "output") == 0) { // todo must take an argument for directory ?? is this okay 
-      options.traces |= TC_OUTPUT;
+      options.result|= TC_OUTPUT;
     } else {
       std::cerr << "invalid --result argument \"" << optarg << "\"\n"
                 << "valid arguments are \"history\", \"all\", "
