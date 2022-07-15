@@ -632,7 +632,7 @@ public:
     *this << indentation() << "/* ======= Murphi Model Infos & MetaData ====== */\n"; // << std::flush;
     *this << indentation() << "namespace " ROMP_INFO_NAMESPACE_NAME " {\n";
     indent();
-    *this << "#define " ROMP_FUNCTS_LEN " (" << sorter.funct_decls.size()  "ul) // the number of functions & procedures in the model\n"
+    *this << "#define " ROMP_FUNCTS_LEN " (" << sorter.funct_decls.size() << "ul) // the number of functions & procedures in the model\n"
           << indentation() << "// the info/metadata about the functions/procedures in the model\n"
           << indentation() << sorter.funct_info_list.str() << '};\n'
           << "#define " ROMP_ERRORS_LEN " (" << next_error_id << "ul) // the number of error statements in the model\n"

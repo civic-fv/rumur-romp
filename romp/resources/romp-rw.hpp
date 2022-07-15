@@ -43,6 +43,7 @@ public:
   State_t state;
   size_t fuel;
   bool valid;
+  json_file_t* json;
   // tripped thing
   IModelError* tripped = nullptr;
   // how many rules have tried to be applied to this state
@@ -51,14 +52,52 @@ public:
   // as a circular buffer array)
   id_t history[_ROMP_STATE_HISTORY_LEN];
   
+  static init_state(unsigned int& seed, json_file_t* json) noexcept {
+    try {
+      // TODO: (ANDREW) generate startstate randomly from rand_seed
+    } catch (IModelError& me) {
+       __handle_init_exception(json,me);
+    } catch (std::exception& ex) {
+      __handle_init_exception(json,ex);
+    } catch (...) {
+      std::cerr << "unknown non std::exception was thrown while initializing a Random Walker!\n" << std::flush;
+    }
+    if (json != nullptr) delete json;
+  }
 
-  RandWalker(State_t startstate, unsigned int rand_seed, size_t fuel/* =DEFAULT_FUEL */) 
+  template<typename T>
+  static __handle_init_exception(json_file_t& json, const T&) noexcept {
+    //TODO: (AJANTHA) this function
+    if (OPTIONS.do_trace) {
+      //TODO: put in the initial json info
+    } else {
+      //TODO something else
+    }
+  }
+
+  RandWalker(State_t startstate, unsigned int rand_seed_, size_t fuel/* =DEFAULT_FUEL */) 
     : state(startstate), 
-      rand_seed(rand_seed),
-      init_rand_seed(rand_seed),
+      rand_seed(rand_seed_),
+      init_rand_seed(rand_seed_),
       fuel(fuel),
       id(RandWalker::next_id++) 
-  { state.__rw__ = *this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ } 
+  { 
+    state.__rw__ = *this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ 
+    if (OPTIONS.do_trace) {
+      json = new json_file_t(OPTIONS.trace_dir + '/' + std::to_string(rand_seed_) + '.json');
+      sim1Step = sim1Step_trace;
+      //TODO: put in the initial json info
+      //TODO: put in the startstate object into the trace section
+    } else {
+      sim1Step = sim1Step_no_trace;
+    }
+  } 
+
+  ~RandWalker() { *json << "]}"; json->out.close(); delete json; }
+
+  void (*RandWalker::sim1Step)();
+
+private:
 
   /**
    * @brief to pick a rule in random for simulation step
@@ -82,15 +121,46 @@ public:
     history[level % _ROMP_STATE_HISTORY_LEN] = id;
     level++;
   }
-  
-  void sim1Step() noexcept {
+
+  void sim1Step_trace() noexcept {
+    
     //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
     const RuleSet& rs= rand_ruleset();
     const Rule& r= rand_rule(rs);
     fuel--;
     try {
       if (r.guard(state) == true)
-          r.action(state);
+        r.action(state);
+      else {
+        *json << ",{\"$type\":\"rule-failed\",\"rule\":" << r << "}";
+        return;
+      }
+      for (const Property& prop : ::__caller__::PROPERTIES)
+          if (prop.check(state) == false) {
+              valid = false;
+              tripped = new ModelPropertyError(prop);
+          }        
+    } catch(IModelError& me) {
+      valid = false;
+      tripped = me/* .clone() */; // need to look into this one, probs broken with std::nested_exceptions
+      // TODO: handle error data
+    } catch (std::exception& ex) {
+      std::err << "unexpected exception outside of model \t[dev-error]\n" << ex.what() << std::endl;
+    } catch (...) {
+      std::err << "unexpected UNKNOWN exception outside of model \t[dev-error]\n";
+    }
+  }
+
+  void sim1Step_no_trace() noexcept {
+    
+    //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
+    const RuleSet& rs= rand_ruleset();
+    const Rule& r= rand_rule(rs);
+    fuel--;
+    try {
+      if (r.guard(state) == true)
+        r.action(state);
+
       for (const Property& prop : ::__caller__::PROPERTIES)
           if (prop.check(state) == false) {
               valid = false;

@@ -16,26 +16,11 @@
 
 #ifndef __romp__GENERATED_CODE
 #pragma once
+#include "c_prefix.cpp"
 #endif
-#include <cstddef>
-#include <cstdint>
-#include <gmpxx.h>
-#include <string>
-#include <vector>
-#include <ctime>
-#include <unistd.h> //parse getopt
 
 namespace romp {
 namespace options {
-enum trace_category_t { // to do for trace
-  TC_VERBOSE, TC_TRIPPED_STATES, TC_RW_PATH
-};
-enum property_category_t // to do define 
- {  TC_NODEADLOCK, TC_LIVENESS, TC_COVER , TC_ATTEMPT_GAURD
-};
-enum result_category_t{
-    TC_HISTORY, TC_ALL, TC_ASSUMPTIONS, TC_OUTPUT
-};
 
 struct Options {
   size_t threads = 0;    // mpz_class ??
@@ -43,12 +28,15 @@ struct Options {
   size_t random_walkers; // any default value needed if not provided ?
   unsigned int rand_seed = time(NULL); // the random seed to se (defaults to current system time)
   std::string seed_str;
+  bool do_single = false;
+  bool do_trace = false;
+  std::string trace_file = false;
   /*
   define for properties and path needs to be done 
   */
 };
 
-Options options;
+Options OPTIONS;
 
 
 // input model's path
@@ -72,40 +60,33 @@ void print_help() {
 }
 static void parse_args(int argc, char **argv) {
 
-  //for (;;) // as an infinite loop consider changing to finite loop with argc as
+  for (int i=0; i<argc; ++i) { // as an infinite loop consider changing to finite loop with argc as
            // check ??
-    enum {
-      OPT_DEPTH = 128,
-      // OPT_NO_DEADLOCK_DETECTION,
-      OPT_TRACE,
-      OPT_PROPERTY,
-      OPT_RESULT
-    };
 
-  static struct options opts[] = {
-      {"depth", required_argument, 0, 'd'}, // whats the point of 0 in here ?
-      //{"nodeadlock-detection", required_argument, 0, 'ndl'}, // not required of args right ??
-      {"help", no_argument, 0, 'h'},
-      {"threads", required_argument, 0, 't'},
-      {"rand-walker", required_argument, 0, 'w'},
-      {"rand-seed", required_argument, 0, 's'},
-      {"trace", optional_argument, 0, 't'},  
-      //{"trace-level", required_argument, 0, 'tl'},  // how to do the trace like trace with options ???
-      {0, 0, 0, 0}, // for no args kind
-  };
 
-  int option_index = 0;
-  int c = getopt_long(
-      argc, argv, "hud:t:w:s:", opts,
-      &option_index); // compund letters args ?? also not for trace//depth ??
-  extern char *optarg;
-ge
-  if (c == -1)
-    break;
+  if ("-h" == argv[i] || "--help" == argv[i]) {
 
+  } else if ("-t" == argv[i] || "--trace" == argv[i]) {
+    OPTIONS.do_trace = true;
+    if (i+1<argc && '-' != argv[i+1][0]) {
+      ++i;
+      OPTIONS.trace_file = argv[i];
+    }
+  } else if ("-s" == argv[i] || "--seed" == argv[i]) {
+    if (i+1<argc && '-' != argv[i+1][0]) {
+      ++i;
+      OPTIONS.trace_file = argv[i];
+    } else {
+      std::cerr << "invalid argument!! :: -s/--seed requires a parameter to follow, but none was found !!\n" << std::flush;
+      exit(EXIT_FAILURE);
+    }
+  }
+
+  long c = *((long*)*(&(argv[i])));
   switch (c) {
 
-  case 'h': // --help
+  case '-h\0\0\0\0\0\0': // --help
+  case '--help\0\0':
     print_help();
     exit(EXIT_SUCCESS);
     break;
@@ -117,7 +98,8 @@ ge
 
   */
 
-  case 't': { // --threads ...
+  case '--thread': // this matches both "--threads" & "--thread-count"
+  case '-ptn': { // --threads ...
     bool valid = true;
     try {
       options.threads = optarg;
@@ -132,7 +114,8 @@ ge
     }
     break;
   }
-  case 'w': { // random walkers to be launched
+  case '':
+  case '-w\0\0\0\0\0\0': { // random walkers to be launched
     bool valid = true;
     try {
       options.random_walkers = optarg;
@@ -247,6 +230,7 @@ ge
     std::cerr << "unexpected error\n";
     exit(EXIT_FAILURE);
   }
+}
 }
 } // namespace options
 } // namespace romp
