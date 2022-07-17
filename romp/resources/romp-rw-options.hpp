@@ -45,18 +45,37 @@ Options OPTIONS;
 #define EXIT_FAILURE 1
 #define EXIT_SUCCESS 0
 
-void print_help() {
-  printf("Run the ROMP model checker with the options are shown as follows:\n\
-\n\
-\t-h    \t\t   \thelp\n\
-\t-d    \t\t   \tdepth  Set a limit for state space exploration .Also, the verifier  will  stop  checking  beyond
-              this  depth.\n\
-\t-t    \t\t   \tnumber of threads the verifier should use. If you do not  specify  this
-              parameter  or  pass  0, the number of threads will be chosen based on the available
-              hardware threads on the platform on which you generate the model.\n\
-\t-w    \t\t   \tnumber of random walkers to be launched by the verifier\n\
-\t-u    \t\t   \tsingle random walker\n\
-\t-s    \t\t   \trandom seed to be fed into the random walker. If not provided, default seed is considered.\n");
+void print_help()
+{
+  std::cout<<"The Options are shown as follows:"<<endl
+  <<endl
+  <<"-h or --help \tto list the options in the ROMP tool"<<endl
+    <<"RANDOM WALKER OPTIONS :"<<endl
+    <<endl
+    <<"-d <int>or --depth <int> \tMaximum number of times rules were tried to be applied. If not provided then it takes a default value "<<endl
+    <<"-ptn <int> or --threads <int> \tSpecifies the thread count. If not provided then the default value is 4"<<endl
+    <<"-sw or --single_walk \tTo perform a single random walker on a single thread. It cant be used along with -ptn"<<endl
+    <<"-w <int>or --walk_count <int>\t Specifies the number of random walkers to be launched. It takes a conditional argument int."<<endl
+    <<"-s <string/int> or --seed <string/int> \t Random seed for the random walkers.It takes an optional argument of string or int for the seed and if not provided default value is considered."<<endl<<endl
+    <<"PROPERTY CONFIGURATIONS :"<<endl
+    <<endl
+    <<"-nd or --no_deadlock \t Disable Deadlock detection "<<endl
+    <<"-lc <int> or --liveness_check <int>\t Allows you to specify the max number of successful steps a random walker can have in a row before any given liveness property must evaluate to true."<<endl
+              <<"\t\t\t\t\tIt takes an optional argument int else default value of MAX_INT is considered"<<endl
+    <<"-cc <int> or --complete_on_cover <int>\tIt considers the random walk to be  complete when each statement has been reached .And takes in the optional argument int if not provided then default value is MAX_INT"<<endl
+    <<"-ag <int> or --attempt_guard <int> \t It is used to mark a random walker to be in deadlock state if the walker has failed to apply any rules."
+                <<" If optional argument of integer not provided then default value of MAX_INT is considered"<<endl<<endl
+    <<"Trace Options"<<endl
+    <<endl
+    <<"-t <str:out_dir> or --trace <str:out_dir>\t To output the trace results of each random walkers.The optional argument <str:out-dir> specifies the directory path to where the trace files has to be written."<<endl
+                 <<" If not provided then it is stored in the path <path>."<<endl<<endl
+
+    <<"Results Options" <<endl
+    <<endl
+    <<"-rhl <int> or --r_history <int> Maximum number of previous states and rules to keep track off and output in the results."<<endl
+    <<"-ra or --r_all \t Report all results not just violating"<<endl
+    <<"-r_assume \t Report all violating  assumptions"<<endl
+    <<"-o <str:dir_path> or --output <str:dir_path> A string containing path to a directory where the system will output the diagram files" <<endl;
 }
 static void parse_args(int argc, char **argv) {
 
@@ -64,9 +83,19 @@ static void parse_args(int argc, char **argv) {
            // check ??
 
 
-  if ("-h" == argv[i] || "--help" == argv[i]) {
-
-  } else if ("-t" == argv[i] || "--trace" == argv[i]) {
+  if ("-h" == argv[i] || "--help" == argv[i]) // to print help message
+  {
+    print_help();
+    exit(EXIT_SUCCESS);
+  } else if("-d" ==argv[i] || "--depth" == argv[i])
+  {
+    
+  }
+  
+  
+  
+  
+  else if ("-t" == argv[i] || "--trace" == argv[i]) {
     OPTIONS.do_trace = true;
     if (i+1<argc && '-' != argv[i+1][0]) {
       ++i;
