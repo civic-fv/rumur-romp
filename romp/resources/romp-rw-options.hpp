@@ -124,9 +124,9 @@ static void parse_args(int argc, char **argv) {
     if(i+1< argc && '-' != argv[i+1][0]){
       try{
           OPTIONS.rand_seed = std::stoul(argv[i],nullptr,0);
-          if(OPTIONS.rand_seed > ULONG_MAX && OPTIONS.rand_seed < 0 )  // error cond ? 
+          if(OPTIONS.rand_seed ==error )  // error cond ?  also the implicit conversion will result in a warning not cause  exception
           throw OPTIONS.rand_seed;
-      }catch(std::invalid_argument &){
+      }catch(OPTIONS.rand_seed){
         std::string str (OPTIONS.rand_seed);
         std::hash<std::string> str_hash;
         OPTIONS.rand_seed = str_hash(str);
