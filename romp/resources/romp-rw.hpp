@@ -87,7 +87,7 @@ public:
   { 
     state.__rw__ = *this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ 
     if (OPTIONS.do_trace) {
-      json = new json_file_t(OPTIONS.trace_dir + '/' + std::to_string(rand_seed_) + '.json');
+      json = new json_file_t(OPTIONS.trace_dir + '/' + std::to_string(rand_seed_) + ".json");
       sim1Step = sim1Step_trace;
       //TODO: put in the initial json info
       //TODO: put in the startstate object into the trace section
