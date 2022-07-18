@@ -17,6 +17,9 @@
 #ifndef __romp__GENERATED_CODE
 #pragma once
 #include "c_prefix.cpp"
+#include<iostream>
+#include<string>
+#include<functional>
 #endif
 
 namespace romp {
@@ -26,14 +29,21 @@ struct Options {
   size_t threads = 0;    // mpz_class ??
   size_t depth = 0;      // what has to be default value  ??
   size_t random_walkers; // any default value needed if not provided ?
-  unsigned int rand_seed = time(NULL); // the random seed to se (defaults to current system time)
-  std::string seed_str;
+  unsigned int rand_seed; // the random seed to se (defaults to current system time)
+  /*std::string seed_str; // what for this ??
   bool do_single = false;
   bool do_trace = false;
-  std::string trace_file = false;
-  /*
-  define for properties and path needs to be done 
-  */
+  std::string trace_file = false;*/
+  size_t lcount;
+  size_t cover_count;
+  size_t ag_count;
+  size_t hlcount;
+  void print_help();
+  std::string trace_file_path;// path for the trace file to be created during each walk
+  bool deadlock=false; // separate bool for each property or consider having a valid bool . depends on how property will be designed 
+  bool result=false; // result output
+  bool result_all=false;
+  bool r_assume=false;
 };
 
 Options OPTIONS;
@@ -47,8 +57,7 @@ Options OPTIONS;
 
 void print_help()
 {
-  std::cout<<"The Options are shown as follows:"<<endl
-  <<endl
+  std::cout<<"The Options are shown as follows:"  <<endl
   <<"-h or --help \tto list the options in the ROMP tool"<<endl
     <<"RANDOM WALKER OPTIONS :"<<endl
     <<endl
@@ -79,29 +88,105 @@ void print_help()
 }
 static void parse_args(int argc, char **argv) {
 
-  for (int i=0; i<argc; ++i) { // as an infinite loop consider changing to finite loop with argc as
-           // check ??
+  for (int i=0; i<argc; ++i){
 
-
-  if ("-h" == argv[i] || "--help" == argv[i]) // to print help message
-  {
+  if ("-h" == argv[i] || "--help" == argv[i]){ // to print help message and ( result of comparison against a string literal is unspecified)
     print_help();
     exit(EXIT_SUCCESS);
-  } else if("-d" ==argv[i] || "--depth" == argv[i])
-  {
-    
+  } else if("-d" ==argv[i] || "--depth" == argv[i]){
+    if(i+1< argc && '-' != argv[i+1][0]){// is it not argv[i+1]  
+        ++i;
+          OPTIONS.depth=std::stoi(argv[i],nullptr,0);}// Do we need to make a check if depth only could be at max  int_max ? 
+    else
+        OPTIONS.depth = INT32_MAX;
+  } else if ("-ptn" == argv[i] || "-threads" == argv[i]){
+    if(OPTIONS.threads ==1 && OPTIONS.random_walkers ==1){
+        std::cerr << "invalid argument - Number of threads cannot be specified while using single walk "<<std::flush;
+        exit(EXIT_FAILURE);
+    }else if(i+1< argc && '-' != argv[i+1][0]){
+        ++i;
+        OPTIONS.threads=std::stoi(argv[i],nullptr,0);}
+    else
+        OPTIONS.threads = 4;
+  }else if ("-sw" == argv[i] || "--single_walk" == argv[i]){
+    if(OPTIONS.threads > 0){
+        std::cerr << "invalid argument - Number of threads argument cannot be specified while using single walk "<<std::flush;
+      exit(EXIT_FAILURE);}
+    else{
+      OPTIONS.threads,OPTIONS.random_walkers = 1;}
+  }else if("-w" ==argv[i] || "--walk_count" == argv[i]){
+    if (i+1<argc && '-' != argv[i+1][0]) {
+              ++i;
+          OPTIONS.random_walkers=std::stoi(argv[i],nullptr,0);}
+    else
+        OPTIONS.random_walkers = INT32_MAX;
+  } else if("-s" ==argv[i] || "--seed" == argv[i]){
+    if(i+1< argc && '-' != argv[i+1][0]){
+      try{
+          OPTIONS.rand_seed = std::stoul(argv[i],nullptr,0);
+          if(OPTIONS.rand_seed > ULONG_MAX && OPTIONS.rand_seed < 0 )  // error cond ? 
+          throw OPTIONS.rand_seed;
+      }catch(std::invalid_argument &){
+        std::string str (OPTIONS.rand_seed);
+        std::hash<std::string> str_hash;
+        OPTIONS.rand_seed = str_hash(str);
+      }else
+        OPTIONS.rand_seed = time(NULL);}
+  } else if ("-nd" == argv[i] || "--no_deadlock" == argv[i]) {
+      OPTIONS.deadlock=true;
+  } else if("-lc" ==argv[i] || "--liveness_check" == argv[i]){
+      // any valid flag needed?
+    if(i+1< argc && '-' != argv[i+1][0]){// is it not argv[i+1]  
+        ++i;
+          OPTIONS.lcount=std::stoi(argv[i],nullptr,0);}
+    else
+        OPTIONS.lcount = INT32_MAX;
+  }else if("-cc" ==argv[i] || "--complete_on_cover" == argv[i]){//todo proerpty check also if flag needed
+      // any valid flag needed?
+    if(i+1< argc && '-' != argv[i+1][0]){// is it not argv[i+1]  
+        ++i;
+          OPTIONS.cover_count=std::stoi(argv[i],nullptr,0);}
+    else
+        OPTIONS.cover_count = INT32_MAX;
+  }else if("-ag" ==argv[i] || "--attempt_guard" == argv[i]){// TODO @Andy make nd true when agcount is decremented to 0
+      // any valid flag needed? 
+    if(i+1< argc && '-' != argv[i+1][0]){// is it not argv[i+1]  
+        ++i;
+          OPTIONS.ag_count=std::stoi(argv[i],nullptr,0);}
+    else
+        OPTIONS.ag_count = INT32_MAX;
+  }else if("-rhl" ==argv[i] || "--r_history" == argv[i]){
+        OPTIONS.result_history =true;
+          if(i+1< argc && '-' != argv[i+1][0]){// is it not argv[i+1]  
+            ++i;
+            OPTIONS.hl_count=std::stoi(argv[i],nullptr,0);}
+          else
+            OPTIONS.hl_count = INT32_MAX;
+  }else if("-ra" ==argv[i] || "--result_all" == argv[i]){
+        OPTIONS.result_all=true;
+        // TODO figure out a way to define property 
+  }else if("--r_assume" ==argv[i]){
+        OPTIONS.r_assume=true;
+        //todo figure out to define the property
+  }else if("--output" ==argv[i] || "-o" ==argv[i]){
+        OPTIONS.output =true;
+        //todo figure out to output 
   }
+  }
+}
   
   
   
-  
+  /*
   else if ("-t" == argv[i] || "--trace" == argv[i]) {
-    OPTIONS.do_trace = true;
     if (i+1<argc && '-' != argv[i+1][0]) {
       ++i;
-      OPTIONS.trace_file = argv[i];
-    }
-  } else if ("-s" == argv[i] || "--seed" == argv[i]) {
+      OPTIONS.trace_file_path = argv[i];
+    }else
+      OPTIONS.trace_file_path = DEFAULT;// give the default path
+      // TODO function to create trace files for each walk and path to be specified from cli 
+  }
+  else if ("-s" == argv[i] || "--seed" == argv[i]) {
     if (i+1<argc && '-' != argv[i+1][0]) {
       ++i;
       OPTIONS.trace_file = argv[i];
@@ -110,22 +195,6 @@ static void parse_args(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
   }
-
-  long c = *((long*)*(&(argv[i])));
-  switch (c) {
-
-  case '-h\0\0\0\0\0\0': // --help
-  case '--help\0\0':
-    print_help();
-    exit(EXIT_SUCCESS);
-    break;
-
-  /*case 'ndl': // --no-deadlock-detection ...
-    // define ndl;
-    exit(EXIT_FAILURE);
-    break;
-
-  */
 
   case '--thread': // this matches both "--threads" & "--thread-count"
   case '-ptn': { // --threads ...
@@ -263,3 +332,4 @@ static void parse_args(int argc, char **argv) {
 }
 } // namespace options
 } // namespace romp
+*/
