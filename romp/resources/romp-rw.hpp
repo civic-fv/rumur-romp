@@ -96,7 +96,7 @@ public:
     }
   } 
 
-  ~RandWalker() { *json << "]}"; json->out.close(); delete json; }
+  ~RandWalker() { *json << "]}"; json->out.close(); delete json; if (tripped != nullptr) delete tripped; }
 
 
 private:
@@ -179,9 +179,10 @@ private:
     }
   }
 
-  ~RandWalker() {
-    if (tripped != nullptr) delete tripped;
+  bool assertion_handler(bool expr, id_t prop_id) {
+    
   }
+
 }; //? END class RandomWalker
 
 id_t RandWalker::next_id = 0u;
