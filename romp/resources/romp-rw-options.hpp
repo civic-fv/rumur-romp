@@ -26,19 +26,19 @@ namespace romp {
 namespace options {
 
 struct Options {
-  size_t threads = 0;    // mpz_class ??
+  size_t threads = 4;    // mpz_class ??
   size_t depth = INT32_MAX;      // what has to be default value  ??
-  size_t random_walkers = 0; // any default value needed if not provided ?
+  size_t random_walkers = INT32_MAX; // any default value needed if not provided ?
   unsigned int
       rand_seed = time(NULL); // the random seed to se (defaults to current system time)
   std::string seed_str; // what for this ??
   bool do_single = false;
   bool do_trace = false;
   std::string trace_file;
-  size_t lcount;
-  size_t cover_count;
-  size_t ag_count;
-  size_t hlcount;
+  size_t lcount = INT32_MAX;
+  size_t cover_count =INT32_MAX;
+  size_t ag_count=INT32_MAX;
+  size_t hlcount=INT32_MAX;
   void print_help();
   std::string
       trace_file_path; // path for the trace file to be created during each walk
@@ -48,6 +48,7 @@ struct Options {
   bool result = false; // result output
   bool result_all = false;
   bool r_assume = false;
+  bool complete_count= false;
 };
 
 Options OPTIONS;
@@ -62,7 +63,7 @@ void print_help() {
   using namespace std;
   std::cout
       << "This is a murphi model checker generated from the romp random walker tool.\n"
-         "\t\tgenerated from: " __model__filename "\n"
+         "\t\tgenerated from: "__model__filename "\n"
          "\n\n"
          "CLI usage:\n"
          "\t\t./<this-file> {options}*\n"
@@ -74,60 +75,43 @@ void print_help() {
          "to be applied. If not provided then it takes a default value \n"
          "-ptn <int> or --threads <int> \tSpecifies the thread count. If not \n"
          "provided then the default value is 4\n"
-      << endl
-      << "-sw or --single_walk \tTo perform a single random walker on a single "
-         "thread. It cant be used along with -ptn"
-      << endl
-      << "-w <int>or --walk_count <int>\t Specifies the number of random "
-         "walkers to be launched. It takes a conditional argument int."
-      << endl
-      << "-s <string/int> or --seed <string/int> \t Random seed for the random "
+         "-sw or --single_walk \tTo perform a single random walker on a single "
+         "thread. It cant be used along with -ptn\n"
+         "-w <int>or --walk_count <int>\t Specifies the number of random "
+         "walkers to be launched. It takes a conditional argument int.\n"
+         "-s <string/int> or --seed <string/int> \t Random seed for the random "
          "walkers.It takes an optional argument of string or int for the seed "
-         "and if not provided default value is considered."
-      << endl
-      << endl
-      << "PROPERTY CONFIGURATIONS :" << endl
-      << endl
-      << "-nd or --no_deadlock \t Disable Deadlock detection " << endl
-      << "-lc <int> or --liveness_check <int>\t Allows you to specify the max "
-         "number of successful steps a random walker can have in a row before "
-         "any given liveness property must evaluate to true."
-      << endl
-      << "\t\t\t\t\tIt takes an optional argument int else default value of "
-         "MAX_INT is considered"
-      << endl
-      << "-cc <int> or --complete_on_cover <int>\tIt considers the random walk "
+         "and if not provided default value is considered.\n\n"
+      
+        "PROPERTY CONFIGURATIONS :\n" 
+        "-nd or --no_deadlock \t Disable Deadlock detection \n" 
+        "-lc <int> or --liveness_check <int>\t Allows you to specify the max "
+        "number of successful steps a random walker can have in a row before "
+        "any given liveness property must evaluate to true.\n"
+        "\t\t\t\t\tIt takes an optional argument int else default value of "
+         "MAX_INT is considered\n"
+         "-cc <int> or --complete_on_cover <int>\tIt considers the random walk "
          "to be  complete when each statement has been reached .And takes in "
          "the optional argument int if not provided then default value is "
-         "MAX_INT"
-      << endl
-      << "-ag <int> or --attempt_guard <int> \t It is used to mark a random "
+         "MAX_INT\n"
+         "-ag <int> or --attempt_guard <int> \t It is used to mark a random "
          "walker to be in deadlock state if the walker has failed to apply any "
          "rules."
-      << " If optional argument of integer not provided then default value of "
-         "MAX_INT is considered"
-      << endl
-      << endl
-      << "Trace Options" << endl
-      << endl
-      << "-t <str:out_dir> or --trace <str:out_dir>\t To output the trace "
+         " If optional argument of integer not provided then default value of "
+         "MAX_INT is considered\n\n"
+         "Trace Options\n"
+         "-t <str:out_dir> or --trace <str:out_dir>\t To output the trace "
          "results of each random walkers.The optional argument <str:out-dir> "
          "specifies the directory path to where the trace files has to be "
-         "written."
-      << endl
-      << " If not provided then it is stored in the path <path>." << endl
-      << endl
-
-      << "Results Options" << endl
-      << endl
-      << "-rhl <int> or --r_history <int> Maximum number of previous states "
-         "and rules to keep track off and output in the results."
-      << endl
-      << "-ra or --r_all \t Report all results not just violating" << endl
-      << "-r_assume \t Report all violating  assumptions" << endl
-      << "-o <str:dir_path> or --output <str:dir_path> A string containing "
-         "path to a directory where the system will output the diagram files"
-      << endl;
+         "written.\n"
+         " If not provided then it is stored in the path <path>.\n\n"
+         "Results Options\n"
+         "-rhl <int> or --r_history <int> Maximum number of previous states "
+         "and rules to keep track off and output in the results.\n"
+         "-ra or --r_all \t Report all results not just violating\n"
+         "-r_assume \t Report all violating  assumptions\n"
+         "-o <str:dir_path> or --output <str:dir_path> A string containing "
+         "path to a directory where the system will output the diagram files\n";
 }
 
 static void parse_args(const int argc, const char **argv) {
@@ -147,13 +131,12 @@ static void parse_args(const int argc, const char **argv) {
           OPTIONS.depth = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument& ia) {
           std::cerr << "invalid argument : provided walk/search depth was not a number (NaN) !! (for -d/--depth flag)\n" << std::flush;
+          exit(EXIT_FAILURE);
         } catch (std::out_of_range& oor) {
           std::cerr << "invalid argument : provided walk/search depth was out of range (for -d/--depth flag) must be unsigned int (aka must be positive)\n" << std::flush;
+          exit(EXIT_FAILURE);
         }
-      } // Do we need to make a check if depth only could be at max  int_max ?
-      else
-        OPTIONS.depth = INT32_MAX; //TODO move default values to Options struct decl (replace with error msgs & exit's)
-    } else if ("-ptn" == argv[i] || "--threads" == argv[i]) {
+      } else if ("-ptn" == argv[i] || "--threads" == argv[i]) {
       if (OPTIONS.threads == 1 && OPTIONS.random_walkers == 1) {
         std::cerr << "invalid argument - Number of threads cannot be specified "
                      "while using single walk\n"
@@ -161,18 +144,30 @@ static void parse_args(const int argc, const char **argv) {
         exit(EXIT_FAILURE);
       } else if (i + 1 < argc && '-' != argv[i + 1][0]) {
         ++i;
-        OPTIONS.threads = std::stoi(argv[i], nullptr, 0);
-      } else
-        OPTIONS.threads = 4;
+        try{
+        OPTIONS.threads = std::stoul(argv[i], nullptr, 0);
+        } catch (std::invalid_argument& ia) {
+          std::cerr << "invalid argument : provided walk/search threads was not a number (NaN) !! (for -ptn/--threads flag)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        } catch (std::out_of_range& oor) {
+          std::cerr << "invalid argument : provided walk/search threads was out of range (for -ptn/--threads flag) must be unsigned int (aka must be positive)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        }
+      } 
     } else if ("-sw" == argv[i] || "--single-walk" == argv[i]) {
       OPTIONS.do_single = true;
-    } else if ("-w" == argv[i] || "--walk-count" == argv[i]) {
-      if (i + 1 < argc && '-' != argv[i + 1][0]) {
+    } else if ("-w" == argv[i] || "--walk-count" == argv[i])f (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
-        OPTIONS.random_walkers = std::stoi(argv[i], nullptr, 0);
-      } else
-        OPTIONS.random_walkers = INT32_MAX;
-    } else if ("-s" == argv[i] || "--seed" == argv[i]) {
+        try {
+          OPTIONS.random_walkers = std::stoul(argv[i], nullptr, 0);
+        } catch (std::invalid_argument& ia) {
+          std::cerr << "invalid argument : provided number of random walkers was not a number (NaN) !! (for -w/--walk-count flag)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        } catch (std::out_of_range& oor) {
+          std::cerr << "invalid argument : provided number of random walkers was out of range (for -d/--depth flag) must be unsigned int (aka must be positive)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        }
+      }  else if ("-s" == argv[i] || "--seed" == argv[i]) {
       if (i + 1 < argc && '-' != argv[i+1][0]) {
         OPTIONS.seed_str = argv[i+1];
         try {
@@ -191,36 +186,58 @@ static void parse_args(const int argc, const char **argv) {
     } else if ("-nd" == argv[i] || "--no-deadlock" == argv[i]) {
       OPTIONS.deadlock = true;
     } else if ("-lc" == argv[i] || "--liveness-check" == argv[i]) {
-      // any valid flag needed?
+      OPTIONS.liveness= true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
-        OPTIONS.lcount = std::stoi(argv[i], nullptr, 0);
-      } else
-        OPTIONS.lcount = INT32_MAX;
-    } else if ("-cc" == argv[i] ||
-               "--complete-on-cover" ==
-                   argv[i]) { // todo proerpty check also if flag needed
-      // any valid flag needed?
+        try {
+          OPTIONS.lcount = std::stoul(argv[i], nullptr, 0);
+        } catch (std::invalid_argument& ia) {
+          std::cerr << "invalid argument : provided liveness count was not a number (NaN) !! (for -w/--walk-count flag)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        } catch (std::out_of_range& oor) {
+          std::cerr << "invalid argument : provided liveness count was out of range (for -d/--depth flag) must be unsigned int (aka must be positive)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        }
+      }else if ("-lc" == argv[i] || "--liveness-check" == argv[i]) {
+      OPTIONS.complete_count= true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
-        OPTIONS.cover_count = std::stoi(argv[i], nullptr, 0);
-      }
-    } else if ("-ag" == argv[i] ||
-               "--attempt-guard" == argv[i]) { // TODO @Andy make nd true when
-                                               // agcount is decremented to 0
-      // any valid flag needed?
+        try {
+          OPTIONS.cover_count = std::stoul(argv[i], nullptr, 0);
+        } catch (std::invalid_argument& ia) {
+          std::cerr << "invalid argument : provided liveness count was not a number (NaN) !! (for -w/--walk-count flag)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        } catch (std::out_of_range& oor) {
+          std::cerr << "invalid argument : provided liveness count was out of range (for -d/--depth flag) must be unsigned int (aka must be positive)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        }
+      }else if ("-ag" == argv[i] || "--attempted-guard" == argv[i]) {
+      OPTIONS.ag_count= true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
-        OPTIONS.ag_count = std::stoi(argv[i], nullptr, 0);
-      } else
-        OPTIONS.ag_count = INT32_MAX;
-    } else if ("-rhl" == argv[i] || "--r-history" == argv[i]) {
+        try {
+          OPTIONS.cover_count = std::stoul(argv[i], nullptr, 0);
+        } catch (std::invalid_argument& ia) {
+          std::cerr << "invalid argument : provided complete on cover count was not a number (NaN) !! (for -w/--walk-count flag)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        } catch (std::out_of_range& oor) {
+          std::cerr << "invalid argument : provided complete on cover count was out of range (for -d/--depth flag) must be unsigned int (aka must be positive)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        }
+      }else if ("-rhl" == argv[i] || "--r-history" == argv[i]) {
       OPTIONS.result_history = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
-        OPTIONS.hl_count = std::stoi(argv[i], nullptr, 0);
-      } else
-        OPTIONS.hl_count = INT32_MAX;
+        try {
+          OPTIONS.hl_count = std::stoul(argv[i], nullptr, 0);
+        } catch (std::invalid_argument& ia) {
+          std::cerr << "invalid argument : provided history length count was not a number (NaN) !! (for -w/--walk-count flag)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        } catch (std::out_of_range& oor) {
+          std::cerr << "invalid argument : provided history lengthF count was out of range (for -d/--depth flag) must be unsigned int (aka must be positive)\n" << std::flush;
+          exit(EXIT_FAILURE);
+        }
+      }
     } else if ("-ra" == argv[i] || "--result-all" == argv[i]) {
       OPTIONS.result_all = true;
       // TODO figure out a way to define property
