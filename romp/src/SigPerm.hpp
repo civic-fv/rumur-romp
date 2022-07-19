@@ -132,7 +132,7 @@ private:
 protected:
   static std::unordered_map<const std::string,std::shared_ptr<const QuantExpansion>> quant_vals_cache;
   std::vector<std::shared_ptr<const QuantExpansion>> quant_vals;
-  size_t _size = 1;
+  mpz_class _size = 1_mpz;
   
 
 public:

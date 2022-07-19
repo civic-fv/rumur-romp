@@ -231,7 +231,7 @@ namespace romp {
       } else
         quant_vals.push_back(qe_i->second); 
       // quant_vals.push_back(qe);
-      _size *= qe_i->second->size();
+      this->_size *= qe_i->second->size();
     } else
       throw rumur::Error("Unprocessed anonymous type found in ruleset quantifier!!\t[dev-error]", q.type->loc);
   }
