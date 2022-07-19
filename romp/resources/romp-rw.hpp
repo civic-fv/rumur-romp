@@ -50,13 +50,15 @@ private:
   // as a circular buffer array)
   id_t history[_ROMP_STATE_HISTORY_LEN];
   
-  static init_state(unsigned int& seed, json_file_t* json) noexcept {
+  static void init_state(RandWalker* rw) noexcept {
     try {
       // TODO: (ANDREW) generate startstate randomly from rand_seed
+      if (OPTIONS.do_trace)
+        *rw->json << "{\"$type\":\"init\",\"startstate\":"<< "todo" << ",\"state\":"<< state <<"}";
     } catch (const IModelError& me) {
-       __handle_init_exception<IModelError>(json,me);
+       rw->__handle_exception<IModelError>(me);
     } catch (const std::exception& ex) {
-      __handle_init_exception<std::exception>(json,ex);
+      rw->__handle_exception<std::exception>(ex);
     } catch (...) {
       std::cerr << "unknown non std::exception was thrown while initializing a Random Walker!\n" << std::flush;
     }
@@ -64,21 +66,24 @@ private:
   }
 
   template<typename T>
-  static __handle_init_exception(json_file_t& json, const T&) noexcept {
-    //TODO: (AJANTHA) this function
-     *json << ",{\"$type\":\"romp-trace\",\"metadata\":" << /*metadata*/ << "}";
+  void __handle_exception(const T& er) noexcept {
     if (OPTIONS.do_trace) {
-        *json << ",{\"$trace\":\"Random walker\",\"$type\":\"init"\"startstate:"/*ptr to startstate*/ << "}";
-    } else {
-      //TODO something else
-      // to call in sim1step_notrace 
-    }
+       *json << "],\"error-trace\":[" << er << "]";
+    } 
+    tripped = new T(er);
+    valid = false;
+  }
+
+  void trace_metadata_out() const {
+    *json << "{"; 
+    // TODO (AJANATHA) put in meta data here
+    *json << "}"; 
   }
 
 public:
   size_t fuel;
   bool valid;
-  void (*RandWalker::sim1Step)();
+  void (RandWalker::*sim1Step)();
 
   RandWalker(State_t startstate, unsigned int rand_seed_, size_t fuel/* =DEFAULT_FUEL */) 
     : state(startstate), 
@@ -91,17 +96,16 @@ public:
     if (OPTIONS.do_trace) {
       json = new json_file_t(OPTIONS.trace_dir + '/' + std::to_string(rand_seed_) + ".json");
       sim1Step = sim1Step_trace;
-           *json << ",{\"$type\":\"romp-trace\",\"metadata\":" << /*metadata*/ << "}";
-           *json << ",{\"$trace\":\"Random walker\",\"$type\":\"init"\"startstate:"<</*ptr to startstate*/ << "state:"\<</**/}";
-
-      //TODO: put in the initial json info
-      //TODO: put in the startstate object into the trace section
+      *json << "{\"$type\":\"romp-trace\",\"metadata\":";
+      trace_metadata_out();
+      *json << ",\"trace\":[";
     } else {
       sim1Step = sim1Step_no_trace;
     }
+    init_state(this);
   } 
 
-  ~RandWalker() { *json << "]}"; json->out.close(); delete json; if (tripped != nullptr) delete tripped; }
+  ~RandWalker() { *json << "}"; json->out.close(); delete json; if (tripped != nullptr) delete tripped; }
 
 
 private:
@@ -142,16 +146,11 @@ private:
         return;
       }
       for (const Property& prop : ::__caller__::PROPERTIES)
-          if (prop.check(state) == false) {
-              valid = false;
-              tripped = new ModelPropertyError(prop);
-          }        
+        prop.check(state);       
     } catch(IModelError& me) {
-      valid = false;
-      tripped = me/* .clone() */; // need to look into this one, probs broken with std::nested_exceptions
-      // TODO: handle error data
+      __handle_exception<IModelError>(me);
     } catch (std::exception& ex) {
-      std::cerr << "unexpected exception outside of model \t[dev-error]\n" << ex.what() << std::endl;
+      __handle_exception<std::exception>(ex);
     } catch (...) {
       std::cerr << "unexpected UNKNOWN exception outside of model \t[dev-error]\n";
     }
@@ -168,19 +167,21 @@ private:
         r.action(state);
 
       for (const Property& prop : ::__caller__::PROPERTIES)
-          if (prop.check(state) == false) {
-              valid = false;
-              tripped = new ModelPropertyError(prop);
-          }        
+          prop.check(state)
+                     
     } catch(IModelError& me) {
       valid = false;
       tripped = me/* .clone() */; // need to look into this one, probs broken with std::nested_exceptions
       // TODO: handle error data
     } catch (std::exception& ex) {
-      std::err << "unexpected exception outside of model \t[dev-error]\n" << ex.what() << std::endl;
+      std::cerr << "unexpected exception outside of model \t[dev-error]\n" << ex.what() << std::endl;
     } catch (...) {
-      std::err << "unexpected UNKNOWN exception outside of model \t[dev-error]\n";
+      std::cerr << "unexpected UNKNOWN exception outside of model \t[dev-error]\n";
     }
+  }
+
+  friend std::ostream& operator << (std::ostream& out, const RandWalker& rw) {
+      // TODO output results to `out`
   }
 
   bool assertion_handler(bool expr, id_t prop_id) {

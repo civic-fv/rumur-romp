@@ -47,6 +47,7 @@ namespace __model__ {
 #define __model__filename_contains_space false
 
 namespace romp {
+  template<class O> struct ojstream; 
   struct RuleInfo;
   struct RuleSet;
   struct Rule;
@@ -71,6 +72,7 @@ namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!
     ::romp::IRandWalker* __rw__; // LANGUAGE SERVER SUPPORT ONLY !!
     size_t test1[16]; // LANGUAGE SERVER SUPPORT ONLY !!
   }; // LANGUAGE SERVER SUPPORT ONLY !!
+  template<class O> ::romp::ojstream<O>& operator << (::romp::ojstream<O>& json, const __State__& s);
 } // LANGUAGE SERVER SUPPORT ONLY !!
 
 #endif

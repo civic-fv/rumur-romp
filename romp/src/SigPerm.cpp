@@ -227,9 +227,9 @@ namespace romp {
       // const QuantExpansion& qe = qe_i->second;
       if (qe_i == SigPerm::quant_vals_cache.end()) {
         SigPerm::add_quant(_tid->name, q);
-        quant_vals.push_back(*SigPerm::quant_vals_cache[_tid->referent->name]);
+        quant_vals.push_back(SigPerm::quant_vals_cache[_tid->referent->name]);
       } else
-        quant_vals.push_back(*qe_i->second); 
+        quant_vals.push_back(qe_i->second); 
       // quant_vals.push_back(qe);
       _size *= qe_i->second->size();
     } else
