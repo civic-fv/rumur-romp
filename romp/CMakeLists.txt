@@ -70,6 +70,7 @@ add_executable(romp
   src/ModelSplitter.cpp
   src/CTypeGenerator.cpp
   src/NestedError.cpp
+  src/SigPerm.cpp
   )
 
 target_include_directories(romp

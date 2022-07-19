@@ -19,6 +19,7 @@
 #include "type_traverse.hpp"
 #include "options.h"
 #include "romp_def.hpp"
+#include "../../common/escape.h"
 #include <rumur/rumur.h>
 
 using namespace rumur;
@@ -49,7 +50,7 @@ void CTypeGenerator::visit_typedecl(const TypeDecl &n) {
   // *this << "\n" << indentation() << "}\n\n";
 
   emitted_tDecls.insert(n.name);
-  emit_json_converter(n.name, n.value);
+  emit_stream_operators(n.name, n.value);
   *this << "\n";
   dedent();
 
@@ -73,10 +74,11 @@ void CTypeGenerator::visit_array(const Array &n) {
 
   // wrap the array in a struct so that we do not have the awkwardness of
   // having to emit its type and size on either size of another node
-  *this << "struct " << (pack ? "__attribute__((packed)) " : "") << "{ "
+  *this << "struct " <<  (pack ? "__attribute__((packed)) " : "") << "{ "
         << *n.element_type 
         // << " data[" << *(n.index_type) << "];";
-        << " data[" << count.get_str() << "];";
+        << " data[" << count.get_str() << "]; "
+        << "size_t size() {return (size_t)(" << count.get_str() <<  ");}";
 
   // // The index for this array may be an enum declared inline:
   // //
@@ -90,21 +92,46 @@ void CTypeGenerator::visit_array(const Array &n) {
   // }
   *this << " }";
 
-  //TODO: insert to_string or to_json method here.
-
 }
 
-void CTypeGenerator::emit_json_converter__array(const std::string &name, const Array &te) {
-  std::string et_str = "";
-  if (auto et = dynamic_cast<const TypeExprID *>(te.element_type.get()))
-    et_str += et->referent->name;
-  else
-    et_str += value_type;
-  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
-           "if (" << ROMP_SHOW_TYPE_OPTION_EXPR << ") {" 
-              "j = " ROMP_JSON_TYPE "{{\"type\",\"" << name << te.to_string() << "\"},"
-                            "{\"value\", std::vector<" << et_str << ">(std::begin(data), std::end(data))}};"
-           "} else {to_json(j, std::vector<" << et_str << ">(std::begin(data), std::end(data))));} }\n";
+void CTypeGenerator::emit_stream_operators__array(const std::string &name, const Array &te) {
+  return; //todo ...
+  if (auto _e = dynamic_cast<const Enum *>(te.index_type.get())) { 
+    *this << indentation() << ROMP_MAKE_JSON_CONVERTER_HEADER(name);
+    *this << "json << \"" // double escape time
+                "{\\\"$type\\\":\\\"enum-array-value\\\","
+                "\\\"type\\\":\\\"" << escape(te.to_string()) << "\\\","
+                // "\\\"element-type\\\":\\\"" << escape(et_str) << "\\\"
+                // "\\\"index-type\\\":\\\"" << escape(it_str) <<"\\\","
+                "\\\"size\\\":\" << val.size() << \","
+                "\\\"value\\\":[";
+    std::string sep;
+    for (int i=0; i<_e->members.size(); ++i) {
+      *this << sep << "{\\\"$type\\\":\\\"kv-pair\\\",\\\"key\\\":\\\"" << escape(_e->members[i].first)
+                   << "\\\"value\\\":\" << val.data[" << std::to_string(i) << "] << \"}";
+      sep = ",";
+    }
+    *this << "]}\";";
+    *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
+    
+  } else {
+    *this << indentation() << ROMP_MAKE_JSON_CONVERTER_HEADER(name);
+    *this << "json << \"" // double escape time
+                "{\\\"$type\\\":\\\"array-value\\\","
+                "\\\"type\\\":\\\"" << escape(te.to_string()) << "\\\","
+                // "\\\"element-type\\\":\\\"" << escape(et_str) << "\\\","
+                // "\\\"index-type\\\":\\\"" << escape(it_str) <<"\\\","
+                "\\\"size\\\":\" << val.size() << \","
+                "\\\"value\\\":[\"; " // end double escape time
+            "std::string sep; for (size_t i=0; i<val.size(); ++i) { json << sep <<  val.data[i]; sep = \",\"}"
+            "json << \"]\"}";
+    *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
+  }
+  // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
+  //          "if (" << ROMP_SHOW_TYPE_OPTION_EXPR << ") {" 
+  //             "j = " ROMP_JSON_TYPE "{{\"type\",\"" << name << te.to_string() << "\"},"
+  //                           "{\"value\", std::vector<" << et_str << ">(std::begin(data), std::end(data))}};"
+  //          "} else {to_json(j, std::vector<" << et_str << ">(std::begin(data), std::end(data))));} }\n";
 }
 
 
@@ -116,21 +143,30 @@ void CTypeGenerator::visit_enum(const Enum &n) {
   *this << "}";
 }
 
-void CTypeGenerator::emit_json_converter__enum(const std::string &name, const Enum &te) {
-  *this << indentation() << "NLOHMANN_JSON_SERIALIZE_ENUM( " << name << ", { ";
-  for (auto &m : te.members)
-    *this << "{" << m.first << "," 
-          "((" ROMP_SHOW_TYPE_OPTION_EXPR ") ? ("
-          " \"" << name << "::" << m.first << "\" "
-          ") : (\"" << m.first << "\")},";
-  *this << " })\n";
+void CTypeGenerator::emit_stream_operators__enum(const std::string &name, const Enum &te) {
+  return; //todo ...
+  *this << indentation() << ROMP_MAKE_JSON_CONVERTER_HEADER(name);
+  *this << "json << \"{\\\"$type\":\\\"enum-value\\\","
+                      "\\\"type\\\":\"" << escape(te.to_string()) << "\\\","
+                      "\\\"value\\\":\\\"\"; "
+           "switch (val) { case: }" // TODO
+
+  *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
+  // *this << indentation() << "NLOHMANN_JSON_SERIALIZE_ENUM( " << name << ", { ";
+  // for (auto &m : te.members)
+  //   *this << "{" << m.first << "," 
+  //         "((" ROMP_SHOW_TYPE_OPTION_EXPR ") ? ("
+  //         " \"" << name << "::" << m.first << "\" "
+  //         ") : (\"" << m.first << "\")},";
+  // *this << " })\n";
 }
 
 
 void CTypeGenerator::visit_range(const Range &) { *this << "range_t"; }
 
 
-void CTypeGenerator::emit_json_converter__range(const std::string &name, const Range &te) {
+void CTypeGenerator::emit_stream_operators__range(const std::string &name, const Range &te) {
+  return; //todo ...
   *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
         "if (" ROMP_SHOW_TYPE_OPTION_EXPR ") {" 
           "j = " ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"}, "
@@ -157,7 +193,8 @@ void CTypeGenerator::visit_record(const Record &n) {
 }
 
 
-void CTypeGenerator::emit_json_converter__record(const std::string &name, const Record &te) {
+void CTypeGenerator::emit_stream_operators__record(const std::string &name, const Record &te) {
+  return; //todo ...
   std::string conv_str = ROMP_JSON_TYPE "{";
   for (const Ptr<VarDecl> &f : te.fields)
     conv_str += "{\"" + f->name + "\", data." + f->name + "},";
@@ -173,7 +210,8 @@ void CTypeGenerator::emit_json_converter__record(const std::string &name, const 
 void CTypeGenerator::visit_scalarset(const Scalarset &) { *this << "scalarset_t"; }
 
 
-void CTypeGenerator::emit_json_converter__scalarset(const std::string &name, const Scalarset &te) {
+void CTypeGenerator::emit_stream_operators__scalarset(const std::string &name, const Scalarset &te) {
+  return; //todo ...
   *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
         "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? (" 
           ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"}, "
@@ -182,14 +220,16 @@ void CTypeGenerator::emit_json_converter__scalarset(const std::string &name, con
 }
 
 
-void CTypeGenerator::emit_json_converter__typeexprid(const std::string &name, const TypeExprID &te) {
+void CTypeGenerator::emit_stream_operators__typeexprid(const std::string &name, const TypeExprID &te) {
+  return; //todo ...
   *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
         "to_json(j,(" << te.referent->name << ")data); "
         "}\n";
 }
 
 
-void CTypeGenerator::emit_json_converter(const std::string &name, const Ptr<const TypeExpr> &te) {
+void CTypeGenerator::emit_stream_operators(const std::string &name, const Ptr<const TypeExpr> &te) {
+  return; //todo ...
   *this << indentation() << "/* NOT YET IMPLEMENTED !\n";
   indent();
   class type_dispatcher : public ConstBaseTypeTraversal {
@@ -200,12 +240,12 @@ void CTypeGenerator::emit_json_converter(const std::string &name, const Ptr<cons
       : _name(name_), parent(parent_),
         ConstBaseTypeTraversal("Not a TypeExpr!! `type_dispatcher` can't handle it \t[dev-error]") 
     {}
-    void visit_array(const Array& n) { parent->emit_json_converter__array(_name, n); }
-    void visit_enum(const Enum& n) { parent->emit_json_converter__enum(_name, n); }
-    void visit_range(const Range& n) { parent->emit_json_converter__range(_name, n); }
-    void visit_record(const Record& n) { parent->emit_json_converter__record(_name, n); }
-    void visit_scalarset(const Scalarset& n) { parent->emit_json_converter__scalarset(_name, n); }
-    void visit_typeexprid(const TypeExprID& n) { parent->emit_json_converter__typeexprid(_name, n); }
+    void visit_array(const Array& n) { parent->emit_stream_operators__array(_name, n); }
+    void visit_enum(const Enum& n) { parent->emit_stream_operators__enum(_name, n); }
+    void visit_range(const Range& n) { parent->emit_stream_operators__range(_name, n); }
+    void visit_record(const Record& n) { parent->emit_stream_operators__record(_name, n); }
+    void visit_scalarset(const Scalarset& n) { parent->emit_stream_operators__scalarset(_name, n); }
+    void visit_typeexprid(const TypeExprID& n) { parent->emit_stream_operators__typeexprid(_name, n); }
     // void dispatch(const Node& n) { n->visit(*this); }
   };
   type_dispatcher tf(name,this);

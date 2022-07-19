@@ -41,13 +41,13 @@ struct SigParam;
 struct QuantExpansion;
 
 //TODO fix this mess !!
-using vec_MTypeVals_t = ::std::vector<const ::romp::SigParam&>;
-using QuantExpansion_Iter_t = ::romp::vec_MTypeVals_t::iterator ;
-using SigParam_Iter_t = ::romp::vec_MTypeVals_t::iterator ;
-using quant_vals_cache_t = ::std::unordered_map<::std::string, const ::romp::QuantExpansion>> ;
-using quant_vals_cache_iter_t = ::romp::quant_vals_cache_t::iterator ;
-using vec_quant_vals_t = ::std::vector<const ::romp::quant_vals_cache_iter_t> ;
-using quant_vals_iter_t = ::romp::vec_quant_vals_t::iterator ;
+// using vec_MTypeVals_t = ::std::vector<const ::romp::SigParam&>;
+// using QuantExpansion_Iter_t = ::romp::vec_MTypeVals_t::iterator ;
+// using SigParam_Iter_t = ::romp::vec_MTypeVals_t::iterator ;
+// using quant_vals_cache_t = ::std::unordered_map<::std::string, const ::romp::QuantExpansion>> ;
+// using quant_vals_cache_iter_t = ::romp::quant_vals_cache_t::iterator ;
+// using vec_quant_vals_t = ::std::vector<const ::romp::quant_vals_cache_iter_t> ;
+// using quant_vals_iter_t = ::romp::vec_quant_vals_t::iterator ;
 // typedef ::std::vector<const ::romp::Sig::Param> vec_MTypeVals_t;
 // typedef ::romp::vec_MTypeVals_t::iterator QuantExpansion_Iter_t;
 // typedef ::romp::vec_MTypeVals_t::iterator SigParam_Iter_t;
@@ -63,9 +63,9 @@ using quant_vals_iter_t = ::romp::vec_quant_vals_t::iterator ;
 #pragma region class_Sig
 struct Sig {
   size_t index;
-  std::vector<const SigParam&> params;
-  std::vector<const SigParam&>::iterator begin() const;
-  std::vector<const SigParam&>::iterator end() const;
+  std::vector<std::shared_ptr<const SigParam>> params;
+  std::vector<std::shared_ptr<const SigParam>>::iterator begin() const;
+  std::vector<std::shared_ptr<const SigParam>>::iterator end() const;
   std::string to_string() const;
   std::string to_json() const;
   Sig(size_t index_, std::vector<const SigParam&> params_, const SigPerm& perm_);
@@ -73,7 +73,7 @@ private:
   const SigPerm& perm;
   friend std::ostream& operator << (std::ostream& out, const Sig& sig);
   friend CGenerator& CGenerator::operator << (const Sig& sig);
-  friend class SigPerm::Iterator;
+  friend SigPerm::Iterator;
 };
 #pragma endregion class_Sig
 
@@ -93,9 +93,9 @@ struct SigParam {
 private:
   friend struct QuantExpansion;
   static const std::string to_string(const std::string& value_str, const QuantExpansion& qe);
-  static const std::string to_json(const std::string& value_str, const QuantExpansion& qe);
+  static const std::string to_json(const std::string& value_str, const QuantExpansion& qe, const std::string json_val_type);
   friend std::ostream& operator << (std::ostream& out, const SigParam& param);
-  friend CGenerator& CGenerator::operator << (const SigParam& param);
+  friend CGenerator& operator << (CGenerator& out, const SigParam& param);
 };
 #pragma endregion class_SigParam
 
@@ -105,15 +105,15 @@ private:
 // << ========================================================================================== >> 
 #pragma region class_QuantExpansion
 struct QuantExpansion {
-  std::vector<const SigParam> values;
+  std::vector<std::shared_ptr<const SigParam>> values;
   const rumur::Ptr<const rumur::TypeExpr> type;
   std::string type_id;
   mpz_class start;
   mpz_class stop;
   mpz_class step = 1_mpz;
   size_t size() const;
-  std::vector<const SigParam>::iterator begin() const;
-  std::vector<const SigParam>::iterator end() const;
+  std::vector<std::shared_ptr<const SigParam>>::iterator begin() const;
+  std::vector<std::shared_ptr<const SigParam>>::iterator end() const;
   QuantExpansion(const rumur::Quantifier& q);
 private:
   mpz_class _size = 0_mpz;
@@ -130,8 +130,8 @@ class SigPerm {
 private:
 
 protected:
-  static std::unordered_map<std::string,const std::shared_ptr<const QuantExpansion>> quant_vals_cache;
-  std::vector<const std::shared_ptr<const QuantExpansion>> quant_vals;
+  static std::unordered_map<const std::string,std::shared_ptr<const QuantExpansion>> quant_vals_cache;
+  std::vector<std::shared_ptr<const QuantExpansion>> quant_vals;
   size_t _size = 1;
   
 
@@ -159,7 +159,8 @@ private:
 
   static void add_quant(const std::string& name, const rumur::Quantifier& q);
   
-  std::vector<std::vector<const SigParam>::iterator> get_init_param_iters() const;
+  // std::vector<std::vector<const SigParam&>::iterator> get_init_param_iters() const;
+  std::vector<size_t> get_init_param_iters() const;
 
 protected:
   
@@ -178,7 +179,7 @@ public:
 
   struct Iterator {
     const Sig operator*() const ;
-    const Sig const* operator->() const ;
+    const Sig* operator->() const ;
     // prefix iterator
     friend Iterator& operator ++ (Iterator&) ;
     // postfix iterator
@@ -194,10 +195,12 @@ public:
     size_t index;
     Sig* sig_ptr;
     const SigPerm& perm;
-    std::vector<std::vector<const SigParam>::iterator> param_iters;
+    // std::vector<std::vector<const SigParam&>::iterator> param_iters;
+    std::vector<size_t> param_iters;
   // public:
     // construct a "begin" iterator (ONLY)
-    Iterator(const SigPerm& perm_, std::vector<std::vector<const SigParam>::iterator> param_iters_);
+    // Iterator(const SigPerm& perm_, std::vector<std::vector<const SigParam&>::iterator> param_iters_);
+    Iterator(const SigPerm& perm_, std::vector<size_t> param_iters_);
     // construct an "end" iterator (ONLY)
     Iterator(const SigPerm& perm_); // : index(perm_.size), perm(perm_) {}
     friend SigPerm;

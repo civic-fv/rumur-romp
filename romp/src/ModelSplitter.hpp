@@ -50,7 +50,7 @@ namespace romp {
 class ModelSplitter : public rumur::BaseTraversal {
 
   // << ===================================== Class Members ====================================== >> 
-protected: // ---- Public Class Members ---- //
+public: // ---- Public Class Members ---- //
   std::vector<rumur::Ptr<rumur::Decl>> global_decls;
   std::vector<rumur::Ptr<rumur::VarDecl>> state_var_decls;
   std::vector<rumur::Ptr<rumur::Function>> funct_decls;
@@ -64,7 +64,7 @@ protected: // ---- Public Class Members ---- //
   id_t next_assume_id = 0u;
   id_t next_cover_id = 0u;
   id_t next_liveness_id = 0u;
-  friend class ::romp::CGenerator;
+  // friend class ::romp::CGenerator;
 
 
 private: // ---- Private Class Members ---- //

@@ -87,6 +87,9 @@
 #define ROMP_MODEL_ERROR_TYPE_ERROR ROMP_UTIL_NAMESPACE "::" "ModelMErrorError"
 
 #define ROMP_JSON_TYPE "nlohmann::json"
+#define ROMP_JSON_STREAM_TYPE "::" ROMP_UTIL_NAMESPACE_NAME "::" "ojstream<O>"
+#define ROMP_MAKE_JSON_CONVERTER_HEADER(_type) "template<class O> " ROMP_JSON_STREAM_TYPE "& operator << (" ROMP_JSON_STREAM_TYPE "& json, const " << (_type) << "& val) noexcept { ";
+#define ROMP_MAKE_JSON_CONVERTER_FOOTER "; return json; }"
 
 #define ROMP_SHOW_TYPE_OPTION_EXPR "options.SHOW_TYPE"
 
@@ -143,7 +146,7 @@
 #define ROMP_ASSERTION_HANDLER(_n,_id) _ROMP_PROPERTY_HANDLER_ASSERT "(" << *((_n).property.expr) << "," << (_id) << "u" ")"
 #define ROMP_INVARIANT_HANDLER(_n,_id) _ROMP_PROPERTY_HANDLER_INVAR "(" << *((_n).property.expr) << "," << (_id) << "u" ")"
 #define ROMP_ASSUMPTION_HANDLER(_n,_id) _ROMP_PROPERTY_HANDLER_ASSUME "(" << *((_n).property.expr) << "," << (_id) << "u" ")"
-#define ROMP_COVER_HANDLER(_n,_id,_cn) _ROMP_PROPERTY_HANDLER_COVER "(" << *((_n).property.expr) << "," << (_ln) << "u," << (_id) << "u" ")"
+#define ROMP_COVER_HANDLER(_n,_id,_cn) _ROMP_PROPERTY_HANDLER_COVER "(" << *((_n).property.expr) << "," << (_cn) << "u," << (_id) << "u" ")"
 #define ROMP_LIVENESS_HANDLER(_n,_id,_ln) _ROMP_PROPERTY_HANDLER_LIVENESS "(" << *((_n).property.expr) << "," << (_ln) << "u," << (_id) << "u" ")"
 #define ROMP_ERROR_HANDLER(_id) "this->" _ROMP_ERROR_HANDLER "(" << (_id) << "u" ")"
 

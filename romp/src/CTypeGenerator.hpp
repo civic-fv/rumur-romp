@@ -62,15 +62,15 @@ public:
 
 
 protected:
-  void emit_json_converter(const std::string &name, const rumur::Ptr<const rumur::TypeExpr> &te);
+  void emit_stream_operators(const std::string &name, const rumur::Ptr<const rumur::TypeExpr> &te);
 
 public:
-  void emit_json_converter__array(const std::string &name, const rumur::Array &te);
-  void emit_json_converter__enum(const std::string &name, const rumur::Enum &te);
-  void emit_json_converter__record(const std::string &name, const rumur::Record &te);
-  void emit_json_converter__range(const std::string &name, const rumur::Range &te);
-  void emit_json_converter__scalarset(const std::string &name, const rumur::Scalarset &te);
-  void emit_json_converter__typeexprid(const std::string &name, const rumur::TypeExprID &te);
+  void emit_stream_operators__array(const std::string &name, const rumur::Array &te);
+  void emit_stream_operators__enum(const std::string &name, const rumur::Enum &te);
+  void emit_stream_operators__record(const std::string &name, const rumur::Record &te);
+  void emit_stream_operators__range(const std::string &name, const rumur::Range &te);
+  void emit_stream_operators__scalarset(const std::string &name, const rumur::Scalarset &te);
+  void emit_stream_operators__typeexprid(const std::string &name, const rumur::TypeExprID &te);
 
 protected:
   void __throw_unreachable_error(const rumur::Node &n);

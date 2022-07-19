@@ -51,7 +51,7 @@ namespace romp {
     std::string sep = "";
       buf << '[';
       for (int i=0; i<perm.param_count; ++i) {
-        buf << sep << "{\"" << perm.quantifiers[i].name << "\":"
+        buf << sep << "{\"$type\":\"kv-pair\",\"key\":\"" << perm.quantifiers[i].name << "\",\"value\":"
                   << params[i].to_json() << '}';
         sep = ",";
       }
@@ -71,11 +71,11 @@ namespace romp {
     return "(::" ROMP_TYPE_NAMESPACE "::" + qe.type_id + ") " + value_str; 
   }
 
-  const std::string SigParam::to_json(const std::string& value_str, const QuantExpansion& qe) {
+  const std::string SigParam::to_json(const std::string& value_str, const QuantExpansion& qe, const std::string json_val_type) {
     // if (auto _tid = dynamic_cast<const rumur::TypeExprID*>(qe.type.get())) {
     //   return "{\"type\":\"" + _tid->referent->name + ": " + _tid->referent->value->to_string() + "\","
     //                 "\"value\":""\"" + value_str +"\"}";
-    return "{\"type\":\"" + qe.type_id + "\",\"value\":""\"" + escape(value_str) +"\"}"; 
+    return "{\"$type\":\""+ escape(json_val_type) + "\",\"type\":\"" + escape(qe.type->resolve()->to_string()) + "\",\"value\":" + value_str +"}"; 
   }
 
   // << ========================================================================================== >> 
@@ -127,7 +127,7 @@ namespace romp {
                             i,
                             i.get_str(),
                             SigParam::to_string(i.get_str(), *this),
-                            SigParam::to_json(i.get_str(), *this),
+                            SigParam::to_json(i.get_str(), *this, "quantifier-value"),
                             *this
                           });
   }
@@ -155,8 +155,9 @@ namespace romp {
                                 mpz_class(i),
                                 val,
                                 "::" ROMP_TYPE_NAMESPACE "::" + val,
-                                "{\"type\":\"" + qe.type_id + "\","
-                                  "\"value\":\"" + n.members[i].first + "\"}",
+                                SigParam::to_json(escape("\""+n.members[i].first+"\""), qe, "enum-value"),
+                                // "{\"type\":\"" + qe.type_id + "\","
+                                //   "\"value\":\"" + n.members[i].first + "\"}",
                                 qe
                               });
         }
@@ -170,7 +171,7 @@ namespace romp {
                                 i,
                                 i.get_str(),
                                 SigParam::to_string(i.get_str(), qe),
-                                SigParam::to_json(i.get_str(), qe),
+                                SigParam::to_json(i.get_str(), qe, "range-value"),
                                 qe
                               });
       }
@@ -183,7 +184,7 @@ namespace romp {
                                 i,
                                 i.get_str(),
                                 SigParam::to_string(i.get_str(), qe),
-                                SigParam::to_json(i.get_str(), qe),
+                                SigParam::to_json(i.get_str(), qe, "scalarset-value"),
                                 qe
                               });
       }
@@ -219,9 +220,9 @@ namespace romp {
       // const QuantExpansion& qe = qe_i->second;
       if (qe_i == SigPerm::quant_vals_cache.end()) {
         SigPerm::add_quant(_tid->name, q);
-        quant_vals.push_back(SigPerm::quant_vals_cache[_tid->referent->name]);
+        quant_vals.push_back(*SigPerm::quant_vals_cache[_tid->referent->name]);
       } else
-        quant_vals.push_back(qe_i->second); 
+        quant_vals.push_back(*qe_i->second); 
       // quant_vals.push_back(qe);
       _size *= qe_i->second->size();
     } else
@@ -229,15 +230,21 @@ namespace romp {
   }
 
   void SigPerm::add_quant(const std::string& name, const rumur::Quantifier& q) {
-    SigPerm::quant_vals_cache.insert(std::make_pair(name, std::shared_ptr<const QuantExpansion>(new QuantExpansion(q))));
+    SigPerm::quant_vals_cache.insert(std::make_pair(name, std::unique_ptr<const QuantExpansion>(new QuantExpansion(q))));
   }
 
-  std::vector<std::vector<const SigParam>::iterator> SigPerm::get_init_param_iters() const {
-    std::vector<std::vector<const SigParam>::iterator> param_iters(param_count);
+  std::vector<size_t> SigPerm::get_init_param_iters() const {
+    std::vector<size_t> param_iters(param_count);
     for (auto quant_val : quant_vals)
-      param_iters.push_back(quant_val->begin());
+      param_iters.push_back(0);
     return param_iters;
   }
+  // std::vector<std::vector<const SigParam>::iterator> SigPerm::get_init_param_iters() const {
+  //   std::vector<std::vector<const SigParam>::iterator> param_iters(param_count);
+  //   for (auto quant_val : quant_vals)
+  //     param_iters.push_back(quant_val->begin());
+  //   return param_iters;
+  // }
 
   size_t SigPerm::size() const { return _size; }
   SigPerm::Iterator SigPerm::begin() const { return Iterator(*this, get_init_param_iters()); }
@@ -253,7 +260,8 @@ namespace romp {
   // <<                                     SigPerm::Iterator                                      >> 
   // << ========================================================================================== >> 
 
-  const Sig SigPerm::Iterator::operator*() const { return *sig_ptr; }
+  const Sig SigPerm::Iterator::operator * () const { return *sig_ptr; }
+  const Sig* SigPerm::Iterator::operator -> () const { return sig_ptr; }
   // prefix iterator
   SigPerm::Iterator& operator ++ (SigPerm::Iterator& it) { it.increment_item(); return it; } 
   // postfix iterator
@@ -267,8 +275,10 @@ namespace romp {
     if (index == perm.size()) return;
     Sig* old = sig_ptr;
     std::vector<const SigParam&> params(perm.param_count);
-    for (auto param_i : param_iters)
-      params.push_back(*param_i);
+    for (size_t i=0; i<perm.size(); ++i)
+      params.push_back(perm.quant_vals[i].values[param_iters[i]]);
+    // for (auto param_i : param_iters)
+    //   params.push_back(*param_i);
     sig_ptr = new Sig(++index, params, perm);
     delete old;
   }
@@ -276,14 +286,17 @@ namespace romp {
   void SigPerm::Iterator::increment_param_iters(size_t level) {
     if (level < 0) { index = perm.size(); return; }
     param_iters[level]++;
-    if (param_iters[level] != perm.quant_vals[level]->end()) return;
-    param_iters[level] = perm.quant_vals[level]->begin();
+    if (param_iters[level] < perm.quant_vals[level].size()) return;
+    param_iters[level] = 0;
     increment_param_iters(--level);
   }
 
-  SigPerm::Iterator::Iterator(const SigPerm& perm_, std::vector<std::vector<const SigParam>::iterator> param_iters_) 
+  SigPerm::Iterator::Iterator(const SigPerm& perm_, std::vector<size_t> param_iters_) 
       : index(0ul), perm(perm_), param_iters(param_iters_)
     {}
+  // SigPerm::Iterator::Iterator(const SigPerm& perm_, std::vector<std::vector<const SigParam&>::iterator> param_iters_) 
+  //     : index(0ul), perm(perm_), param_iters(param_iters_)
+  //   {}
   SigPerm::Iterator::Iterator(const SigPerm& perm_) : index(perm_.size()), perm(perm_) {}
   SigPerm::Iterator::~Iterator() { delete sig_ptr; }
 
