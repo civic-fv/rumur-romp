@@ -25,7 +25,7 @@
 
 #define ROMP_STATE_RAND_WALKER_VAR "__rw__"
 
-#define ROMP_RAND_WALKER_REFERENCE  "" ROMP_RAND_WALKER_TYPE "& " ROMP_STATE_RAND_WALKER_VAR "; // reference to associated romp rand walker"
+#define ROMP_RAND_WALKER_DECL  "" ROMP_RAND_WALKER_TYPE "* " ROMP_STATE_RAND_WALKER_VAR "; // reference to associated romp rand walker"
 
 #define ROMP_MODEL_NAMESPACE_NAME "__model__"
 
@@ -135,13 +135,13 @@
 #define ROMP_MAKE_MODEL_ERROR_ERROR(_n,_id) ROMP_MODEL_ERROR_TYPE_ERROR "(" << (_id) << ")"
 
 
-#define _ROMP_PROPERTY_HANDLER_BASE "this->" ROMP_STATE_RAND_WALKER_VAR
-#define _ROMP_PROPERTY_HANDLER_INVAR _ROMP_PROPERTY_HANDLER_BASE "." "invariant_handler"
-#define _ROMP_PROPERTY_HANDLER_ASSERT _ROMP_PROPERTY_HANDLER_BASE "." "assertion_handler"
-#define _ROMP_PROPERTY_HANDLER_ASSUME _ROMP_PROPERTY_HANDLER_BASE "." "assumption_handler"
-#define _ROMP_PROPERTY_HANDLER_COVER _ROMP_PROPERTY_HANDLER_BASE "." "cover_handler"
-#define _ROMP_PROPERTY_HANDLER_LIVENESS _ROMP_PROPERTY_HANDLER_BASE "." "liveness_handler"
-#define _ROMP_ERROR_HANDLER _ROMP_PROPERTY_HANDLER_BASE "." "error_handler"
+#define _ROMP_PROPERTY_HANDLER_BASE "this->" ROMP_STATE_RAND_WALKER_VAR "->"
+#define _ROMP_PROPERTY_HANDLER_INVAR _ROMP_PROPERTY_HANDLER_BASE "invariant_handler"
+#define _ROMP_PROPERTY_HANDLER_ASSERT _ROMP_PROPERTY_HANDLER_BASE "assertion_handler"
+#define _ROMP_PROPERTY_HANDLER_ASSUME _ROMP_PROPERTY_HANDLER_BASE "assumption_handler"
+#define _ROMP_PROPERTY_HANDLER_COVER _ROMP_PROPERTY_HANDLER_BASE "cover_handler"
+#define _ROMP_PROPERTY_HANDLER_LIVENESS _ROMP_PROPERTY_HANDLER_BASE "liveness_handler"
+#define _ROMP_ERROR_HANDLER _ROMP_PROPERTY_HANDLER_BASE "error_handler"
 
 #define ROMP_ASSERTION_HANDLER(_n,_id) _ROMP_PROPERTY_HANDLER_ASSERT "(" << *((_n).property.expr) << "," << (_id) << "u" ")"
 #define ROMP_INVARIANT_HANDLER(_n,_id) _ROMP_PROPERTY_HANDLER_INVAR "(" << *((_n).property.expr) << "," << (_id) << "u" ")"

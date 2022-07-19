@@ -605,7 +605,7 @@ public:
 
     *this << "\n" << indentation() << "struct " ROMP_STATE_CLASS_NAME " {\n";
     indent();
-
+    *this << indentation() << ROMP_RAND_WALKER_DECL "\n\n";
     *this << "\n" << indentation() << "/* ======= Model State Variables ====== */\n\n";
     // split.state_var_decl.visit(*this);
     for (const Ptr<const VarDecl> &var : sorter.state_var_decls)

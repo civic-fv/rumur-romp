@@ -54,9 +54,9 @@ private:
     try {
       // TODO: (ANDREW) generate startstate randomly from rand_seed
     } catch (const IModelError& me) {
-       __handle_init_exception(json,me);
+       __handle_init_exception<IModelError>(json,me);
     } catch (const std::exception& ex) {
-      __handle_init_exception(json,ex);
+      __handle_init_exception<std::exception>(json,ex);
     } catch (...) {
       std::cerr << "unknown non std::exception was thrown while initializing a Random Walker!\n" << std::flush;
     }
@@ -125,13 +125,12 @@ private:
   }
 
   void sim1Step_trace() noexcept {
-    
     //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
     const RuleSet& rs= rand_ruleset();
     const Rule& r= rand_rule(rs);
-    fuel--;
-    try {
-      if (r.guard(state) == true)
+    bool pass = false;
+    try {  
+      if ((pass = r.guard(state)) == true)
         r.action(state);
       else {
         *json << ",{\"$type\":\"rule-failed\",\"rule\":" << r << "}";
@@ -147,9 +146,9 @@ private:
       tripped = me/* .clone() */; // need to look into this one, probs broken with std::nested_exceptions
       // TODO: handle error data
     } catch (std::exception& ex) {
-      std::err << "unexpected exception outside of model \t[dev-error]\n" << ex.what() << std::endl;
+      std::cerr << "unexpected exception outside of model \t[dev-error]\n" << ex.what() << std::endl;
     } catch (...) {
-      std::err << "unexpected UNKNOWN exception outside of model \t[dev-error]\n";
+      std::cerr << "unexpected UNKNOWN exception outside of model \t[dev-error]\n";
     }
   }
 
@@ -180,7 +179,7 @@ private:
   }
 
   bool assertion_handler(bool expr, id_t prop_id) {
-    
+
   }
 
 }; //? END class RandomWalker

@@ -25,34 +25,6 @@
 namespace romp {
 namespace options {
 
-struct Options {
-  size_t threads = 4;    // mpz_class ??
-  size_t depth = INT32_MAX;      // what has to be default value  ??
-  size_t random_walkers = INT32_MAX; // any default value needed if not provided ?
-  unsigned int
-      rand_seed = time(NULL); // the random seed to se (defaults to current system time)
-  std::string seed_str; // what for this ??
-  bool do_single = false;
-  bool do_trace = false;
-  std::string trace_file;
-  size_t lcount = INT32_MAX;
-  size_t cover_count =INT32_MAX;
-  size_t ag_count=INT32_MAX;
-  size_t hlcount=INT32_MAX;
-  void print_help();
-  std::string
-      trace_file_path; // path for the trace file to be created during each walk
-  bool deadlock =
-      false; // separate bool for each property or consider having a valid bool
-             // . depends on how property will be designed
-  bool result = false; // result output
-  bool result_all = false;
-  bool r_assume = false;
-  bool complete_count= false;
-};
-
-Options OPTIONS;
-
 // input model's path
 // extern std::string input_filename;
 
@@ -240,13 +212,10 @@ static void parse_args(const int argc, const char **argv) {
       }
     } else if ("-ra" == argv[i] || "--result-all" == argv[i]) {
       OPTIONS.result_all = true;
-      // TODO figure out a way to define property
     } else if ("--r-assume" == argv[i]) {
       OPTIONS.r_assume = true;
-      // todo figure out to define the property
     } else if ("--output" == argv[i] || "-o" == argv[i]) {
       OPTIONS.output = true;
-      // todo figure out to output
     }
   }
   // check for inconsistent or contradictory options here
@@ -257,9 +226,9 @@ static void parse_args(const int argc, const char **argv) {
 else if ("-t" == argv[i] || "--trace" == argv[i]) {
   if (i+1<argc && '-' != argv[i+1][0]) {
     ++i;
-    OPTIONS.trace_file_path = argv[i];
+    OPTIONS.trace_dir = argv[i];
   }else
-    OPTIONS.trace_file_path = DEFAULT;// give the default path
+    OPTIONS.trace_dir = DEFAULT;// give the default path
     // TODO function to create trace files for each walk and path to be
 specified from cli
 }
