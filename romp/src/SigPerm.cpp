@@ -24,11 +24,15 @@ namespace romp {
   // <<                                            SIG                                             >> 
   // << ========================================================================================== >> 
 
-  std::vector<const SigParam&>::iterator Sig::begin() const { return params.begin(); }
-  std::vector<const SigParam&>::iterator Sig::end() const { return params.end(); }
+  std::vector<std::shared_ptr<const SigParam>>::iterator Sig::begin() const { return params.begin(); }
+  std::vector<std::shared_ptr<const SigParam>>::iterator Sig::end() const { return params.end(); }
+  // std::vector<const SigParam&>::iterator Sig::begin() const { return params.begin(); }
+  // std::vector<const SigParam&>::iterator Sig::end() const { return params.end(); }
 
-  Sig::Sig(size_t index_, std::vector<const SigParam&> params_, const SigPerm& perm_)
+  Sig::Sig(size_t index_, std::vector<std::shared_ptr<const SigParam>> params_, const SigPerm& perm_)
     : index(index_), params(params_), perm(perm_) {}
+  // Sig::Sig(size_t index_, std::vector<const SigParam&> params_, const SigPerm& perm_)
+  //   : index(index_), params(params_), perm(perm_) {}
 
   std::string Sig::to_string() const {
     if (perm.param_count > 0) {
@@ -36,7 +40,8 @@ namespace romp {
     // buf << "quantifiers(";
     std::string sep = "";
       for (int i=0; i<perm.param_count; ++i) {
-        buf << sep << perm.quantifiers[i].name << ":=" << escape(params[i].value_str);
+        buf << sep << perm.quantifiers[i].name << ":=" << escape(params[i]->value_str);
+        // buf << sep << perm.quantifiers[i].name << ":=" << escape(params[i].value_str);
         sep = "; ";
       }
       // buf << ')';
@@ -84,8 +89,10 @@ namespace romp {
 
   size_t QuantExpansion::size() const { return _size.get_ui() ; }
 
-  std::vector<const SigParam>::iterator QuantExpansion::begin() const { values.begin(); }
-  std::vector<const SigParam>::iterator QuantExpansion::end() const { values.end(); }
+  std::vector<std::shared_ptr<const SigParam>>::iterator QuantExpansion::begin() const { values.begin(); }
+  std::vector<std::shared_ptr<const SigParam>>::iterator QuantExpansion::end() const { values.end(); }
+  // std::vector<const SigParam>::iterator QuantExpansion::begin() const { values.begin(); }
+  // std::vector<const SigParam>::iterator QuantExpansion::end() const { values.end(); }
 
   QuantExpansion::QuantExpansion(const rumur::Quantifier& q) 
     : type(q.decl->type)
@@ -121,15 +128,15 @@ namespace romp {
     // stop = stop_mpz.get_ui();
     // if (q.step != nullptr)
     //   step = step_mpz.get_ui();
-    values = std::vector<const SigParam>();
+    values = std::vector<std::shared_ptr<const SigParam>>();
     for (mpz_class i = start; i<=stop; i += step)
-      values.push_back(SigParam{
+      values.push_back(std::shared_ptr<const SigParam>(new SigParam{
                             i,
                             i.get_str(),
                             SigParam::to_string(i.get_str(), *this),
                             SigParam::to_json(i.get_str(), *this, "quantifier-value"),
                             *this
-                          });
+                          }));
   }
 
   void QuantExpansion::resolve_quantifier_type(const rumur::Quantifier& q_) {
@@ -148,10 +155,10 @@ namespace romp {
         qe.start = mpz_class(0ul);
         qe.stop = mpz_class(n.members.size()) - 1_mpz;
         qe._size = n.members.size();
-        qe.values = std::vector<const SigParam>(n.members.size());
+        qe.values = std::vector<std::shared_ptr<const SigParam>>(qe.size());
         for (int i=0; i<n.members.size(); ++i) {
           std::string val = qe.type_id + "::" + n.members[i].first;
-          qe.values.push_back(SigParam{
+          qe.values.push_back(std::shared_ptr<const SigParam>(new SigParam{
                                 mpz_class(i),
                                 val,
                                 "::" ROMP_TYPE_NAMESPACE "::" + val,
@@ -159,34 +166,34 @@ namespace romp {
                                 // "{\"type\":\"" + qe.type_id + "\","
                                 //   "\"value\":\"" + n.members[i].first + "\"}",
                                 qe
-                              });
+                              }));
         }
       }
       void visit_range(const rumur::Range& n) {
         qe.start = n.min->constant_fold();
         qe.stop = n.max->constant_fold();
-        qe.values = std::vector<const SigParam>(qe.size());
+        qe.values = std::vector<std::shared_ptr<const SigParam>>(qe.size());
         for (mpz_class i = qe.start; i<=qe.stop; i += qe.step)
-          qe.values.push_back(SigParam{
+          qe.values.push_back(std::shared_ptr<const SigParam>(new SigParam{
                                 i,
                                 i.get_str(),
                                 SigParam::to_string(i.get_str(), qe),
                                 SigParam::to_json(i.get_str(), qe, "range-value"),
                                 qe
-                              });
+                              }));
       }
       void visit_scalarset(const rumur::Scalarset& n) {
         qe.start = 0_mpz;
         qe.stop = n.bound->constant_fold() - 1_mpz;
-        qe.values = std::vector<const SigParam>(qe.size());
+        qe.values = std::vector<std::shared_ptr<const SigParam>>(qe.size());
         for (mpz_class i = qe.start; i<=qe.stop; i += qe.step)
-          qe.values.push_back(SigParam{
+          qe.values.push_back(std::shared_ptr<const SigPerm>(new SigParam{
                                 i,
                                 i.get_str(),
                                 SigParam::to_string(i.get_str(), qe),
                                 SigParam::to_json(i.get_str(), qe, "scalarset-value"),
                                 qe
-                              });
+                              }));
       }
     };
     type_trav tt(q_, *this);
@@ -230,12 +237,12 @@ namespace romp {
   }
 
   void SigPerm::add_quant(const std::string& name, const rumur::Quantifier& q) {
-    SigPerm::quant_vals_cache.insert(std::make_pair(name, std::unique_ptr<const QuantExpansion>(new QuantExpansion(q))));
+    SigPerm::quant_vals_cache.insert(std::make_pair(name, std::shared_ptr<const QuantExpansion>(new QuantExpansion(q))));
   }
 
   std::vector<size_t> SigPerm::get_init_param_iters() const {
     std::vector<size_t> param_iters(param_count);
-    for (auto quant_val : quant_vals)
+    for (size_t i=0; i<param_count; ++i)
       param_iters.push_back(0);
     return param_iters;
   }
