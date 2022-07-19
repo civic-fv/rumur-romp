@@ -92,6 +92,8 @@ public:
       json = new json_file_t(OPTIONS.trace_dir + '/' + std::to_string(rand_seed_) + ".json");
       sim1Step = sim1Step_trace;
            *json << ",{\"$type\":\"romp-trace\",\"metadata\":" << /*metadata*/ << "}";
+           *json << ",{\"$trace\":\"Random walker\",\"$type\":\"init"\"startstate:"<</*ptr to startstate*/ << "state:"\<</**/}";
+
       //TODO: put in the initial json info
       //TODO: put in the startstate object into the trace section
     } else {
