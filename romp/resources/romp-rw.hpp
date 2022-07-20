@@ -222,9 +222,9 @@ private:
         << "TODO" // rw.init_rand_seed
         << "TODO" // startstate selected (use ::__caller__::STARTSTATES[rw.startstate_id])
         << "TODO" // Trace info Lite™ (header)
-        << "TODO" //  history (if it exists)
-        << "TODO" //  final state value
-        << "TODO" // ... maybe more stuff
+        << "TODO" //    history (if it exists)
+        << "TODO" //    final state value
+        << "TODO" // ... maybe more stuff ...
         << "TODO" // report of conditions (header)
         << "TODO" //    the property violated if any else report max depth reached (combines is-error & the cause from error-trace)
         << "TODO" //    is it a valid state
