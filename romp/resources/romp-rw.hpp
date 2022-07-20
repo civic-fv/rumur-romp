@@ -39,6 +39,7 @@ private:
   static id_t next_id;
   const id_t id;
   const unsigned int init_rand_seed;
+  const size_t startstate_id;  //TODO (ANDREW) assign this during init
   unsigned int rand_seed;
   State_t state;
   size_t _fuel = OPTIONS.depth;
@@ -53,9 +54,9 @@ private:
   // as a circular buffer array)
   id_t history[_ROMP_STATE_HISTORY_LEN];
 #ifdef __ROMP__DO_MEASURE
-  unsigned int init_time;
-  unsigned int start_time;
-  unsigned int active_time = 0;
+  time_t init_time;
+  time_t start_time;
+  time_t active_time = 0;
 #endif
   
   static void init_state(RandWalker* rw) noexcept {
@@ -201,7 +202,7 @@ private:
   //  the calling context should ensure that the RandWalker is not being used else where & safe output to the ostream 
   friend std::ostream& operator << (std::ostream& out, const RandWalker& rw) {
 #ifdef __ROMP__DO_MEASURE
-    unsigned int total_time = (time(NULL)-rw.init_time);
+    time_t total_time = (time(NULL)-rw.init_time);
 #endif
     if (OPTIONS.do_trace && rw.json != nullptr) {
       if (rw._valid) // if it didn't end in an error we need to: 
@@ -209,7 +210,7 @@ private:
                   << ",\"error-trace\":[]"; // output empty error-trace
       *rw.json << ",\"results\":{\"depth\":"<< OPTIONS.depth-rw._fuel <<",\"valid\":" << rw._valid << ",\"is-error\":"<< rw._is_error
 #ifdef __ROMP__DO_MEASURE
-                                  << ",\"active-time\":" << rw.active_time << ",\"total-time\":"
+                                  << ",\"active-time\":" << rw.active_time << ",\"total-time\":" << total_time
 #else
                                   << ",\"active-time\":null,\"total-time\":null" 
 #endif
@@ -217,16 +218,25 @@ private:
                << "}" // closes top level trace object
     }
     //TODO write result plain text string (not json) to "out" (the variable in func parameter)
-    out << "TODO" // ...
-        << "TODO" // ...
-        << "TODO" // ...
-        << "TODO" // ...
+    out << "TODO" /* opening remarks */
+        << "TODO" // rw.init_rand_seed
+        << "TODO" // startstate selected (use ::__caller__::STARTSTATES[rw.startstate_id])
+        << "TODO" // Trace info Lite™ (header)
+        << "TODO" //  history (if it exists)
+        << "TODO" //  final state value
+        << "TODO" // ... maybe more stuff
+        << "TODO" // report of conditions (header)
+        << "TODO" //    the property violated if any else report max depth reached (combines is-error & the cause from error-trace)
+        << "TODO" //    is it a valid state
+        << "TODO" //    "depth" explored
+        << "TODO" // metrics header
 #ifdef __ROMP__DO_MEASURE
-        << "TODO" // active time
-        << "TODO" // total time
-        << "TODO" // states discovered (TODO)
+        << "TODO" //  states discovered (TODO)
+        << "TODO" //  runtime info sub-header
+        << "TODO" //      active time
+        << "TODO" //      total time
 #endif
-        << "TODO" /* ... */;
+        << "TODO" /* closing remarks */;
 
     return out;
   }
