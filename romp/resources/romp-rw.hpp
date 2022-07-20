@@ -75,9 +75,7 @@ private:
   }
 
   void trace_metadata_out() const {
-    *json << "{"; 
-    // TODO (AJANATHA) put in meta data here
-    *json << "}"; 
+    *json << "{"\metadata":"details_on_model",\"model"\:<<"str:file-path" <<",\"seed\":"<<OPTIONS.rand_seed<<",\"max-depth\":"<<OPTIONS.depth <<"}";
   }
 
 public:
@@ -134,7 +132,6 @@ private:
   }
 
   void sim1Step_trace() noexcept {
-    //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
     const RuleSet& rs= rand_ruleset();
     const Rule& r= rand_rule(rs);
     bool pass = false;
@@ -181,7 +178,7 @@ private:
   }
 
   friend std::ostream& operator << (std::ostream& out, const RandWalker& rw) {
-      // TODO output results to `out`
+    *json << "{"\"max-depth\":"<<OPTIONS.depth <<","\"valid\":"<<validvariable?<<","\"Is-error\":"<<FALSE <<"}";
   }
 
   bool assertion_handler(bool expr, id_t prop_id) {
