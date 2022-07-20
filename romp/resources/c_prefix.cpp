@@ -18,6 +18,7 @@
 // #include <stdbool.h>
 #include <cstddef>
 #include <cstdio>
+#include <iostream>
 // #include <stdlib.h>
 #include <string>
 #include <fstream>
@@ -165,8 +166,6 @@ namespace romp {
     ojstream<O>& operator << (const long val) { out << val; return *this; }
     ojstream<O>& operator << (const unsigned int val) { out << val; return *this; }
     ojstream<O>& operator << (const int val) { out << val; return *this; }
-    ojstream<O>& operator << (const unsigned short val) { out << val; return *this; }
-    ojstream<O>& operator << (const short val) { out << val; return *this; }
     ojstream<O>& operator << (const unsigned short val) { out << val; return *this; }
     ojstream<O>& operator << (const short val) { out << val; return *this; }
     ojstream<O>& operator << (const bool val) { out << (val) ? "true" : "false"; return *this; }
