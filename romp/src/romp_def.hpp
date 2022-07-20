@@ -46,23 +46,23 @@
 #define ROMP_CALLER_RULESETS_VAR "::"ROMP_CALLER_NAMESPACE_NAME "::" ROMP_CALLER_RULESETS_VAR_NAME
 // #define ROMP_RULESET_INFOS_LEN "_ROMP_RULESET_INFO_LEN"
 #define ROMP_INFO_RULESETS_VAR_NAME "RULESET_INFOS"
-#define ROMP_INFO_RULESETS_DECL "const " ROMP_UTIL_NAMESPACE "::RuleSetInfo " ROMP_INFO_RULESETS_VAR_NAME "[" ROMP_RULESETS_LEN "]";
+#define ROMP_INFO_RULESETS_DECL "const " ROMP_UTIL_NAMESPACE "::RuleInfo " ROMP_INFO_RULESETS_VAR_NAME "[" ROMP_RULESETS_LEN "]";
 #define ROMP_INFO_RULESETS_VAR "::" ROMP_INFO_NAMESPACE_NAME "::" ROMP_INFO_RULESETS_VAR_NAME
 
 #define ROMP_PROPERTY_RULES_LEN "_ROMP_PROPERTY_RULES_LEN"
 #define ROMP_CALLER_PROPERTIES_VAR_NAME "PROPERTIES"
-#define ROMP_CALLER_PROPERTIES_DECL "const " ROMP_UTIL_NAMESPACE "::Property " ROMP_CALLER_PROPERTIES_VAR_NAME "[" ROMP_PROPERTIES_LEN "]"
+#define ROMP_CALLER_PROPERTIES_DECL "const " ROMP_UTIL_NAMESPACE "::Property " ROMP_CALLER_PROPERTIES_VAR_NAME "[" ROMP_PROPERTY_RULES_LEN "]"
 #define ROMP_PROPERTY_INFOS_LEN "_ROMP_PROPERTIES_LEN"
 #define ROMP_INFO_PROPERTIES_VAR_NAME "PROPERTY_INFOS"
-#define ROMP_INFO_PROPERTIES_DECL "const " ROMP_UTIL_NAMESPACE "::PropertyInfo " ROMP_INFO_PROPERTIES_VAR_NAME "[" ROMP_PROPERTIES_LEN "]"
+#define ROMP_INFO_PROPERTIES_DECL "const " ROMP_UTIL_NAMESPACE "::PropertyInfo " ROMP_INFO_PROPERTIES_VAR_NAME "[" ROMP_PROPERTY_INFOS_LEN "]"
 #define ROMP_INFO_PROPERTIES_VAR "::" ROMP_INFO_NAMESPACE_NAME "::" ROMP_INFO_PROPERTIES_VAR_NAME
 
 #define ROMP_STARTSTATE_RULES_LEN "_ROMP_STARTSTATES_LEN"
 #define ROMP_CALLER_STARTSTATE_VAR_NAME "STARTSTATES"
-#define ROMP_CALLER_STARTSTATES_DECL "const " ROMP_UTIL_NAMESPACE "::StartState " ROMP_CALLER_STARTSTATE_VAR_NAME "[" ROMP_STARTSTATES_LEN "]"
+#define ROMP_CALLER_STARTSTATES_DECL "const " ROMP_UTIL_NAMESPACE "::StartState " ROMP_CALLER_STARTSTATE_VAR_NAME "[" ROMP_STARTSTATE_RULES_LEN "]"
 #define ROMP_STARTSTATE_INFOS_LEN "_ROMP_STARTSTATE_INFO_LEN"
 #define ROMP_INFO_STARTSTATE_VAR_NAME "STARTSTATE_INFOS"
-#define ROMP_INFO_STARTSTATES_DECL "const " ROMP_UTIL_NAMESPACE "::StartStateInfo " ROMP_INFO_STARTSTATE_VAR_NAME "[" ROMP_STARTSTATES_LEN "]"
+#define ROMP_INFO_STARTSTATES_DECL "const " ROMP_UTIL_NAMESPACE "::StartStateInfo " ROMP_INFO_STARTSTATE_VAR_NAME "[" ROMP_STARTSTATE_INFOS_LEN "]"
 #define ROMP_INFO_STARTSTATES_VAR "::" ROMP_INFO_NAMESPACE_NAME "::" ROMP_INFO_STARTSTATE_VAR_NAME
 
 #define ROMP_ERRORS_LEN "_ROMP_ERRORS_LEN"
@@ -113,17 +113,17 @@
 #define ROMP_MAKE_LOCATION_STRUCT(_loc) "{{" << (_loc).begin.line << "," << (_loc).begin.column << "},"\
                                          "{" << (_loc).end.line << "," << (_loc).end.column << "}}"
 
-#define ROMP_MAKE_RULE_INFO_STRUCT(_n, _json) "{" << (_n).name << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << escape(_json) << "\"}"
-#define ROMP_MAKE_PROPERTY_INFO_STRUCT(_n, _id, _name, _pt, _json) "{" << (_name) << "," << (_pt) << ",\"" << escape((_n).property.expr->to_string()) << "\"," << (_id) << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << escape(_json) << "\"}"
-#define ROMP_MAKE_STARTSTATE_INFO_STRUCT(_n, _json) "{" << (_n).name << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << escape(_json) << "\"}"
-#define ROMP_MAKE_ERROR_INFO_STRUCT(_n, _inFunct, _json) "{" << (_n).message << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << (_inFunct) << ",\"" << escape(_json) << "\"}"
-#define ROMP_MAKE_FUNCT_INFO_STRUCT(_n, _json, _str) "{" << (_n).name << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << escape(_json) << "\",\"" << escape(_str) << "\"}"
+#define ROMP_MAKE_RULE_INFO_STRUCT(_n, _json) "{\"" << escape((_n).name) << "\"," ROMP_MAKE_LOCATION_STRUCT((_n).loc) ",\"" << escape(_json) << "\"}"
+#define ROMP_MAKE_PROPERTY_INFO_STRUCT(_n, _id, _name, _pt, _json) "{" << (_name) << "," << (_pt) << ",\"" << escape((_n).property.expr->to_string()) << "\"," << (_id) << "," ROMP_MAKE_LOCATION_STRUCT((_n).loc) ",\"" << escape(_json) << "\"}"
+#define ROMP_MAKE_STARTSTATE_INFO_STRUCT(_n, _json) "{\"" << escape((_n).name) << "\"," ROMP_MAKE_LOCATION_STRUCT((_n).loc) ",\"" << escape(_json) << "\"}"
+#define ROMP_MAKE_ERROR_INFO_STRUCT(_n, _inFunct, _json) "{\"" << escape((_n).message) << "\"," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << (_inFunct) << ",\"" << escape(_json) << "\"}"
+#define ROMP_MAKE_FUNCT_INFO_STRUCT(_n, _json, _str) "{\"" << escape((_n).name) << "\"," ROMP_MAKE_LOCATION_STRUCT((_n).loc) ",\"" << escape(_json) << "\",\"" << escape(_str) << "\"}"
 
 #define ROMP_MAKE_RULESET_STRUCT_HEADER(_info_id) "{" ROMP_INFO_RULESETS_VAR"[" <<(_info_id)<<"]" ",{" 
 #define ROMP_MAKE_RULESET_STRUCT_FOOTER(...) "}}" 
 #define ROMP_MAKE_RULE_STRUCT(_guard, _action, _info_id, _json, _str) "{" << (_guard) << "," << (_action) << "," ROMP_INFO_RULESETS_VAR "[" <<(_info_id)<<"],\"" << escape(_json) << "\",\"" << escape(_str) << "\"}"
 #define ROMP_MAKE_PROPERTY_STRUCT(_check, _info_id, _json, _str) "{" << (_check) << "," ROMP_INFO_PROPERTIES_VAR "[" <<(_info_id)<<"],\"" << escape(_json) << "\",\"" << escape(_str) << "\"}"
-#define ROMP_MAKE_STARTSTATE_STRUCT(_init, _info_id, _json, _str) "{" << (_init) << "," ROMP_INFO_STARTSTATE_VAR "[" <<(_info_id)<<"],\"" << escape(_json) << "\",\"" << escape(_str) << "\"}"
+#define ROMP_MAKE_STARTSTATE_STRUCT(_init, _info_id, _json, _str) "{" << (_init) << "," ROMP_INFO_STARTSTATES_VAR "[" <<(_info_id)<<"],\"" << escape(_json) << "\",\"" << escape(_str) << "\"}"
 
 
 #define ROMP_MAKE_MODEL_ERROR_PROPERTY(_n,_id) ROMP_MODEL_ERROR_TYPE_PROPERTY "(" << (_id) << ")"

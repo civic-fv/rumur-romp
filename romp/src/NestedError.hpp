@@ -22,7 +22,15 @@
 #include <regex>
 #include <ostream>
 
+std::ostream& operator << (std::ostream& out, const rumur::Error& er);
+std::ostream& operator << (std::ostream& out, const std::exception& er);
+
 namespace romp {
+
+// template<typename T>
+// void fprint_exception(std::ostream& out, const T& ex) noexcept;
+// template<typename T>
+// void fprint_exception(std::ostream& out, const T& ex, const std::string& prefix) noexcept;
 
 void fprint_exception(std::ostream& out, const rumur::Error& ex) noexcept;
 void fprint_exception(std::ostream& out, const rumur::Error& ex, const std::string& prefix) noexcept;

@@ -134,6 +134,21 @@ static dup_t make_stdin_dup() {
   return dup_t(buffer, copy);
 }
 
+std::string trim(const std::string &s)
+{
+    auto start = s.begin();
+    while (start != s.end() && std::isspace(*start)) {
+        start++;
+    }
+ 
+    auto end = s.end();
+    do {
+        end--;
+    } while (std::distance(start, end) > 0 && std::isspace(*end));
+ 
+    return std::string(start, end + 1);
+}
+
 int main(int argc, char **argv) {
 
   // parse command line options
@@ -168,14 +183,14 @@ int main(int argc, char **argv) {
   try {
     resolve_symbols(*m);
     validate(*m);
-  } catch (rumur::Error &e) {
-    romp::fprint_exception(std::cerr, e);
+  } catch (const rumur::Error& e) {
+    std::cerr << e << "\n";
     // std::cerr << e.loc << ":" << e.what() << "\n";
     return EXIT_FAILURE;
-  } catch (std::exception& ex) {
-    std::cerr << "[[DEV ERROR : BEGIN]]\n";
-    romp::fprint_exception(std::cerr, ex);
-    std::cerr << "[[DEV ERROR : END]]\n";
+  } catch (const std::exception& ex) {
+    std::cerr << "[[DEV ERROR : BEGIN]]\n"
+              << ex << "\n"
+              << "[[DEV ERROR : END]]\n";
     return EXIT_FAILURE;
   }
 
@@ -196,18 +211,22 @@ int main(int argc, char **argv) {
   try {
   // output code
   // if (source) {
-    generate_c(*m, comments, pack, (out == nullptr) ? std::cout : *out, in_filename, "<not-implemented-yet>");
+    in_filename = trim(in_filename);
+    auto start = ((in_filename[0]=='"') ? ++(in_filename.begin()) : in_filename.begin() );
+    auto stop = ((in_filename[in_filename.size()-1]=='"') ? --(in_filename.end()) : in_filename.end() );
+    file_path = std::string(start,stop);
+    generate_c(*m, comments, pack, (out == nullptr) ? std::cout : *out, "<not-implemented-yet>");
   // } else {
   //   generate_h(*m, comments, pack, out == nullptr ? std::cout : *out);
   // }
-  } catch (rumur::Error &e) {
-    romp::fprint_exception(std::cerr, e);
+  } catch (const rumur::Error& e) {
+    std::cerr << e << "\n";
     // std::cerr << e.loc << ":" << e.what() << "\n";
     return EXIT_FAILURE;
-  } catch (std::exception& ex) {
-    std::cerr << "[[DEV ERROR : BEGIN]]\n";
-    romp::fprint_exception(std::cerr, ex);
-    std::cerr << "[[DEV ERROR : END]]\n";
+  } catch (const std::exception& ex) {
+    std::cerr << "[[DEV ERROR : BEGIN]]\n"
+              << ex << "\n"
+              << "[[DEV ERROR : END]]\n";
     return EXIT_FAILURE;
   }
 

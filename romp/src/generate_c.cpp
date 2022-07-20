@@ -39,9 +39,9 @@ class CGenerator : public CLikeGenerator {
 private:
   static const std::unordered_set<std::string> RESERVED_VAR_NAMES; //{ROMP_RESERVED_NAMES};
   // std::vector<std::string> state_vars;
-  std::vector<rumur::Ptr<rumur::SimpleRule>> rules;
-  std::vector<rumur::Ptr<rumur::PropertyRule>> property_rules;
-  std::vector<rumur::Ptr<rumur::StartState>> startstates;
+  // std::vector<rumur::Ptr<rumur::SimpleRule>> rules;
+  // std::vector<rumur::Ptr<rumur::PropertyRule>> property_rules;
+  // std::vector<rumur::Ptr<rumur::StartState>> startstates;
   std::strstream prop_info_list;
   std::strstream error_info_list;
   id_t next_property_rule_id = 0u;
@@ -149,7 +149,7 @@ public:
   void visit_propertyrule(const PropertyRule &n) final {
     inType = RULE;
     id_t prop_id = next_property_rule_id++;
-    property_rules.push_back(Ptr<const PropertyRule>::make(n));
+    // property_rules.push_back(Ptr<const PropertyRule>::make(n));
     // function prototype
     *this << indentation() << CodeGenerator::M_PROPERTY__FUNC_ATTRS << "\n"
           << indentation() << "void " ROMP_PROPERTYRULE_PREFIX << n.name << "(";
@@ -160,9 +160,11 @@ public:
     } else {
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
+        if (q.type == nullptr || q.decl == nullptr || q.decl->type == nullptr)
+          throw Error("(property-rule) Quantifier is missing type/decl info !! \t[dev-error]",q.loc);
         *this << sep // ;
               << "const " // quantifier parameters should never be edited
-              << *(q.decl->type) << " " << q.name;
+              << *(q.type) << " " << q.name;
         // if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
         //   *this << *t; //t->name;
         // else
@@ -186,7 +188,7 @@ public:
 
     processing_global_prop = true;
     const auto stmt = Ptr<PropertyStmt>::make(n.property,n.name,n.loc);
-    *this << indentation() // << "return ";
+    *this // << indentation() // << "return ";
           << *stmt;
     processing_global_prop = false;
     // *this << "(" << *n.property.expr << ");\n";
@@ -207,7 +209,7 @@ public:
 
   void visit_simplerule(const SimpleRule &n) final {
     inType = RULE;
-    rules.push_back(Ptr<const SimpleRule>(&n));
+    // rules.push_back(Ptr<const SimpleRule>(&n));
     id_t id = next_rule_id++;
 
     *this << indentation() << CodeGenerator::M_RULE_GUARD__FUNC_ATTRS << "\n"
@@ -219,9 +221,11 @@ public:
     } else {
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
+        if (q.type == nullptr || q.decl == nullptr || q.decl->type == nullptr)
+          throw Error("(rule-guard) Quantifier is missing type/decl info !! \t[dev-error]",q.loc);
         *this << sep // ;
               << "const "  // quantifier parameters should never be edited
-              << *(q.decl->type) << " " << q.name;
+              << *(q.type) << " " << q.name;
         /// if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
         //   *this << *t; //t->name;
         // else
@@ -257,8 +261,8 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
-                          ROMP_MAKE_MODEL_ERROR_GUARD(n,id) " ); }\n";
+    *this << indentation() << "} catch (...) { ::std::throw_with_nested( "
+                                  ROMP_MAKE_MODEL_ERROR_RULE_GUARD(n,id) " ); }\n";
 
     dedent();
     *this << indentation() << "}\n\n";
@@ -272,9 +276,11 @@ public:
     } else {
       std::string sep;
       for (const Quantifier &q : n.quantifiers) {
+        if (q.type == nullptr || q.decl == nullptr || q.decl->type == nullptr)
+          throw Error("(rule-action) Quantifier is missing type/decl info !! \t[dev-error]",q.loc);
         *this << sep // ;
               << "const " // quantifier parameters should never be edited
-              << *(q.decl->type) << " " << q.name;
+              << *(q.type) << " " << q.name;
         // if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
         //   *this << *t; //t->name;
         // else
@@ -328,7 +334,7 @@ public:
 
   void visit_startstate(const StartState &n) final {
     inType = RULE;
-    startstates.push_back(Ptr<const StartState>(&n));
+    // startstates.push_back(Ptr<const StartState>(&n));
     id_t id = next_startstate_id++;
     
     *this << indentation() << CodeGenerator::M_STARTSTATE__FUNC_ATTRS 
@@ -339,10 +345,12 @@ public:
       *this << "void";
     } else {
       std::string sep;
-      for (const Quantifier &q : n.quantifiers) {
+      for (const auto q : n.quantifiers) {
+        if (q.type == nullptr || q.decl == nullptr || q.decl->type == nullptr)
+          throw Error("(startstate) Quantifier is missing type/decl info !! \t[dev-error]",q.loc);
         *this << sep // ;
               << "const " // quantifier parameters should never be edited
-              << *(q.decl->type) << " " << q.name;
+              << *(q.type) << " " << q.name;
         /// if (auto t = dynamic_cast<const TypeExprID *>(q.type.get()))
         //   *this << *t; //t->name;
         // else
@@ -355,6 +363,9 @@ public:
     *this << ") throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n"; 
+
+    *this << indentation() << "try {\n";
+    indent(); 
 
     // aliases, variables, local types, etc.
     for (const Ptr<AliasDecl> &a : n.aliases) {
@@ -408,7 +419,7 @@ public:
     *this << ")\n";
   }
 
-  void gen_ruleset_array() {
+  void gen_ruleset_array(const std::vector<rumur::Ptr<rumur::SimpleRule>>& rules) {
     std::strstream ruleset_array;
     ruleset_array << indentation() << ROMP_CALLER_RULESETS_DECL " = {";
     std::string rs_sep = "\n\t\t";
@@ -452,15 +463,14 @@ public:
   }
 
 
-  void gen_property_array() {
+  void gen_property_array(const std::vector<rumur::Ptr<rumur::PropertyRule>>& property_rules) {
     std::strstream prop_list;
     prop_list << ROMP_CALLER_PROPERTIES_DECL " = {";
     id_t _lid = 0u;
-    // size_t count = 0u;
+    size_t count = 0u;
     std::string sep = "";
     for (const Ptr<const PropertyRule>& prop : property_rules) {
       *this << indentation() << "/* --- Property Rule(s) generated by: `" << prop->name << "` (RuleSet expansions) --- */\n";
-      int tmp = 0;
       SigPerm sigs(prop);
       for (auto& sig : sigs) {
         std::string _check = ROMP_PROPERTYRULE_PREFIX + prop->name + "__" + int_to_hex(sig.index);
@@ -472,7 +482,7 @@ public:
                "return s." ROMP_PROPERTYRULE_PREFIX << sig << "; }\n";
         prop_list << sep << ROMP_MAKE_PROPERTY_STRUCT(_check,_lid,sig.to_json(),sig.to_string());
         sep = ", ";
-        // ++count;
+        ++count;
       }
       ++_lid;
     }
@@ -482,11 +492,11 @@ public:
   }
 
 
-  void gen_startstate_array() {
+  void gen_startstate_array(const std::vector<rumur::Ptr<rumur::StartState>>& startstates) {
     std::strstream prop_list;
     prop_list << ROMP_CALLER_STARTSTATES_DECL " = {";
     id_t info_id = 0u;
-    // size_t count = 0u;
+    size_t count = 0u;
     std::string sep = "";
     for (const Ptr<const StartState>& startstate : startstates) {
       *this << indentation() << "/* --- StartState Rule(s) generated by: `" << startstate->name << "` (RuleSet expansions) --- */\n";
@@ -502,7 +512,7 @@ public:
                "return s." ROMP_STARTSTATE_PREFIX << sig << "; }\n";
         prop_list << sep << ROMP_MAKE_STARTSTATE_STRUCT(_init,info_id,sig.to_json(),sig.to_string());
         sep = ", ";
-        // ++count;
+        ++count;
       }
       ++info_id;
     }
@@ -556,7 +566,7 @@ public:
     *this << "\n";
   }
 
-  void CLikeGenerator::visit_errorstmt(const ErrorStmt &n) {
+  void visit_errorstmt(const ErrorStmt &n) {
     id_t id = next_error_id++;
     *this << indentation() << "if (" ROMP_ERROR_HANDLER(id) ")\n";
     indent();
@@ -582,8 +592,8 @@ public:
     *this << "\n" << indentation() << "namespace " ROMP_TYPE_NAMESPACE " {\n";
     indent();
 
-    *this << indentation() << "typedef " << value_type << "range_t;\n"
-          << indentation() << "typedef " << value_type << "scalarset_t;\n";
+    *this << indentation() << "typedef " << value_type << " range_t;\n"
+          << indentation() << "typedef unsigned int scalarset_t;\n";
 
     CTypeGenerator type_gen(comments, out, pack, 
       [&](const ConstDecl &_n) -> void {visit_constdecl(_n);});
@@ -617,13 +627,27 @@ public:
     for (const Ptr<const Function> &funct : sorter.funct_decls)
       *this << *funct << "\n";
 
-    *this << "\n" << indentation() << "/* ======= Murphi Model Rules, StartStates & Invariants ====== */\n\n"; // << std::flush;
+    *this << "\n" << indentation() << "/* ======= Murphi Model StartStates, Rules & Global Properties ====== */\n\n"; // << std::flush;
     // split.rule_decls.visit(*this);
-    for (const Ptr<const Rule> &_r : sorter.rule_decls) {
-      std::vector<Ptr<Rule>> rs = _r->flatten();
-      for (const Ptr<const Rule> &r2 : rs)
-        *this << *r2 << "\n";
-    }
+    // for (const Ptr<const Rule> &_r : sorter.rule_decls) {
+    //   std::vector<Ptr<Rule>> rs = _r->flatten();
+    //   for (auto &r2 : rs) {
+    //     if (_r->quantifiers.size() < r2->quantifiers.size())
+    //       throw Error("rule did not flatten properly\t[dev-error]",_r->loc);
+    //     for (int i=0; i<_r->quantifiers.size(); ++i) // bad lazy patch that will not work for nested rulesets!!
+    //       r2->quantifiers[i] = _r->quantifiers[i]; // reason: flattening is loosing pointers to quantifier members 
+    //     *this << *r2 << "\n";
+    //   }
+    // }
+    for (const auto& _s : sorter.startstate_decls)
+      *this << *_s << "\n";
+    *this << "\n";
+    for (const auto& _r : sorter.rule_decls)
+      *this << *_r << "\n";
+    *this << "\n";
+    for (const auto& _p : sorter.property_decls)
+      *this << *_p << "\n";
+  
     dedent();
     *this << "\n" << indentation() << "};\n"; // << std::flush;
 
@@ -643,11 +667,11 @@ public:
           // << "#define " ROMP_PROPERTY_RULES_LEN " (" << property_rules.size() <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"
           << indentation() << "// the info/metadata about the murphi properties in the model\n"
           << indentation() << sorter.prop_info_list.str() << prop_info_list.str() << "};\n"
-          << "#define " ROMP_STARTSTATE_INFOS_LEN " (" << startstates.size() <<  "ul) // the number of start state rules (before ruleset expansions) in the model\n"
+          << "#define " ROMP_STARTSTATE_INFOS_LEN " (" << sorter.startstate_decls.size() <<  "ul) // the number of start state rules (before ruleset expansions) in the model\n"
           // << "#define " ROMP_STARTSTATE_RULES_LEN " (" << startstates.size() <<  "ul) // the number of start state rules (after ruleset expansions) in the model\n"
           << indentation() << "// the info/metadata about the startstate rules in the model\n"
           << indentation() << sorter.startstate_info_list.str() << "};\n"
-          << "#define " ROMP_RULESETS_LEN " (" << rules.size() << "ul) // the number of rules (before ruleset expansion) in the model\n"
+          << "#define " ROMP_RULESETS_LEN " (" << sorter.rule_decls.size() << "ul) // the number of rules (before ruleset expansion) in the model\n"
           << indentation() << "// the info/metadata about the rules in the model\n"
           << indentation() << sorter.rule_info_list.str() << "};\n";
     dedent();
@@ -659,9 +683,9 @@ public:
 
     *this << indentation() << "typedef " ROMP_STATE_TYPE " State_t; // type mask for the generated state object\n";
 
-    // gen_ruleset_array();
-    // gen_property_array();
-    // gen_startstate_array();
+    gen_ruleset_array(sorter.rule_decls);
+    gen_property_array(sorter.property_decls);
+    gen_startstate_array(sorter.startstate_decls);
 
     dedent();
     *this << "\n" << indentation() << "}\n\n"; // << std::flush;
@@ -679,7 +703,7 @@ public:
     buf << "{\"$type\":\"error-statement\",";
     buf << "\"label\":\"" << escape(rule.message) << "\","
             "\"loc\":{\"$type\":\"location\","
-                      "\"file\":\"" << *rule.loc.begin.filename << "\","
+                      "\"file\":\"" << escape(file_path) <<  "\","
     //                   "\"inside\":\"";
     // // TODO ...
     // buf <<            "\","
@@ -695,7 +719,7 @@ public:
         << "\"label\":\"" << escape(prop.message == "" ? prop.property.expr->to_string() : prop.message) << "\","
         << "\"expr\":\"" << escape(prop.property.expr->to_string()) << "\","
             "\"loc\":{\"$type\":\"location\","
-                      "\"file\":\"" << *prop.loc.begin.filename << "\","
+                      "\"file\":\"" << escape(file_path) << "\","
     //                   "\"inside\":\"";
     // // TODO ...
     // buf <<            "\","
@@ -709,7 +733,7 @@ public:
   CGenerator& operator << (const int val) { out << val; return *this; }
   CGenerator& operator << (const rumur::Node& n) { dispatch(n); return *this; }
   CGenerator& operator << (const Sig& sig) { out << sig; return *this; }
-  friend CGenerator& operator << (CGenerator& out, const SigParam& param) { out << param; return *this; }
+  friend CGenerator& operator << (CGenerator& gen, const SigParam& param) { gen.out << param; return gen; }
   // CGenerator& operator << (const SigParam& param) { out << param; return *this; }
 };
 
@@ -718,11 +742,12 @@ const std::unordered_set<std::string> CGenerator::RESERVED_VAR_NAMES{ROMP_RESERV
 
 std::ostream& operator << (std::ostream& out, const Sig& sig) {
   out << sig.perm.rule->name << "(";
-  const char* sep = "";
-  for (const auto param& : sig.params) {
-    out << sep << param;
-    sep = ", ";
-  }
+  std::string sep;
+  for (auto param : sig.params) 
+    if (param != nullptr) {
+      out << sep << *param;
+      sep = ", ";
+    }
   return (out << ")");
 }
 
@@ -737,33 +762,19 @@ void output_embedded_code_file(std::ostream& out, const unsigned char* ecf, cons
     out << (char) ecf[i];
 }
 
-std::string trim(const std::string &s)
-{
-    auto start = s.begin();
-    while (start != s.end() && std::isspace(*start)) {
-        start++;
-    }
- 
-    auto end = s.end();
-    do {
-        end--;
-    } while (std::distance(start, end) > 0 && std::isspace(*end));
- 
-    return std::string(start, end + 1);
-}
+
 
 void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
-                std::ostream &out, const std::string& in_filename, const std::string& build_cmds) {
+                std::ostream &out, const std::string& build_cmds) {
 
   out << ROMP_GENERATED_FILE_PREFACE("\tGenerated code for a romp \"parallel random walker\" verification tool based off of the Murphi Model described in:\n"
-                                     "\t\tOriginal Murphi Model: " + in_filename + "\n"
-                                     "\tPlease build with the following command:\n") "\n";
+                                     "\t\tOriginal Murphi Model: " + file_path + "\n"
+                                     "\tPlease build with the following command(s):\n\t\t" + build_cmds + "") "\n";
 
   out << "\n#define __romp__GENERATED_CODE\n\n";
   out << "\n#define _ROMP_STATE_TYPE " ROMP_STATE_TYPE "\n\n";
-  out << "\n#define __model__filename \"" << in_filename << "\"\n\n";
-  auto _tmp = trim(in_filename);
-  auto _count = std::count(_tmp.begin(), _tmp.end(), ' ');
+  out << "\n#define __model__filename \"" << escape(file_path) << "\"\n\n";
+  auto _count = std::count(file_path.begin(), file_path.end(), ' ');
   out << "\n#define __model__filename_contains_space " 
       << ((_count > 0) ? "true" : "false") << "\n\n";
 

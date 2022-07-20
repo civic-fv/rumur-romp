@@ -14,5 +14,5 @@
 /// \param out Stream to write translation to
 void generate_c(const rumur::Node &n,
                 const std::vector<rumur::Comment> &comments, bool pack,
-                std::ostream &out, const std::string& in_filename,
+                std::ostream &out,
                 const std::string& build_cmds);

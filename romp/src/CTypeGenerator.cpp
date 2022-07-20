@@ -112,7 +112,7 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
       sep = ",";
     }
     *this << "]}\";";
-    *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
+    // *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
     
   } else {
     *this << indentation() << ROMP_MAKE_JSON_CONVERTER_HEADER(name);
@@ -125,7 +125,7 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
                 "\\\"value\\\":[\"; " // end double escape time
             "std::string sep; for (size_t i=0; i<val.size(); ++i) { json << sep <<  val.data[i]; sep = \",\"}"
             "json << \"]\"}";
-    *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
+    // *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
   }
   // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
   //          "if (" << ROMP_SHOW_TYPE_OPTION_EXPR << ") {" 
@@ -149,9 +149,9 @@ void CTypeGenerator::emit_stream_operators__enum(const std::string &name, const 
   *this << "json << \"{\\\"$type\":\\\"enum-value\\\","
                       "\\\"type\\\":\"" << escape(te.to_string()) << "\\\","
                       "\\\"value\\\":\\\"\"; "
-           "switch (val) { case: }" // TODO
+           "switch (val) { case: }"; // TODO
 
-  *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
+  // *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
   // *this << indentation() << "NLOHMANN_JSON_SERIALIZE_ENUM( " << name << ", { ";
   // for (auto &m : te.members)
   //   *this << "{" << m.first << "," 

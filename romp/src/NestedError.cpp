@@ -18,29 +18,44 @@
 #include <strstream>
 // #include <algorithm>
 
-namespace rumur {
+std::ostream& operator << (std::ostream& out, const rumur::Error& er) { romp::fprint_exception(out,er,""); return out; }
+std::ostream& operator << (std::ostream& out, const std::exception& er) { romp::fprint_exception(out,er,""); return out; }
+
+namespace romp {
 
 #define __romp__nested_exception__print_prefix "| "
 
-  void fprint_exception(std::ostream& out, const Error& ex, const std::string& prefix) noexcept {
+  // template<>
+  // void fprint_exception<Error>(std::ostream& out, const Error& ex) noexcept { fprint_exception(out,ex,""); }
+  // template<>
+  // void fprint_exception<Error>(std::ostream& out, const Error& ex, const std::string& prefix) noexcept {
+  
+  void fprint_exception(std::ostream& out, const rumur::Error& ex) noexcept { fprint_exception(out,ex,""); }
+  void fprint_exception(std::ostream& out, const rumur::Error& ex, const std::string& prefix) noexcept {
     out << prefix << ex.loc << " :: " << ex.what();
     try {
         std::rethrow_if_nested(ex);
-    } catch(const Error& mod_ex) {
-      fprint_exception(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
+    } catch(const rumur::Error& mod_ex) {
+      fprint_exception/* <rumur::Error> */(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
     } catch(const std::exception& ex) {
-      fprint_exception(out, ex, prefix + __romp__nested_exception__print_prefix);
+      fprint_exception/* <std::exception> */(out, ex, prefix + __romp__nested_exception__print_prefix);
     } catch(...) {}
   }
 
+  // template<>
+  // void fprint_exception<std::exception>(std::ostream& out, const std::exception& ex) noexcept { fprint_exception(out,ex,""); }
+  // template<>
+  // void fprint_exception<std::exception>(std::ostream& out, const std::exception& ex, const std::string& prefix) noexcept {
+  
+  void fprint_exception(std::ostream& out, const std::exception& ex) noexcept { fprint_exception(out,ex,""); }
   void fprint_exception(std::ostream& out, const std::exception& ex, const std::string& prefix) noexcept {
     out << prefix << ex.what() << '\n';
     try {
         std::rethrow_if_nested(ex);
-    } catch(const Error& mod_ex) {
-      fprint_exception(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
+    } catch(const rumur::Error& mod_ex) {
+      fprint_exception/* <rumur::Error> */(out, mod_ex, prefix + __romp__nested_exception__print_prefix);
     } catch(const std::exception& ex) {
-      fprint_exception(out, ex, prefix + __romp__nested_exception__print_prefix);
+      fprint_exception/* <std::exception> */(out, ex, prefix + __romp__nested_exception__print_prefix);
     } catch(...) {}
   }
 

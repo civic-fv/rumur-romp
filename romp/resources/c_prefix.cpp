@@ -508,6 +508,15 @@ namespace romp {
   }
 
 
+  // struct PrettyPrinter {
+  //   std::string
+  // }
+
+  // std::ostream& operator << (std::ostream& out, const State_t& state) {
+
+  // }
+
+
   class IRandWalker {
     /**
      * @brief the handler the model will call when it reaches an inline `assert`/`invariant` statement

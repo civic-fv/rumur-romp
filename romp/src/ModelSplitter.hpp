@@ -54,7 +54,9 @@ public: // ---- Public Class Members ---- //
   std::vector<rumur::Ptr<rumur::Decl>> global_decls;
   std::vector<rumur::Ptr<rumur::VarDecl>> state_var_decls;
   std::vector<rumur::Ptr<rumur::Function>> funct_decls;
-  std::vector<rumur::Ptr<rumur::Rule>> rule_decls;
+  std::vector<rumur::Ptr<rumur::StartState>> startstate_decls;
+  std::vector<rumur::Ptr<rumur::SimpleRule>> rule_decls;
+  std::vector<rumur::Ptr<rumur::PropertyRule>> property_decls;
   std::strstream funct_info_list;
   std::strstream rule_info_list;
   std::strstream startstate_info_list;

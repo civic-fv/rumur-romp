@@ -149,7 +149,7 @@ void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
       dispatch(*f);
     } else if (const auto _r = dynamic_cast<const Rule *>(c.get())) {
       Ptr<Rule> r(_r->clone());
-      rule_decls.push_back(r);
+      // rule_decls.push_back(r);  // now sorting into type of usable rule types & flattening on the way down
       dispatch(*r);
     } else 
         // throw Error("Unexpected item in the global scope!!", _c->loc);
@@ -177,7 +177,7 @@ std::string to_json(const Rule& rule, const std::string rule_type) {
     buf << "\"expr\":\"" << escape(_r->guard->to_string()) << "\",";
   buf << "\"label\":\"" << escape(rule.name) << "\","
           "\"loc\":{\"$type\":\"location\","
-                    "\"file\":\"" << *rule.loc.begin.filename << "\","
+                    "\"file\":\"" << escape(file_path) <<  "\","
                     // "\"inside\":\"global\","
                     "\"start\":["<< rule.loc.begin.line << "," << rule.loc.begin.column << "],"  
                     "\"end\":["<< rule.loc.end.line << "," << rule.loc.end.column << "]}";
@@ -446,6 +446,8 @@ void ModelSplitter::_visit_quantifier(Quantifier& q) {
     q.decl->type = Ptr<TypeExprID>::make(name, decl, q.loc);
   } else 
     throw Error("the Quantifier has broken bounds!!", q.loc);
+  if (q.type == nullptr || q.decl == nullptr || q.decl->type == nullptr)
+    throw Error("(model-splitter) Quantifier is missing type/decl info !! \t[dev-error]",q.loc);
 }
 
 void ModelSplitter::visit_and_check_quantifier(Rule& r, Quantifier& q) {
@@ -496,16 +498,17 @@ void ModelSplitter::visit_propertyrule(PropertyRule &n) {
   }
   prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,id,n.name,pt,to_json(n,"property")) ",";
   ++next_property_id;
-  for (Quantifier& q : n.quantifiers)
-    _visit_quantifier(q);
+  // for (Quantifier& q : n.quantifiers)
+  //   _visit_quantifier(q);
+  property_decls.push_back(Ptr<PropertyRule>::make(n));
 }
 
 
 void ModelSplitter::visit_simplerule(SimpleRule &n) {
   //TODO: handle the cases of non-TypeExprId TypeExpr values
   rule_info_list << ROMP_MAKE_RULE_INFO_STRUCT(n,to_json(n,"rule")) ",";
-  for (Quantifier& q : n.quantifiers)
-    _visit_quantifier(q);
+  // for (Quantifier& q : n.quantifiers)
+  //   _visit_quantifier(q);
     // if (q.type != nullptr) 
     //   if (auto _td = dynamic_cast<TypeExprID *>(q.type.get())) {
     //     // do nothing
@@ -536,7 +539,7 @@ void ModelSplitter::visit_simplerule(SimpleRule &n) {
       insert_to_global_decls(Ptr<ConstDecl>(cd));
     }
   n.decls = _decls;
-
+  rule_decls.push_back(Ptr<SimpleRule>::make(n));
 }
 
 void ModelSplitter::visit_ruleset(rumur::Ruleset &n) {
@@ -551,31 +554,33 @@ void ModelSplitter::visit_ruleset(rumur::Ruleset &n) {
       //   insert_to_global_decls(decl);
       //   q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
       // }
-  for (auto _r : n.rules)
+  for (auto _r : n.rules) {
+    for (auto _a : n.aliases)
+      _r->aliases.push_back(_a);
+    for (auto q : n.quantifiers)
+      _r->quantifiers.push_back(q);
     dispatch(*_r);
+  }
 }
 
 
 void ModelSplitter::visit_aliasrule(rumur::AliasRule &n) {
-  for (auto _r : n.rules)
+  // for (Quantifier& q : n.quantifiers)
+  //     _visit_quantifier(q); 
+  for (auto _r : n.rules) {
+    for (auto _a : n.aliases)
+      _r->aliases.push_back(_a);
+    for (auto q : n.quantifiers)
+      _r->quantifiers.push_back(q);
     dispatch(*_r);
+  }
 }
 
 
 void ModelSplitter::visit_startstate(StartState &n) {
-  //TODO: handle the cases of non-TypeExprId TypeExpr values
   startstate_info_list << ROMP_MAKE_STARTSTATE_INFO_STRUCT(n,to_json(n,"startstate")) ",";
-  for (Quantifier &q : n.quantifiers) 
-  if (q.type != nullptr) 
-    if (auto _td = dynamic_cast<TypeExprID *>(q.type.get())) {
-      // do nothing
-    } else {
-      dispatch(*(q.type));
-      std::string name = gen_new_anon_name();
-      Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(q.type), q.type->loc));
-      insert_to_global_decls(decl);
-      q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
-  }
+  // for (Quantifier& q : n.quantifiers)
+  //   _visit_quantifier(q);
   std::vector<Ptr<Decl>> _decls(n.decls.size());
   for (Ptr<Decl> &d : n.decls)
     if (auto vd = dynamic_cast<VarDecl *>(d.get())) {
@@ -595,6 +600,7 @@ void ModelSplitter::visit_startstate(StartState &n) {
       insert_to_global_decls(Ptr<ConstDecl>(cd->clone()));
     }
   n.decls = _decls;
+  startstate_decls.push_back(Ptr<StartState>::make(n));
 }
 
 
