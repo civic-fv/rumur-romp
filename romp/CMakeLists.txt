@@ -54,7 +54,7 @@ add_executable(romp
   ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-main.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/resources_romp-rw-options.cpp
-  ${CMAKE_CURRENT_BINARY_DIR}/resources_lib_nlohmann_json.cpp
+  # ${CMAKE_CURRENT_BINARY_DIR}/resources_lib_nlohmann_json.cpp
   ../common/escape.cc
   ../common/help.cc
   src/check.cc
@@ -71,6 +71,7 @@ add_executable(romp
   src/CTypeGenerator.cpp
   src/NestedError.cpp
   src/SigPerm.cpp
+  src/nested_escape.cpp
   )
 
 target_include_directories(romp

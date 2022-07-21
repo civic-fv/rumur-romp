@@ -19,7 +19,8 @@
 #include "type_traverse.hpp"
 #include "options.h"
 #include "romp_def.hpp"
-#include "../../common/escape.h"
+#include "nested_escape.hpp"
+// #include "../../common/escape.h"
 #include <rumur/rumur.h>
 
 using namespace rumur;
@@ -100,14 +101,14 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
     *this << indentation() << ROMP_MAKE_JSON_CONVERTER_HEADER(name);
     *this << "json << \"" // double escape time
                 "{\\\"$type\\\":\\\"enum-array-value\\\","
-                "\\\"type\\\":\\\"" << escape(te.to_string()) << "\\\","
-                // "\\\"element-type\\\":\\\"" << escape(et_str) << "\\\"
-                // "\\\"index-type\\\":\\\"" << escape(it_str) <<"\\\","
+                "\\\"type\\\":\\\"" << nEscape(te.to_string()) << "\\\","
+                // "\\\"element-type\\\":\\\"" << nEscape(et_str) << "\\\"
+                // "\\\"index-type\\\":\\\"" << nEscape(it_str) <<"\\\","
                 "\\\"size\\\":\" << val.size() << \","
                 "\\\"value\\\":[";
     std::string sep;
     for (int i=0; i<_e->members.size(); ++i) {
-      *this << sep << "{\\\"$type\\\":\\\"kv-pair\\\",\\\"key\\\":\\\"" << escape(_e->members[i].first)
+      *this << sep << "{\\\"$type\\\":\\\"kv-pair\\\",\\\"key\\\":\\\"" << nEscape(_e->members[i].first)
                    << "\\\"value\\\":\" << val.data[" << std::to_string(i) << "] << \"}";
       sep = ",";
     }
@@ -118,9 +119,9 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
     *this << indentation() << ROMP_MAKE_JSON_CONVERTER_HEADER(name);
     *this << "json << \"" // double escape time
                 "{\\\"$type\\\":\\\"array-value\\\","
-                "\\\"type\\\":\\\"" << escape(te.to_string()) << "\\\","
-                // "\\\"element-type\\\":\\\"" << escape(et_str) << "\\\","
-                // "\\\"index-type\\\":\\\"" << escape(it_str) <<"\\\","
+                "\\\"type\\\":\\\"" << nEscape(te.to_string()) << "\\\","
+                // "\\\"element-type\\\":\\\"" << nEscape(et_str) << "\\\","
+                // "\\\"index-type\\\":\\\"" << nEscape(it_str) <<"\\\","
                 "\\\"size\\\":\" << val.size() << \","
                 "\\\"value\\\":[\"; " // end double escape time
             "std::string sep; for (size_t i=0; i<val.size(); ++i) { json << sep <<  val.data[i]; sep = \",\"}"
@@ -147,7 +148,7 @@ void CTypeGenerator::emit_stream_operators__enum(const std::string &name, const 
   return; //todo ...
   *this << indentation() << ROMP_MAKE_JSON_CONVERTER_HEADER(name);
   *this << "json << \"{\\\"$type\":\\\"enum-value\\\","
-                      "\\\"type\\\":\"" << escape(te.to_string()) << "\\\","
+                      "\\\"type\\\":\"" << nEscape(te.to_string()) << "\\\","
                       "\\\"value\\\":\\\"\"; "
            "switch (val) { case: }"; // TODO
 

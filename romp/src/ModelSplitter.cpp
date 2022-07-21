@@ -19,6 +19,7 @@
 #include "ModelSplitter.hpp"
 
 #include "../../common/escape.h"
+#include "nested_escape.hpp"
 #include "../../common/isa.h"
 #include "options.h"
 #include <cassert>
@@ -172,12 +173,12 @@ std::string to_json(const Rule& rule, const std::string rule_type) {
       case rumur::Property::LIVENESS:
         buf << "liveness"; break;
     }
-    buf << "\",\"expr\":\"" << escape(_prop->property.expr->to_string()) << "\",";
+    buf << "\",\"expr\":\"" << nEscape(_prop->property.expr->to_string()) << "\",";
   } else if (auto _r = dynamic_cast<const rumur::SimpleRule*>(&rule))
-    buf << "\"expr\":\"" << escape(_r->guard->to_string()) << "\",";
-  buf << "\"label\":\"" << escape(rule.name) << "\","
+    buf << "\"expr\":\"" << nEscape(_r->guard->to_string()) << "\",";
+  buf << "\"label\":\"" << nEscape(rule.name) << "\","
           "\"loc\":{\"$type\":\"location\","
-                    "\"file\":\"" << escape(file_path) <<  "\","
+                    "\"file\":\"" << nEscape(file_path) <<  "\","
                     // "\"inside\":\"global\","
                     "\"start\":["<< rule.loc.begin.line << "," << rule.loc.begin.column << "],"  
                     "\"end\":["<< rule.loc.end.line << "," << rule.loc.end.column << "]}";
@@ -189,18 +190,18 @@ std::string to_json(const Function& rule) {
   buf << "{\"$type\":\"" << ((rule.return_type == nullptr) 
                               ? "procedure" 
                               : "function\","
-                                "\"return-type\":\"" + escape(rule.return_type->to_string())) << "\","
-      << "\"label\":\"" << escape(rule.name) << "\","
+                                "\"return-type\":\"" + nEscape(rule.return_type->to_string())) << "\","
+      << "\"label\":\"" << nEscape(rule.name) << "\","
          "\"params\":[";
   std::string sep = "";
   for (auto& p : rule.parameters) {
     buf << sep << "{\"$type\":\"param\","
-                   "\"id\":\"" << escape(p->name) << "\","
-                   "\"type\":\"" << escape(p->type->to_string()) << "\"}";
+                   "\"id\":\"" << nEscape(p->name) << "\","
+                   "\"type\":\"" << nEscape(p->type->to_string()) << "\"}";
     sep = ",";
   }
   buf << "],\"loc\":{\"$type\":\"location\","
-                    "\"file\":\"" << escape(*rule.loc.begin.filename) << "\","
+                    "\"file\":\"" << nEscape(*rule.loc.begin.filename) << "\","
                     // "\"inside\":\"global\","
                     "\"start\":["<< rule.loc.begin.line << "," << rule.loc.begin.column << "],"  
                     "\"end\":["<< rule.loc.end.line << "," << rule.loc.end.column << "]}}";
@@ -210,26 +211,26 @@ std::string to_json(const Function& rule) {
 std::string to_string(const Function& f) {
   std::strstream buf;
   buf << ((f.return_type != nullptr) ? "function " : "procedure ")
-      << escape(f.name) << '(';
+      << nEscape(f.name) << '(';
   if (f.parameters.size() >= 1) {
     const VarDecl* _p = f.parameters[0].get();
     const VarDecl* p = nullptr;
     if (_p->readonly) buf << "var ";
-    buf << escape(_p->name);
+    buf << nEscape(_p->name);
     if (f.parameters.size() >= 2)
       for (int i=1; i<f.parameters.size(); ++i) {
         p = f.parameters[i].get();
         if (_p->readonly == p->readonly && _p->type->loc == _p->type->loc)
-          buf << ',' << escape(p->name);
+          buf << ',' << nEscape(p->name);
         else {
-          buf << ": " << escape(_p->type->to_string()) << "; ";
+          buf << ": " << nEscape(_p->type->to_string()) << "; ";
           if (p->readonly)
             buf << "var ";
-          buf << escape(p->name);
+          buf << nEscape(p->name);
         }
         _p = p;
       }
-    buf << ": " << escape(p->type->to_string());
+    buf << ": " << nEscape(p->type->to_string());
   }
   if (f.return_type != nullptr)
     buf << ") : " << f.return_type->to_string() << ';';
@@ -556,9 +557,9 @@ void ModelSplitter::visit_ruleset(rumur::Ruleset &n) {
       // }
   for (auto _r : n.rules) {
     for (auto _a : n.aliases)
-      _r->aliases.push_back(_a);
+      _r->aliases.push_back(rumur::Ptr<rumur::AliasDecl>(_a));
     for (auto q : n.quantifiers)
-      _r->quantifiers.push_back(q);
+      _r->quantifiers.push_back(rumur::Quantifier(q));
     dispatch(*_r);
   }
 }
@@ -569,9 +570,9 @@ void ModelSplitter::visit_aliasrule(rumur::AliasRule &n) {
   //     _visit_quantifier(q); 
   for (auto _r : n.rules) {
     for (auto _a : n.aliases)
-      _r->aliases.push_back(_a);
+      _r->aliases.push_back(rumur::Ptr<rumur::AliasDecl>(_a));
     for (auto q : n.quantifiers)
-      _r->quantifiers.push_back(q);
+      _r->quantifiers.push_back(rumur::Quantifier(q));
     dispatch(*_r);
   }
 }

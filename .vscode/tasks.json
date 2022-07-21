@@ -15,7 +15,7 @@
         {
             "type": "cmake",
             "label": "CMake: configure romp",
-            "detail": "use CMake to build the romp codegen tool",
+            "detail": "use CMake to configure the romp codegen tool for building",
             "command": "configure",
             "targets": [
                 "romp"
