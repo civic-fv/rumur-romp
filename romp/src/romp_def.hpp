@@ -153,6 +153,6 @@
 
 #define ROMP_RESERVED_NAMES "" ROMP_STATE_CLASS_NAME, "to_json", \
                             ROMP_MODEL_NAMESPACE_NAME, ROMP_CALLER_NAMESPACE_NAME, ROMP_UTIL_NAMESPACE_NAME, \
-                            "boolean", ROMP_STATE_RAND_WALKER_VAR, "std", ROMP_INFO_NAMESPACE_NAME
+                            "boolean", ROMP_STATE_RAND_WALKER_VAR, "std", ROMP_INFO_NAMESPACE_NAME, "res_"
 
 #endif

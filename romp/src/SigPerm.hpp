@@ -75,8 +75,10 @@ struct Sig {
   // Sig(size_t index_, std::vector<const SigParam*> params_, const SigPerm& perm_);
   Sig(size_t index_, size_t params_size, const SigPerm& perm_);
   Sig(const SigPerm& perm_);
-  Sig(const Sig& other);
+  Sig(const Sig& other); // copy constructor
   ~Sig(); // = default;
+  friend bool operator == (const Sig& l, const Sig& r) ;
+  friend bool operator != (const Sig& l, const Sig& r) ;
 private:
   const SigPerm& perm;
   friend std::ostream& operator << (std::ostream& out, const Sig& sig);
@@ -188,7 +190,7 @@ public:
   // << ========================================================================================== >> 
 
   struct Iterator {
-    const Sig operator*() const ;
+    const Sig& operator*() const ;
     const Sig* operator->() const ;
     // prefix iterator
     friend Iterator& operator ++ (Iterator&) ;
@@ -200,25 +202,29 @@ public:
   protected:
     void increment_item();
     void increment_param_iters();
-    void increment_param_iters(long level);
+    void increment_param_iters(signed long level);
   private:
     size_t index;
     // Sig* sig_ptr;
     Sig sig;
     const SigPerm& perm;
     // std::vector<std::vector<const SigParam&>::iterator> param_iters;
-    std::vector<size_t> param_iters;
+    // std::vector<size_t> param_iters;
+    size_t* param_iters; // dynamic array of index values for the various quantifiers for a 
   // public:
     // construct a "begin" iterator (ONLY)
     // Iterator(const SigPerm& perm_, std::vector<std::vector<const SigParam&>::iterator> param_iters_);
-    Iterator(const SigPerm& perm_, std::vector<size_t> param_iters_);
+    // Iterator(const SigPerm& perm_, std::vector<size_t> param_iters_);
+    Iterator(const SigPerm& perm_, size_t index_);
     // construct an "end" iterator (ONLY)
     Iterator(const SigPerm& perm_); // : index(perm_.size), perm(perm_) {}
+  public:
+    Iterator(const Iterator& other); // copy constructor
     friend SigPerm;
     friend Sig;
   public:
     // ~Iterator();
-    ~Iterator() = default;
+    ~Iterator(); // = default;
   };
 
   friend Iterator;

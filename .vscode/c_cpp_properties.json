@@ -9,7 +9,7 @@
                 "${workspaceFolder}/romp/resources"
             ],
             "defines": [
-                "__romp__PREGEN=1"
+                "__romp__PREGEN=1", "DEBUG"
             ],
             "compilerPath": "/usr/bin/gcc-9",
             "intelliSenseMode": "linux-clang-x64",
