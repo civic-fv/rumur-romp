@@ -42,19 +42,24 @@
 // #define ROMP_CALLER_RULE_DECL "const ::romp::Rule ";
 #define ROMP_RULESETS_LEN "_ROMP_RULESETS_LEN"
 #define ROMP_CALLER_RULESETS_VAR_NAME "RULESETS"
-#define ROMP_CALLER_RULESETS_DECL "const " ROMP_UTIL_NAMESPACE "::RuleSet " ROMP_CALLER_RULESETS_VAR_NAME "[" ROMP_RULESETS_LEN "]"
+#define ROMP_CALLER_RULE_TYPE ROMP_UTIL_NAMESPACE "::Rule"
+#define ROMP_CALLER_RULESETS_TYPE ROMP_UTIL_NAMESPACE "::RuleSet"
+#define ROMP_CALLER_RULESETS_DECL "const " ROMP_CALLER_RULESETS_TYPE " " ROMP_CALLER_RULESETS_VAR_NAME "[" ROMP_RULESETS_LEN "]"
 #define ROMP_CALLER_RULESETS_VAR "::" ROMP_CALLER_NAMESPACE_NAME "::" ROMP_CALLER_RULESETS_VAR_NAME
 // #define ROMP_RULESET_INFOS_LEN "_ROMP_RULESET_INFO_LEN"
 #define ROMP_INFO_RULESETS_VAR_NAME "RULESET_INFOS"
-#define ROMP_INFO_RULESETS_DECL "const " ROMP_UTIL_NAMESPACE "::RuleInfo " ROMP_INFO_RULESETS_VAR_NAME "[" ROMP_RULESETS_LEN "]"
+#define ROMP_INFO_RULESET_TYPE ROMP_UTIL_NAMESPACE "::RuleInfo"
+#define ROMP_INFO_RULESETS_DECL "const " ROMP_INFO_RULESET_TYPE " " ROMP_INFO_RULESETS_VAR_NAME "[" ROMP_RULESETS_LEN "]"
 #define ROMP_INFO_RULESETS_VAR "::" ROMP_INFO_NAMESPACE_NAME "::" ROMP_INFO_RULESETS_VAR_NAME
 
 #define ROMP_PROPERTY_RULES_LEN "_ROMP_PROPERTY_RULES_LEN"
 #define ROMP_CALLER_PROPERTIES_VAR_NAME "PROPERTIES"
-#define ROMP_CALLER_PROPERTIES_DECL "const " ROMP_UTIL_NAMESPACE "::Property " ROMP_CALLER_PROPERTIES_VAR_NAME "[" ROMP_PROPERTY_RULES_LEN "]"
+#define ROMP_CALLER_PROPERTY_TYPE ROMP_UTIL_NAMESPACE "::Property"
+#define ROMP_CALLER_PROPERTIES_DECL "const " ROMP_CALLER_PROPERTY_TYPE " " ROMP_CALLER_PROPERTIES_VAR_NAME "[" ROMP_PROPERTY_RULES_LEN "]"
 #define ROMP_PROPERTY_INFOS_LEN "_ROMP_PROPERTIES_LEN"
 #define ROMP_INFO_PROPERTIES_VAR_NAME "PROPERTY_INFOS"
-#define ROMP_INFO_PROPERTIES_DECL "const " ROMP_UTIL_NAMESPACE "::PropertyInfo " ROMP_INFO_PROPERTIES_VAR_NAME "[" ROMP_PROPERTY_INFOS_LEN "]"
+#define ROMP_INFO_PROPERTY_TYPE ROMP_UTIL_NAMESPACE "::PropertyInfo"
+#define ROMP_INFO_PROPERTIES_DECL "const " ROMP_INFO_PROPERTY_TYPE " " ROMP_INFO_PROPERTIES_VAR_NAME "[" ROMP_PROPERTY_INFOS_LEN "]"
 #define ROMP_INFO_PROPERTIES_VAR "::" ROMP_INFO_NAMESPACE_NAME "::" ROMP_INFO_PROPERTIES_VAR_NAME
 
 #define ROMP_STARTSTATE_RULES_LEN "_ROMP_STARTSTATES_LEN"
@@ -119,9 +124,9 @@
 #define ROMP_MAKE_ERROR_INFO_STRUCT(_n, _inFunct, _json) "{\"" << nEscape((_n).message) << "\"," ROMP_MAKE_LOCATION_STRUCT((_n).loc) "," << (_inFunct) << ",\"" << nEscape(_json) << "\"}"
 #define ROMP_MAKE_FUNCT_INFO_STRUCT(_n, _json, _str) "{\"" << nEscape((_n).name) << "\"," ROMP_MAKE_LOCATION_STRUCT((_n).loc) ",\"" << nEscape(_json) << "\",\"" << nEscape(_str) << "\"}"
 
-#define ROMP_MAKE_RULESET_STRUCT_HEADER(_info_id) "{" ROMP_INFO_RULESETS_VAR"[" <<(_info_id)<<"]" ",{" 
+#define ROMP_MAKE_RULESET_STRUCT_HEADER(_info_id) "{" ROMP_INFO_RULESETS_VAR"[" <<(_info_id)<<"]" ",std::vector<" ROMP_CALLER_RULE_TYPE ">{" 
 #define ROMP_MAKE_RULESET_STRUCT_FOOTER(...) "}}" 
-#define ROMP_MAKE_RULE_STRUCT(_guard, _action, _info_id, _json, _str) "{" << (_guard) << "," << (_action) << "," ROMP_INFO_RULESETS_VAR "[" <<(_info_id)<<"],\"" << nEscape(_json) << "\",\"" << nEscape(_str) << "\"}"
+#define ROMP_MAKE_RULE_STRUCT(_guard, _action, _info_id, _json, _str) ROMP_CALLER_RULE_TYPE "{" << (_guard) << "," << (_action) << "," ROMP_INFO_RULESETS_VAR "[" <<(_info_id)<<"],\"" << nEscape(_json) << "\",\"" << nEscape(_str) << "\"}"
 #define ROMP_MAKE_PROPERTY_STRUCT(_check, _info_id, _json, _str) "{" << (_check) << "," ROMP_INFO_PROPERTIES_VAR "[" <<(_info_id)<<"],\"" << nEscape(_json) << "\",\"" << nEscape(_str) << "\"}"
 #define ROMP_MAKE_STARTSTATE_STRUCT(_init, _info_id, _json, _str) "{" << (_init) << "," ROMP_INFO_STARTSTATES_VAR "[" <<(_info_id)<<"],\"" << nEscape(_json) << "\",\"" << nEscape(_str) << "\"}"
 

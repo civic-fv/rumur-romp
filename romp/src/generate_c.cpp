@@ -288,7 +288,6 @@ public:
         // else
         //   *this << value_type;
         // *this << " " << q.name;
-        *this << " " << q.name;
         sep = ", ";
       }
     }
@@ -439,7 +438,7 @@ public:
       std::string r_sep = "";
       for (const Sig& sig : sigs) {
         _sig_str << sig;
-        std::string sig_str(_sig_str.str() + " "); // sig_str += " ";
+        // std::string sig_str(_sig_str.str()); sig_str += " ";
         std::string _guard = ROMP_RULE_GUARD_PREFIX + rule.name + "__" + std::to_string(sig.index);  // int_to_hex(sig.index);
         std::string _action = ROMP_RULE_ACTION_PREFIX + rule.name + "__" + std::to_string(sig.index); // int_to_hex(sig.index);
         ruleset_array << r_sep << ROMP_MAKE_RULE_STRUCT(_guard,_action,info_id,sig.to_json(),sig.to_string());
@@ -448,26 +447,26 @@ public:
               << " bool "
               << _guard
               << "(const State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
-              "return s." ROMP_RULE_GUARD_PREFIX << sig_str << "; }\n"
+              "return s." ROMP_RULE_GUARD_PREFIX << sig/* _str */ << "; }\n"
               << indentation()
               << CodeGenerator::M_RULE_ACTION__FUNC_ATTRS
               << " void "
               << _action
               << "(State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
-              "s." ROMP_RULE_ACTION_PREFIX << sig_str << "; }\n";
+              "s." ROMP_RULE_ACTION_PREFIX << sig/* _str */ << "; }\n";
         // rule_c++;
         r_sep = ", ";
       }
       ruleset_array << indentation() << "\t" ROMP_MAKE_RULESET_STRUCT_FOOTER();
       rs_sep = ",\n\t\t";
       ++info_id;
-      this.out << std::flush;
+      this->out << std::flush;
     }
     // *this << "\n#undef " ROMP_RULESETS_LEN "\n"; 
     // *this << "\n#define " ROMP_RULESETS_LEN " " << rules.size() << "\n"; 
     *this << "\n\n" << indentation() << "// All of the rule sets in one place\n" 
           << ruleset_array.str() << "};\n\n";
-    this.out << std::flush;
+    this->out << std::flush;
   }
 
 
@@ -496,12 +495,12 @@ public:
         ++count;
       }
       ++_lid;
-      this.out << std::flush;
+      this->out << std::flush;
     }
     *this << "\n\n#define " ROMP_PROPERTY_RULES_LEN " (" << count <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"; 
     *this << "\n" << indentation() << "// All of the rule sets in one place\n" 
           << prop_list.str() << "};\n\n";
-    this.out << std::flush;
+    this->out << std::flush;
   }
 
 
@@ -530,12 +529,12 @@ public:
         ++count;
       }
       ++info_id;
-      this.out << std::flush;
+      this->out << std::flush;
     }
     *this << "\n\n#define " ROMP_STARTSTATE_RULES_LEN " (" << count <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"; 
     *this << "\n" << indentation() << "// All of the rule sets in one place\n" 
           << prop_list.str() << "};\n\n";
-    this.out << std::flush;
+    this->out << std::flush;
   }
 
   void visit_propertystmt(const PropertyStmt &n) {
@@ -672,24 +671,29 @@ public:
     *this << indentation() << "}\n\n";
     
     *this << indentation() << "/* ======= Murphi Model Infos & MetaData ====== */\n"; // << std::flush;
-    *this << indentation() << "namespace " ROMP_INFO_NAMESPACE_NAME " {\n";
+    *this << indentation() << "namespace " ROMP_INFO_NAMESPACE_NAME " {\n\n";
     indent();
-    *this << "#define " ROMP_FUNCTS_LEN " (" << sorter.funct_decls.size() << "ul) // the number of functions & procedures in the model\n"
-          << indentation() << "// the info/metadata about the functions/procedures in the model\n"
+    *this << "/* the number of functions & procedures in the model */\n"
+             "#define " ROMP_FUNCTS_LEN " (" << sorter.funct_decls.size() << "ul)\n"
+          << indentation() << "/* the info/metadata about the functions/procedures in the model */\n"
           << indentation() << sorter.funct_info_list.str() << "};\n"
-          << "#define " ROMP_ERRORS_LEN " (" << next_error_id << "ul) // the number of error statements in the model\n"
-          << indentation() << "// the info/metadata about the murphi error statements in the model\n"
+          << "/* the number of error statements in the model */\n"
+             "#define " ROMP_ERRORS_LEN " (" << next_error_id << "ul)\n"
+          << indentation() << "/* the info/metadata about the murphi error statements in the model */\n"
           << indentation() << error_info_list.str() << "};\n"
-          << "#define " ROMP_PROPERTY_INFOS_LEN " (" << next_property_id <<  "ul) // the number of property statements & rules in the model\n"
+          << "/* the number of property statements & rules in the model */\n"
+             "#define " ROMP_PROPERTY_INFOS_LEN " (" << next_property_id <<  "ul)\n"
           // << "#define " ROMP_PROPERTY_RULES_LEN " (" << property_rules.size() <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"
-          << indentation() << "// the info/metadata about the murphi properties in the model\n"
+          << indentation() << "/* the info/metadata about the murphi properties in the model */\n"
           << indentation() << sorter.prop_info_list.str() << prop_info_list.str() << "};\n"
-          << "#define " ROMP_STARTSTATE_INFOS_LEN " (" << sorter.startstate_decls.size() <<  "ul) // the number of start state rules (before ruleset expansions) in the model\n"
+          << "/* the number of start state rules (before ruleset expansions) in the model */\n"
+             "#define " ROMP_STARTSTATE_INFOS_LEN " (" << sorter.startstate_decls.size() <<  "ul)\n"
           // << "#define " ROMP_STARTSTATE_RULES_LEN " (" << startstates.size() <<  "ul) // the number of start state rules (after ruleset expansions) in the model\n"
-          << indentation() << "// the info/metadata about the startstate rules in the model\n"
+          << indentation() << "/* the info/metadata about the startstate rules in the model */\n"
           << indentation() << sorter.startstate_info_list.str() << "};\n"
-          << "#define " ROMP_RULESETS_LEN " (" << sorter.rule_decls.size() << "ul) // the number of rules (before ruleset expansion) in the model\n"
-          << indentation() << "// the info/metadata about the rules in the model\n"
+          << "/* the number of rules (before ruleset expansion) in the model */\n"
+             "#define " ROMP_RULESETS_LEN " (" << sorter.rule_decls.size() << "ul)\n"
+          << indentation() << "/* the info/metadata about the rules in the model */\n"
           << indentation() << sorter.rule_info_list.str() << "};\n";
     dedent();
     *this << "\n" << indentation() << "}\n\n"; out << std::flush;
@@ -746,8 +750,9 @@ public:
     return buf.str();
   }
 public:
-  CGenerator& operator << (const char* str) { out << str; return *this; }
-  CGenerator& operator << (const std::string str) { out << str; return *this; }
+  CGenerator& operator << (const char*& str) { out << str; return *this; }
+  CGenerator& operator << (const std::string& str) { out << str; return *this; }
+  // CGenerator& operator << (const char* str) { out << str; return *this; }
   CGenerator& operator << (const int val) { out << val; return *this; }
   CGenerator& operator << (const rumur::Node& n) { dispatch(n); return *this; }
   CGenerator& operator << (const Sig& sig) { out << sig; return *this; }

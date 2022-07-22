@@ -223,7 +223,7 @@ namespace romp {
         qe.stop = n.max->constant_fold();
         qe.step = 1_mpz;
         qe.values = std::vector<const SigParam*>(/* qe.size() */);
-        for (mpz_class i = qe.start; i<=qe.stop; i += qe.step)
+        for (mpz_class i = qe.start; i<qe.stop; i += qe.step)
           qe.values.push_back(new SigParam{
                                 i,
                                 i.get_str(),
@@ -254,7 +254,7 @@ namespace romp {
       std::throw_with_nested(rumur::Error("Could not resolve the bounds of the Type based Quantifier !!", q_.loc));
     }
     try {
-      _size = q_.type->count().get_ui();
+      _size = q_.type->count().get_ui() - 1;
     } catch (...) {
       std::throw_with_nested(rumur::Error("Could not extrapolate the size of the Quantifier !!",q_.loc));
     }

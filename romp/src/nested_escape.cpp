@@ -20,7 +20,7 @@
 #include "nested_escape.hpp"
 #include <ctype.h>
 
-static std::string octal_esc(char c) {
+static std::string _octal_esc(char c) {
   char buffer[sizeof("\\000")];
   std::snprintf(buffer, sizeof(buffer), "\\%03o", c);
   return buffer;
@@ -28,13 +28,17 @@ static std::string octal_esc(char c) {
 
 std::string nEscape(const std::string &s) {
   std::string out;
-  for (const char c : s) {
-    if (c == '\\' || c == '\"') {
-      out += "\\" + c;
-    } else if (iscntrl(c)) {
-      out += octal_esc(c);
+  for (size_t i=0; i<s.size(); ++i) {
+    if (s[i] == '\\') {
+      out += '\\';
+      out += '\\';
+    } else if (s[i] == '\"') {
+      out += '\\';
+      out += '"';
+    // } else if (iscntrl(s[i])) {
+    //   out += _octal_esc(s[i]);
     } else {
-      out += c;
+      out += s[i];
     }
   }
   return out;

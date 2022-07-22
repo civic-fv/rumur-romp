@@ -21,6 +21,7 @@
 #include <iostream>
 // #include <stdlib.h>
 #include <string>
+#include <string.h>  // required for memset
 #include <fstream>
 #include <strstream>
 #include <exception>
@@ -320,7 +321,7 @@ namespace romp {
   struct Rule {
     bool (*guard)(const State_t&) throw (IModelError);
     void (*action)(State_t&) throw (IModelError);
-    RuleInfo& info;
+    const RuleInfo& info;
     const std::string quant_json;
     const std::string quant_str;
   };
@@ -334,7 +335,7 @@ namespace romp {
   }
 
   struct RuleSet {
-    RuleInfo& info;
+    const RuleInfo& info;
     std::vector<Rule> rules;
   }; 
 
@@ -368,7 +369,7 @@ namespace romp {
   
   struct StartStateInfo {
     const std::string label;
-    location loc;
+    const location loc;
     const std::string json_h;
   };
 
@@ -376,8 +377,8 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const StartStateInfo& si) noexcept { return (out << "startstate \""<< si.label << "\" @(" << si.loc << ")"); }
 
   struct StartState {
-    void (*initialize)(State_t&) throw (IModelError);
-    StartStateInfo& info;
+    const void (*initialize)(State_t&) throw (IModelError);
+    const StartStateInfo& info;
     const std::string quant_json;
     const std::string quant_str;
   };
