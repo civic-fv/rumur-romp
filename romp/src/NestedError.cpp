@@ -15,7 +15,7 @@
  */
 
 #include "NestedError.hpp"
-#include <strstream>
+#include <stringstream>
 // #include <algorithm>
 
 std::ostream& operator << (std::ostream& out, const rumur::Error& er) { romp::fprint_exception(out,er,""); return out; }
@@ -103,7 +103,7 @@ namespace romp {
 // char* NestedError::what(const NestedError::format_str& format) const { 
 //   std::vector<std::string> msg;
 //   format_what("", msg, format);
-//   std::strstream str;
+//   std::stringstream str;
 //   for (auto line : msg)
 //     str << line;
 //   return str.str();
@@ -114,7 +114,7 @@ namespace romp {
 
 
 // void NestedError::format_what(const std::string& prefix, std::vector<std::string>& msg, const NestedError::format_str& format) {
-//   std::strstream tmp;
+//   std::stringstream tmp;
 //   tmp << loc;
 //   msg.push_back(std::regex_replace(std::regex_replace(std::regex_replace(format,
 //                                                                           NestedError::loc_re,

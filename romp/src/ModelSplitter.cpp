@@ -159,7 +159,7 @@ void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
 }
 
 std::string to_json(const Rule& rule, const std::string rule_type) {
-  std::strstream buf;
+  std::stringstream buf;
   buf << "{\"$type\":\"" << rule_type << "\",";
   if (auto _prop = dynamic_cast<const rumur::PropertyRule*>(&rule)) {
     buf << "\"type\":\"";
@@ -186,7 +186,7 @@ std::string to_json(const Rule& rule, const std::string rule_type) {
 }
 
 std::string to_json(const Function& rule) {
-  std::strstream buf;
+  std::stringstream buf;
   buf << "{\"$type\":\"" << ((rule.return_type == nullptr) 
                               ? "procedure" 
                               : "function\","
@@ -209,7 +209,7 @@ std::string to_json(const Function& rule) {
 }
 
 std::string to_string(const Function& f) {
-  std::strstream buf;
+  std::stringstream buf;
   buf << ((f.return_type != nullptr) ? "function " : "procedure ")
       << nEscape(f.name) << '(';
   if (f.parameters.size() >= 1) {

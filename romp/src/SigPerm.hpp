@@ -31,7 +31,7 @@
 #include <unordered_map>
 #include <map>
 #include <memory>
-#include <strstream>
+#include <stringstream>
 
 namespace romp {
 class CGenerator;

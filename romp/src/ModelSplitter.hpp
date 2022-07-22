@@ -26,7 +26,7 @@
 // #include <unordered_map>
 #include <unordered_set>
 #include <rumur/rumur.h>
-#include <strstream>
+#include <stringstream>
 #include "romp_def.hpp"
 
 
@@ -57,10 +57,10 @@ public: // ---- Public Class Members ---- //
   std::vector<rumur::Ptr<rumur::StartState>> startstate_decls;
   std::vector<rumur::Ptr<rumur::SimpleRule>> rule_decls;
   std::vector<rumur::Ptr<rumur::PropertyRule>> property_decls;
-  std::strstream funct_info_list;
-  std::strstream rule_info_list;
-  std::strstream startstate_info_list;
-  std::strstream prop_info_list;
+  std::stringstream funct_info_list;
+  std::stringstream rule_info_list;
+  std::stringstream startstate_info_list;
+  std::stringstream prop_info_list;
   id_t next_property_id = 0u;
   id_t next_invar_id = 0u;
   id_t next_assume_id = 0u;

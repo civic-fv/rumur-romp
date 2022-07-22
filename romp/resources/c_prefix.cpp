@@ -23,7 +23,7 @@
 #include <string>
 #include <string.h>  // required for memset
 #include <fstream>
-#include <strstream>
+#include <stringstream>
 #include <exception>
 #include <vector>
 #include <memory>
@@ -184,7 +184,7 @@ namespace romp {
 
 
   typedef ojstream<std::ofstream> json_file_t;
-  typedef ojstream<std::strstream> json_str_t;
+  typedef ojstream<std::stringstream> json_str_t;
 
   // template<> char* json_str_t::str() { return out.str(); }
 
@@ -223,7 +223,7 @@ namespace romp {
   struct IModelError : public std::logic_error {
     IModelError() : std::logic_error("this is a model error (you should never see this)") {}
     const char* what() const noexcept {
-      std::strstream out;
+      std::stringstream out;
       this->what(out);
       return out.str();
     }

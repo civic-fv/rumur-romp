@@ -33,7 +33,7 @@ namespace romp {
   // Sig::Sig(size_t index_, std::vector<const SigParam*> params_, const SigPerm& perm_)
   //   : index(index_), params(params_), perm(perm_) {}
   Sig::Sig(size_t index_, size_t params_size, const SigPerm& perm_)
-    : index(index_), params(new const SigParam*[params_size]), perm(perm_) {}
+    : index(index_), params(new const SigParam*[params_size+1]), perm(perm_) {}
   // Sig::Sig(size_t index_, std::vector<const SigParam&> params_, const SigPerm& perm_)
   //   : index(index_), params(params_), perm(perm_) {}
 
@@ -50,7 +50,7 @@ namespace romp {
 
   std::string Sig::to_string() const {
     if (perm.param_count > 0) {
-    std::strstream buf;
+    std::stringstream buf;
     // buf << "quantifiers(";
     std::string sep = "";
       for (int i=0; i<perm.param_count; ++i) 
@@ -66,7 +66,7 @@ namespace romp {
 
   std::string Sig::to_json() const {  
     if (perm.param_count > 0) {
-    std::strstream buf;
+    std::stringstream buf;
     // buf << "\"quantifiers\":";
     std::string sep = "";
       buf << '[';
@@ -82,7 +82,7 @@ namespace romp {
   }
 
   std::string Sig::gen_call() const {
-    std::strstream out;
+    std::stringstream out;
     out << perm.rule.name << "(";
     std::string sep;
     for (size_t i=0; i<size(); ++i) 
@@ -332,7 +332,8 @@ namespace romp {
 
   // size_t SigPerm::size() const { return _size.get_ui(); }
   size_t SigPerm::size() const { return _size; }
-  SigPerm::Iterator SigPerm::begin() const { return (param_count > 0) ? Iterator(*this/* , get_init_param_iters() */) : this->end(); }
+  // SigPerm::Iterator SigPerm::begin() const { return (param_count > 0) ? Iterator(*this/* , get_init_param_iters() */) : this->end(); }
+  SigPerm::Iterator SigPerm::begin() const { return Iterator(*this/* , get_init_param_iters() */); }
   SigPerm::Iterator SigPerm::end() const { return Iterator(*this, _size); }
 
   // std::string SigPerm::to_string() const {
@@ -401,7 +402,7 @@ namespace romp {
 
   SigPerm::Iterator::Iterator(const SigPerm& perm_/* , std::vector<size_t> param_iters_ */) 
       // : index(0ul), perm(perm_), param_iters(param_iters_.size()), sig(0,perm_.param_count,perm_)
-      : index(0ul), perm(perm_), param_iters(new size_t[perm_.param_count]), sig(0,perm_.param_count,perm_)
+      : index(0ul), perm(perm_), param_iters(new size_t[perm_.param_count+1]), sig(0,perm_.param_count,perm_)
     {
       // std::vector<const SigParam*> params(perm.param_count);
       for (size_t i=0; i<perm.param_count; ++i) {
@@ -426,7 +427,7 @@ namespace romp {
   // SigPerm::Iterator::~Iterator() { delete sig_ptr; }
 
   SigPerm::Iterator::Iterator(const SigPerm::Iterator& other)
-    : perm(other.perm), index(other.index), sig(other.sig), param_iters(new size_t[other.perm.param_count])
+    : perm(other.perm), index(other.index), sig(other.sig), param_iters(new size_t[other.perm.param_count+1])
   {
     for (size_t i=0; i<other.perm.param_count; ++i)
       param_iters[i] = other.param_iters[i];
