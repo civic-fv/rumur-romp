@@ -23,7 +23,7 @@
 #include <string>
 #include <string.h>  // required for memset
 #include <fstream>
-#include <stringstream>
+#include <sstream>
 #include <exception>
 #include <vector>
 #include <memory>

@@ -26,7 +26,7 @@
 // #include <unordered_map>
 #include <unordered_set>
 #include <rumur/rumur.h>
-#include <stringstream>
+#include <sstream>
 #include "romp_def.hpp"
 
 

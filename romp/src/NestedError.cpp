@@ -15,7 +15,7 @@
  */
 
 #include "NestedError.hpp"
-#include <stringstream>
+#include <sstream>
 // #include <algorithm>
 
 std::ostream& operator << (std::ostream& out, const rumur::Error& er) { romp::fprint_exception(out,er,""); return out; }
