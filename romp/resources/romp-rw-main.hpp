@@ -24,7 +24,12 @@ int main(int argc, char **argv) {
 
   ::romp::options::parse_args(argc, argv);
 
-  // Parse input model
-  // TODO   figure out ??
+  if (::romp::OPTIONS.do_single)
+    ::romp::launch_single();
+
+  else
+    ::romp::launch_OpenMP();
+
+
   return EXIT_SUCCESS;
 }

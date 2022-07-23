@@ -1,4 +1,5 @@
 {
+    "editor.rulers": [83,84,76,77,100,120,125,126],
     "cmake.configureOnOpen": true,
     "git.mergeEditor": true,
     "files.associations": {

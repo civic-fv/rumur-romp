@@ -17,26 +17,32 @@
 
 #ifndef __romp__GENERATED_CODE
 
-#ifndef _ROMP_STATE_HISTORY_LENSIZE
-#define _ROMP_STATE_HISTORY_LEN 16ul
+#ifndef _ROMP_STATE_HISTORY_LEN
+#define _ROMP_STATE_HISTORY_LEN (16ul)
 #endif
 #ifndef _ROMP_RULESETS_LEN
-#define _ROMP_RULESETS_LEN 6ul
+#define _ROMP_RULESETS_LEN (6ul)
+#endif
+#ifndef _ROMP_RULE_COUNT
+#define _ROMP_RULE_COUNT (16ul)
 #endif
 #ifndef _ROMP_PROPERTIES_LEN 
-#define _ROMP_PROPERTIES_LEN 2ul
+#define _ROMP_PROPERTIES_LEN (2ul)
 #endif
 #ifndef _ROMP_PROPERTY_RULES_LEN 
-#define _ROMP_PROPERTY_RULES_LEN 2ul
+#define _ROMP_PROPERTY_RULES_LEN (2ul)
 #endif
 #ifndef _ROMP_LIVENESS_TESTS_LEN
-#define _ROMP_LIVENESS_TESTS_LEN 2ul
+#define _ROMP_LIVENESS_TESTS_LEN (2ul)
 #endif
 #ifndef _ROMP_STARTSTATES_LEN
-#define _ROMP_STARTSTATES_LEN 2ul
+#define _ROMP_STARTSTATES_LEN (2ul)
 #endif
 #ifndef _ROMP_STATE_TYPE 
 #define _ROMP_STATE_TYPE ::__model__::__State__
+#endif
+#ifndef _ROMP_THREAD_TO_RW_RATIO 
+#define _ROMP_THREAD_TO_RW_RATIO (16u)
 #endif
 
 // pre-declaration of the state object romp will generate.

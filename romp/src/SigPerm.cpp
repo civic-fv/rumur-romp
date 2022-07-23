@@ -362,6 +362,7 @@ namespace romp {
   std::string SigPerm::Iterator::to_string() const { sig.to_string(); }
 
   void SigPerm::Iterator::increment_item() {
+    if (perm.param_count == 0) { sig.index = index = perm.size(); return; } // edge case of no quantifiers
     if (index >= perm.size() || perm.param_count == 0) return;  // we are at the end
     increment_param_iters(); 
     sig.index = ++index;

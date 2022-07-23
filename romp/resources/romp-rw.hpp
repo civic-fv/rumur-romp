@@ -108,7 +108,7 @@ public:
   { 
     state.__rw__ = this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ 
     if (OPTIONS.do_trace) {
-      json = new json_file_t(OPTIONS.trace_dir + '/' + std::to_string(init_rand_seed) + ".json");
+      json = new json_file_t(OPTIONS.trace_dir + std::to_string(init_rand_seed) + ".json");
       sim1Step = sim1Step_trace;
       *json << "{\"$type\":\"romp-trace\"";
       trace_metadata_out();
@@ -306,6 +306,8 @@ std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_se
  * @param thread_count the max number of threads to use to accomplish all said random walks.
  */
 void launch_OpenMP(size_t rw_count, unsigned int rand_seed, size_t fuel, size_t thread_count) {
+  std::cout << "\n\t!! NOT YET IMPLEMENTED !!\n" << std::endl; return; //!! temp, remove when finished !! 
+  
   std::vector<RandWalker> rws;
   try {
     rws = gen_random_walkers(rw_count, rand_seed, fuel);

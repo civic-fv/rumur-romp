@@ -30,6 +30,7 @@
 #include <utility>
 #include <functional>
 #include <type_traits>
+#include <thread>
 
 
 
@@ -94,30 +95,48 @@ namespace __info__ { // LANGUAGE SERVER SUPPORT ONLY!!
 namespace romp {
 
   namespace options {
+
+    /**
+     * @brief the number of concurrent threads a system supports \n
+     *        \b NOTE: if \c 0 then number is unknown & user must provide with \c -ptn / \c --threads flags.
+     */
+    const unsigned int __system_thread_count = ::std::thread::hardware_concurrency();
+    unsigned int get_default_thread_count() {
+      switch (__system_thread_count) {
+      case 0: return 0;
+      case 1: 
+      case 2:
+        return 1;
+      default:
+        return __system_thread_count - 2;
+      }
+    }
+
     struct Options {
-      size_t threads = 4;    // mpz_class ??
-      size_t depth = INT32_MAX;      // what has to be default value  ??
-      size_t random_walkers = INT32_MAX; // any default value needed if not provided ?
-      unsigned int
-          rand_seed = time(NULL); // the random seed to se (defaults to current system time)
-      std::string seed_str; // what for this ??
-      bool do_single = false;
+      size_t history_length = 4;
       bool do_trace = false;
-      std::string trace_file;
-      size_t lcount = INT32_MAX;
-      size_t cover_count =INT32_MAX;
-      size_t ag_count=INT32_MAX;
-      size_t hlcount=INT32_MAX;
-      void print_help();
-      std::string
-          trace_dir = "./traces"; // path for the trace file to be created during each walk
+      unsigned int threads =  get_default_thread_count(); 
+      size_t depth = INT32_MAX;      
+      unsigned int random_walkers = threads*_ROMP_THREAD_TO_RW_RATIO; 
+      unsigned int
+          rand_seed = time(NULL); 
+      std::string seed_str; 
+      bool do_single = false;
+      bool liveness = false;
+      size_t lcount = INT16_MAX;
+      size_t cover_count = INT16_MAX; 
+      size_t attempt_limit= 0; // disabled if 0/NULL
+      std::string trace_dir = "./traces/"; // path for the trace file to be created during each walk
       bool deadlock =
           false; // separate bool for each property or consider having a valid bool
                 // . depends on how property will be designed
       bool result = false; // result output
       bool result_all = false;
       bool r_assume = false;
-      bool complete_count= false;
+      bool complete_on_cover= false;
+      bool output_results = false;
+      std::string result_out_file = "results.txt";
+      bool even_start = false;
     };
   }
   options::Options OPTIONS;
@@ -377,17 +396,23 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const StartStateInfo& si) noexcept { return (out << "startstate \""<< si.label << "\" @(" << si.loc << ")"); }
 
   struct StartState {
-    const void (*initialize)(State_t&) throw (IModelError);
+    void (*initialize)(State_t&) throw (IModelError);
     const StartStateInfo& info;
+    const id_t id;
     const std::string quant_json;
     const std::string quant_str;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartState& s) noexcept { return (json << s.info.json_h << ",\"quantifiers\":" << s.quant_json << '}'); }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartState& s) noexcept { 
+    return (json << s.info.json_h 
+                 << ",\"id\":" << s.id
+                 << ",\"quantifiers\":" << s.quant_json << '}'); 
+  }
   std::ostream& operator << (std::ostream& out, const StartState& s) noexcept {
     out << "startstate \"" << s.info.label << "\" ";
     if (s.quant_str.size() > 0)
-      out << " Quantifiers(" << s.quant_str << ") ";
+      out << "-- id: " << s.id 
+          << " -- Quantifiers(" << s.quant_str << ") ";
     return (out << "@(" << s.info.loc << ')');
   }
 

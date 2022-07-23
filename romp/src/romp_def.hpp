@@ -41,6 +41,7 @@
 
 // #define ROMP_CALLER_RULE_DECL "const ::romp::Rule ";
 #define ROMP_RULESETS_LEN "_ROMP_RULESETS_LEN"
+#define ROMP_RULES_LEN "_ROMP_RULE_COUNT"
 #define ROMP_CALLER_RULESETS_VAR_NAME "RULESETS"
 #define ROMP_CALLER_RULE_TYPE ROMP_UTIL_NAMESPACE "::Rule"
 #define ROMP_CALLER_RULESETS_TYPE ROMP_UTIL_NAMESPACE "::RuleSet"
@@ -128,7 +129,7 @@
 #define ROMP_MAKE_RULESET_STRUCT_FOOTER(...) "}}" 
 #define ROMP_MAKE_RULE_STRUCT(_guard, _action, _info_id, _json, _str) ROMP_CALLER_RULE_TYPE "{" << (_guard) << "," << (_action) << "," ROMP_INFO_RULESETS_VAR "[" <<(_info_id)<<"],\"" << nEscape(_json) << "\",\"" << nEscape(_str) << "\"}"
 #define ROMP_MAKE_PROPERTY_STRUCT(_check, _info_id, _json, _str) "{" << (_check) << "," ROMP_INFO_PROPERTIES_VAR "[" <<(_info_id)<<"],\"" << nEscape(_json) << "\",\"" << nEscape(_str) << "\"}"
-#define ROMP_MAKE_STARTSTATE_STRUCT(_init, _info_id, _json, _str) "{" << (_init) << "," ROMP_INFO_STARTSTATES_VAR "[" <<(_info_id)<<"],\"" << nEscape(_json) << "\",\"" << nEscape(_str) << "\"}"
+#define ROMP_MAKE_STARTSTATE_STRUCT(_init, _id, _info_id, _json, _str) "{" << (_init) << "," ROMP_INFO_STARTSTATES_VAR "[" <<(_info_id)<<"]," << (_id) << ",\"" << nEscape(_json) << "\",\"" << nEscape(_str) << "\"}"
 
 
 #define ROMP_MAKE_MODEL_ERROR_PROPERTY(_n,_id) ROMP_MODEL_ERROR_TYPE_PROPERTY "(" << (_id) << ")"
