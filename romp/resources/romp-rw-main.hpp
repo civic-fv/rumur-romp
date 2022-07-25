@@ -33,3 +33,5 @@ int main(int argc, char **argv) {
 
   return EXIT_SUCCESS;
 }
+
+//TODO add in signal intercept for kill/Ctrl-C to gracefully kill threads & output traces etc.

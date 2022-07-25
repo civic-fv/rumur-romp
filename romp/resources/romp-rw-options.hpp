@@ -42,8 +42,8 @@ void print_help() {
                "GENERAL OPTIONS:\n"
                "   -h | --help      Display help information (this page.)\n"
                "   -y | -l          Launch without prompting (skip launch prompt).\n"
-               "   --list-starts    Output a list of all startstates & their id's.\n"
-               "                      (see --sw-start/-sws for more info)\n"
+               "   --list-starts    Output a list of all startstates & their id's.\n"  //TODO call list_starts() then exit(EXIT_SUCCESS)
+               "                      (see --start-id/-sid for more info)\n"
                "\n"
                "RANDOM WALKER OPTIONS:\n"
                "  --depth <int>     Maximum number of rules to apply in a walk \n"
@@ -56,14 +56,15 @@ void print_help() {
                "  --single-walk     Perform a single random walker on a single thread.\n"
                "     | -sw            note: overrides -ptn/--threads \n"
                "                              & -w/--walks/--walk-count\n"
-               "  --sw-start <id>   Set the start state to use for single walk.\n"
-               "    | -sws   <id>     <id> is an int determined by a startstate's\n"
-               "                      position in the file after ruleset expansion.\n"
-               "                      default: 0  NOTE: only for --single-walk/-sw\n"
                "  --seed <str/int>  Random seed for generating the random walks\n"
                "    | -s <str/int>    default: current system time\n"
-               "  --even-start      Determine startstate for even distribution\n"
+               "  --even-start      Determine startstate for even distribution\n"       //TODO OPTIONS.do_even_start
                "    | -es             rather than random choice (default behavior).\n"
+               "  --start-id <id>   Set a single startstate to use (For all walks).\n"  //TODO OPTIONS.start_id (default: 0)
+               "    | -sid <id>       <id> is an int determined by a startstate's\n"
+               "                      position in the file after ruleset expansion.\n"
+               "                      NOTE: only for --single-walk/-sw \n"
+               "                              and --even-start/-es\n"
                "\n"
                "PROPERTY CONFIGURATIONS :\n"
                "  -nd or --no_deadlock \t Disable Deadlock detection \n"
@@ -132,6 +133,7 @@ void parse_args(const int argc, const char **argv) {
       print_help();
       exit(EXIT_SUCCESS);
     } else if ("-l" == argv[i] || "-y" == argv[i]) {
+      OPTIONS.skip_launch_prompt = true;
     } else if ("-d" == argv[i] || "--depth" == argv[i]) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
@@ -335,6 +337,12 @@ void parse_args(const int argc, const char **argv) {
       OPTIONS.random_walkers = _ROMP_THREAD_TO_RW_RATIO * OPTIONS.threads;
     // check for inconsistent or contradictory options here
     // TODO (OPTIONAL) check OPTIONS to make sure config is valid and output
+    if (not threads_provided && OPTIONS.threads == 0) {
+      std::cerr << "ERROR : could not determine hardware thread capacity & no --threads/-ptn option was provided !!\n"
+                   "         try again using the --threads/-ptn flag to set the number of threads you want to use.\n"
+                   <<std::flush;
+      exit(EXIT_FAILURE);
+    }
     if (OPTIONS.do_single) {
       if (walks_provided)
         std::cerr << "\nWARNING : -w/--walks/--walk_count is ignored when the -sw/--single-walk flag is set !!\n"

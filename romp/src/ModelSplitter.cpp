@@ -127,7 +127,6 @@ void ModelSplitter::insert_to_global_decls(Ptr<ConstDecl> n) {
   cTypeNames.insert(n->name);
 }
 
-
 void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
   for (const Ptr<Node> &_c : children) {
   // for (const Ptr<Node> &c : children) {
@@ -207,6 +206,8 @@ std::string to_json(const Function& rule) {
                     "\"end\":["<< rule.loc.end.line << "," << rule.loc.end.column << "]}}";
   return buf.str();
 }
+
+
 
 std::string to_string(const Function& f) {
   std::stringstream buf;

@@ -136,7 +136,9 @@ namespace romp {
       bool complete_on_cover= false;
       bool output_results = false;
       std::string result_out_file = "results.txt";
-      bool even_start = false;
+      bool do_even_start = false;
+      id_t start_id = 0;
+      bool skip_launch_prompt = false;
     };
   }
   options::Options OPTIONS;
