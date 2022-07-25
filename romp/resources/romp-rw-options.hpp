@@ -319,6 +319,15 @@ void parse_args(const int argc, const char **argv) {
       OPTIONS.do_trace = true;
       if (i + 1 < argc && argv[i + 1][0] != '-')
         OPTIONS.trace_dir = validate_dir_path(std::string(argv[++i]));
+        try{
+            int lenofstr = strlen(OPTIONS.trace_dir);
+            if(OPTIONS.trace_dir[lenofstr-1] == '/')
+              bool trace_dir =true;
+        }catch (std::invalid_argument &ia) {
+          std::cerr << "invalid argument : provided trace directory without '/'\n"
+                    << std::flush;
+          exit(EXIT_FAILURE);
+        }
       else
         std::cerr << "\nWARNING : you have not specified an out directory after using the -t/--trace flag !!\n"
                      "        |-> `./traces/` will be used by default !!\n"
