@@ -72,8 +72,6 @@
 
 
 namespace romp {
-  struct Options;
-  extern Options options;
   struct RuleInfo; struct PropertyInfo; struct StartStateInfo; struct MErrorInfo; struct FunctInfo;
   struct RuleSet; struct StartState; struct Property;
 }
@@ -127,9 +125,7 @@ namespace romp {
       size_t cover_count = INT16_MAX; 
       size_t attempt_limit= 0; // disabled if 0/NULL
       std::string trace_dir = "./traces/"; // path for the trace file to be created during each walk
-      bool deadlock =
-          false; // separate bool for each property or consider having a valid bool
-                // . depends on how property will be designed
+      bool deadlock = false; // separate bool for each property or consider having a valid bool
       bool result = false; // result output
       bool result_all = false;
       bool r_assume = false;
@@ -164,6 +160,7 @@ namespace romp {
   }
 
   struct IModelError;
+  template <class O> struct ojstream;
   template<class O> void __jprint_exception(ojstream<O>& json, const std::exception& ex) noexcept;
 
   template <class O>
@@ -200,7 +197,10 @@ namespace romp {
       // if (--ex_level == 0) out << "],";
       return *this; 
     }
-    char* str() { if () }
+    std::string str() { 
+      if (std::is_base_of<std::stringstream, O>::value) return out.str(); 
+      else return "Not Allowed for non stringstream base (json_str_t) !!\t[dev-error]";
+    }
   };
 
 
@@ -234,7 +234,7 @@ namespace romp {
             << '}'); 
   }
   std::ostream& operator << (std::ostream& out, const location& loc) { 
-    out << ((__model__filename_contains_space) ? "\""__model__filename "\":" : __model__filename ":") 
+    out << ((__model__filename_contains_space) ? "\"" __model__filename "\":" : __model__filename ":") 
         << loc.start << '-' << loc.end;
     // if (loc.model_obj != "")
     //   out << " in ``" << loc.model_obj << "``";
@@ -256,7 +256,7 @@ namespace romp {
   template<class O>
   ojstream<O>& ojstream<O>::operator << (const IModelError& me) noexcept { 
     // if (ex_level++ == 0) out << "],\"error-trace\":["
-    me.to_json(out); 
+    me.to_json(*this); 
     __jprint_exception(*this,me);
     // if (--ex_level == 0) out << ']';
     return *this; 
@@ -290,6 +290,7 @@ namespace romp {
     id_t id;
     location loc;
     std::string json_h; // missing closing '}' so you can insert other fields if necessary
+    IModelError* make_error() const;
   };
 
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const PropertyInfo& pi) noexcept { return (json << pi.json_h << '}'); }
@@ -300,7 +301,16 @@ namespace romp {
     const PropertyInfo& info;
     const std::string quant_json;
     const std::string quant_str;
+    IModelError* make_error() const;
   };
+
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Property& p) noexcept { return (json << p.info.json_h << ",\"quantifiers\":" << p.quant_json << '}'); }
+  std::ostream& operator << (std::ostream& out, const Property& p) noexcept { 
+    out << p.info.type << " \"" << p.info.label << "\" ";
+    if (p.quant_str.size() > 0)
+      out << " Quantifiers(" << p.quant_str << ") ";
+    return (out << "@(" << p.info.loc << ')'); 
+  }
 
   struct ModelPropertyError : public IModelError {
     ModelPropertyError(const Property& prop_) : isProp(true) { data.prop = &prop_; }
@@ -323,18 +333,15 @@ namespace romp {
     } 
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Property& p) noexcept { return (json << p.info.json_h << ",\"quantifiers\":" << p.quants_json << '}'); }
-  std::ostream& operator << (std::ostream& out, const Property& p) noexcept { 
-    out << p.info.type << " \"" << p.info.label << "\" ";
-    if (p.quant_str.size() > 0)
-      out << " Quantifiers(" << p.quant_str << ") ";
-    return (out << "@(" << p.info.loc << ')'); 
-  }
+  IModelError* PropertyInfo::make_error() const { return new ModelPropertyError(*this); }
+  IModelError* Property::make_error() const { return new ModelPropertyError(*this); }
+  
 
   struct RuleInfo {
     std::string label;
     location loc;
-    std::string json_h; 
+    std::string json_h;
+    IModelError* make_error() const;
   };
 
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const RuleInfo& ri) noexcept { return (json << ri.json_h << '}'); }
@@ -346,6 +353,7 @@ namespace romp {
     const RuleInfo& info;
     const std::string quant_json;
     const std::string quant_str;
+    IModelError* make_error() const;
   };
 
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const Rule& r) noexcept { return (json << r.info.json_h << ",\"quantifiers\":" << r.quant_json << '}'); }
@@ -359,6 +367,7 @@ namespace romp {
   struct RuleSet {
     const RuleInfo& info;
     std::vector<Rule> rules;
+    IModelError* make_error() const;
   }; 
 
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const RuleSet& rs) noexcept { return (json << rs.info); }
@@ -388,11 +397,16 @@ namespace romp {
       json << '}'; 
     } 
   };
+
+  IModelError* RuleInfo::make_error() const { return new ModelRuleError(*this); }
+  IModelError* Rule::make_error() const { return new ModelRuleError(*this); }
+  IModelError* RuleSet::make_error() const { return new ModelRuleError(*this); }
   
   struct StartStateInfo {
     const std::string label;
     const location loc;
     const std::string json_h;
+    IModelError* make_error() const;
   };
 
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartStateInfo& si) noexcept { return (json << si.json_h << '}'); }
@@ -404,6 +418,7 @@ namespace romp {
     const id_t id;
     const std::string quant_json;
     const std::string quant_str;
+    IModelError* make_error() const;
   };
 
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartState& s) noexcept { 
@@ -440,6 +455,9 @@ namespace romp {
     } 
   };
 
+  IModelError* StartStateInfo::make_error() const { return new ModelStartStateError(*this); }
+  IModelError* StartState::make_error() const { return new ModelStartStateError(*this); }
+
   struct MErrorInfo {
     const std::string label;
     location loc;
@@ -447,7 +465,7 @@ namespace romp {
     const std::string json;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const MErrorInfo& ei) noexcept { return (json << ei.json_h); }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const MErrorInfo& ei) noexcept { return (json << ei.json); }
   std::ostream& operator << (std::ostream& out, const MErrorInfo& ei) noexcept { return (out << "error \""<< ei.label << "\" @(" << ei.loc << ")"); }
   
   struct ModelMErrorError : public IModelError {
@@ -474,7 +492,7 @@ namespace romp {
     const std::string signature;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const FunctInfo& fi) noexcept { return (json << fi.json_h); }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const FunctInfo& fi) noexcept { return (json << fi.json); }
   std::ostream& operator << (std::ostream& out, const FunctInfo& fi) noexcept { return (out << fi.signature << " @(" << fi.loc << ")"); }
   
   struct ModelFunctError : public IModelError {

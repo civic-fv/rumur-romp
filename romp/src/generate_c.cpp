@@ -82,7 +82,7 @@ public:
       const Ptr<TypeExpr> type = n.value->type();
       auto it = enum_typedefs.find(type->unique_id);
       if (it != enum_typedefs.end()) {
-        *this << " ::"ROMP_TYPE_NAMESPACE"::" << it->second;
+        *this << " ::" ROMP_TYPE_NAMESPACE "::" << it->second;
 
       } else { // fallback on the type of the right hand side
         *this << "__typeof__(" << *n.value << ")";
@@ -216,6 +216,8 @@ public:
       *this << ROMP_LIVENESS_HANDLER(n,prop_id,_id);
       break;
     }
+    *this << ";\n";
+
     // *this << "(" << *n.property.expr << ");\n";
 
     // clean up any aliases we defined
@@ -560,14 +562,17 @@ public:
              "#define ___propRule_assume_count___ (" << count_assume << "ul)\n"
              "#else\n"
              "#define ___propRule_assume_count___ (0)\n"
+             "#endif\n"
              "#ifdef " ROMP_COVER_PREPROCESSOR_VAR "\n"
              "#define ___propRule_cover_count___ (" << count_cover << "ul)\n"
              "#else\n"
+             "#endif\n"
              "#define ___propRule_cover_count___ (0)\n"
              "#ifdef " ROMP_LIVENESS_PREPROCESSOR_VAR "\n"
              "#define ___propRule_liveness_count___ (" << count_liveness << "ul)\n"
              "#else\n"
-             "#define ___propRule_liveness_count___ (0)\n";
+             "#define ___propRule_liveness_count___ (0)\n"
+             "#endif\n";
     *this << "\n/* the number of property rules (after ruleset expansion) in the model */\n"
              "#define " ROMP_PROPERTY_RULES_LEN " ((" << count_invar << "ul) + ___propRule_assume_count___ + ___propRule_cover_count___ + ___propRule_liveness_count___)\n"; 
     *this << "\n" << indentation() << "/* All of the property rules expanded in one place */\n" 

@@ -30,7 +30,7 @@ template<typename T>
 T rand_choice(unsigned int &seed, T min, T max) {
     //not done fully
     seed = (((seed ^ (seed >> 3)) >> 12) & 0xffff) | ((seed & 0x7fff) << 16); // modifies the seed
-    int choice = seed % (maxWeight-min+1) + min;  // generates the random number
+    int choice = seed % (max-min+1) + min;  // generates the random number
     return choice;
 }
 
@@ -50,16 +50,21 @@ private:
   IModelError* tripped = nullptr;
   IModelError* tripped_inside = nullptr;
   struct History {
-    const Rule& rule;
+    const Rule* rule;
   };
   size_t history_level = 0;
   size_t history_size = OPTIONS.history_length;
-  History history* = new History[OPTIONS.history_length];
+  History* history = new History[OPTIONS.history_length];
   size_t history_start = 0;
+  /**
+   * @brief call if rule is applied to store what rule made the change in the
+   * history circular buffer.
+   * @param r reference to the rule that was applied
+   */
   void add_to_history(const Rule& r) {
-    history[level%history_size] = History{r};
-    ++level;
-    if (level >= history_size)
+    history[history_level%history_size] = History{&r};
+    ++history_level;
+    if (history_level >= history_size)
       ++history_start;
   }
 #ifdef __ROMP__DO_MEASURE
@@ -75,7 +80,7 @@ private:
       start_id = OPTIONS.start_id;
     else
       start_id = rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN);
-    const StartState& startstate = ::__caller__::STARTSTATES[start_id]
+    const StartState& startstate = ::__caller__::STARTSTATES[start_id];
 #ifdef __ROMP__DO_MEASURE
     start_time = time(NULL);
 #endif
@@ -88,7 +93,7 @@ private:
     } catch (const std::exception& ex) {
       __handle_exception<StartState,std::exception>(startstate,ex); return;
     } catch (...) {
-      std::cerr << "unknown non std::exception was thrown while initializing a Random Walker!\t[dev-error]\n" << std::flush;
+      std::cerr << "unknown non std::exception was thrown while initializing a Random Walker (id:"<<id<<")!\t[dev-error]\n" << std::flush;
     }
     // if (json != nullptr) delete json;
 #ifdef __ROMP__DO_MEASURE
@@ -101,43 +106,46 @@ private:
     if (OPTIONS.do_trace) {
        *json << "],\"error-trace\":[" << er << "]";
     } 
-    tripped_inside = new E(r);
+    tripped_inside = r.make_error();
 #ifdef __ROMP__DO_MEASURE
     active_time += time(NULL)-start_time;
 #endif
   }
+ 
 
   void trace_metadata_out() const {
     *json << ",\"metadata\":{\"model\":\"" __model__filename "\",\"seed\":" << init_rand_seed << ",\"max-depth\":" << OPTIONS.depth <<"}";
   }
 
 public:
+  const std::function<void()> sim1Step;
   size_t fuel() { return _fuel; }
   bool is_valid() { return _valid; }
   size_t is_error() { return _is_error; }
   
-  void (RandWalker::*sim1Step)();
 
   RandWalker(unsigned int rand_seed_) 
     : rand_seed(rand_seed_),
       init_rand_seed(rand_seed_),
+      sim1Step(((OPTIONS.do_trace) 
+                  ? std::function<void()>([this](){sim1Step_no_trace();}) 
+                  : std::function<void()>([this](){sim1Step_trace();}))),
       id(RandWalker::next_id++) 
   { 
     state.__rw__ = this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ 
 #ifdef __ROMP__DO_MEASURE
     init_time = time(NULL);
 #endif
-    init_state(this);
+    init_state();
     if (OPTIONS.do_trace) {
       json = new json_file_t(OPTIONS.trace_dir + std::to_string(init_rand_seed) + ".json");
-      sim1Step = sim1Step_trace;
+      // sim1Step = std::function<void()>([this]() {sim1Step_trace();});
       *json << "{\"$type\":\"romp-trace\"";
       trace_metadata_out();
       *json << ",\"trace\":[";
     } else {
-      sim1Step = sim1Step_no_trace;
+      // sim1Step = std::function<void()>([this]() {sim1Step_no_trace();});
     }
-    init_state(this);
   } 
 
   ~RandWalker() { 
@@ -154,23 +162,13 @@ private:
    * @brief to pick a rule in random for simulation step
    */
   const RuleSet& rand_ruleset(){
-    return ::__caller__::RULE_SETS[rand_choice<size_t>(rand_seed,0ul,_ROMP_RULESETS_LEN)]; 
+    return ::__caller__::RULESETS[rand_choice<size_t>(rand_seed,0ul,_ROMP_RULESETS_LEN)]; 
   }
   /**
    * @brief to pick a rule in random for simulation step
    */
   const Rule& rand_rule(const RuleSet& rs){
     return rs.rules[rand_choice<size_t>(rand_seed,0ul,rs.rules.size())];  
-  }
-  
-  /**
-   * @brief call if rule is applied to store what rule made the change in the
-   * history circular buffer.
-   * @param id the id of the rule that was applied.
-   */
-  void rule_applied(id_t id) {
-    history[level % _ROMP_STATE_HISTORY_LEN] = id;
-    level++;
   }
 
   void sim1Step_trace() noexcept {
@@ -184,6 +182,7 @@ private:
       if ((pass = r.guard(state)) == true) {
         r.action(state);
         --_fuel;
+        add_to_history(r);
       } else {
         *json << ",{\"$type\":\"rule-failed\",\"rule\":" << r << "}";
       }      
@@ -224,6 +223,7 @@ private:
       if ((pass = r.guard(state)) == true) {
         r.action(state);
         --_fuel;
+        add_to_history(r);
       }      
     } catch(IModelError& me) {
       __handle_exception<Rule,IModelError>(r,me); return;
@@ -271,21 +271,21 @@ private:
                << "}"; // closes top level trace object
       rw.json->out.flush();
     }
-    if (not rw._is_error && not OPTIONS.result_all) return; // don't output non-error state
+    if (not rw._is_error && not OPTIONS.result_all) return out; // don't output non-error state
     out << "\n====== BEGIN :: Report of Walk #" << rw.id << " ======"
         << "\n\tRandSeed: " << rw.init_rand_seed
         << "\n\tStartState: " << ::__caller__::STARTSTATES[rw.start_id]
-        << "\n\tFuel level: " << rw.fuel
+        << "\n\tFuel level: " << rw._fuel
         << "\n\nTrace lite:"
         << "\n\t" << ((OPTIONS.do_trace) ? 
-                          "see \"" + OPTIONS.trace_dir + rw.init_rand_seed + ".json\" for full trace." 
+                          "see \"" + OPTIONS.trace_dir + std::to_string(rw.init_rand_seed) + ".json\" for full trace." 
                         : "use the --trace/-t option to generate a full & detailed trace." ) 
         << "\n\t# of rules applied: " << rw.history_level+1
         << "\n\tHistory:\n"; // how to get for thr rule vs ruleset
     if (rw.history_start != 0)
       out << "\t\t... forgotten past ...\n";
     for (size_t i=rw.history_start; i<=rw.history_level; ++i)
-      out << "\t\t(" << i+1 <<") " << rw.history[i].rule << "\n"
+      out << "\t\t(" << i+1 <<") " << *(rw.history[i].rule) << "\n";
     out << "\nFinal State value:" << rw.state
         << "\nProperty/Error Report:"
         << "\n\tStill a ``valid'' State?: " << (rw._valid ? "true" : "false") //    is it a valid state
@@ -383,7 +383,7 @@ unsigned int gen_random_seed(unsigned int &root_seed) {
 std::vector<RandWalker> gen_random_walkers(unsigned int root_seed) throw (IModelError) {
   std::vector<RandWalker> rws;
   for(int i=0; i<OPTIONS.random_walkers; i++) {
-    rws.push_back(RandWalker(get_random_seed(root_seed)));
+    rws.push_back(RandWalker(gen_random_seed(root_seed)));
   }
   return rws;
 }
@@ -408,13 +408,13 @@ std::vector<RandWalker> gen_random_walkers(unsigned int root_seed) throw (IModel
 void launch_OpenMP(unsigned int root_seed) {
   std::cout << "\n\t!! NOT YET IMPLEMENTED !!\n" << std::endl; return; //!! temp, remove when finished !! 
   
-  std::vector<RandWalker> rws;
-  try {
-    rws = gen_random_walkers(rw_count, root_seed, fuel);
-  } catch (const IModelError& ex) {
-    std::cerr << "\nModel raised an error when initializing our start state(s)!! (message below)\n"
-               << ex.what << std::endl;
-  }
+  // std::vector<RandWalker> rws;
+  // try {
+  //   rws = gen_random_walkers(rw_count, root_seed, fuel);
+  // } catch (const IModelError& ex) {
+  //   std::cerr << "\nModel raised an error when initializing our start state(s)!! (message below)\n"
+  //             << ex << std::endl;
+  // }
   //TODO: launch the random walkers !!
 }
 

@@ -122,7 +122,7 @@ void list_starts() {
   std::cout << "\n\tNOT YET IMPLEMENTED\n" << std::flush;
 }
 
-void parse_args(const int argc, const char **argv) {
+void parse_args(int argc, char **argv) {
   bool threads_provided = false;
   bool walks_provided = false;
 
