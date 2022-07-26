@@ -40,7 +40,42 @@
             "group": "build",
             "command": "cd",
             "args": ["${workspaceFolder}/build/romp"]
-        }
+        },
+        {
+            "type": "shell",
+            "label": "romp: generate germain test",
+            "detail": "use make to build the romp tool (must have configured cmake first & built/have librumur)",
+            "group": "build",
+            "command": "${workspaceFolder}/build/romp",
+            "args": ["--output", "${workspaceFolder}/tests/germain-rw.test.cpp", "${workspaceFolder}/tests/germain.m"],
+            "dependsOn": ["CMake: build romp"]
+        },
+        {
+            "type": "shell",
+            "label": "build germain test",
+            "detail": "use make to build the romp tool (must have configured cmake first & built/have librumur)",
+            "group": "build",
+            "command": "g++",
+            "args": ["-g", "-o", "${workspaceFolder}/tests/germain-rw.test", "${workspaceFolder}/tests/germain-rw.test.cpp"],
+            "dependsOn": ["romp: generate germain test"]
+        },
+        {
+            "type": "shell",
+            "label": "romp: generate germain test [no-build]",
+            "detail": "use make to build the romp tool (must have configured cmake first & built/have librumur)",
+            "group": "build",
+            "command": "${workspaceFolder}/build/romp",
+            "args": ["--output", "${workspaceFolder}/tests/germain-rw.test.cpp", "${workspaceFolder}/tests/germain.m"]
+        },
+        {
+            "type": "shell",
+            "label": "build germain test [no-build]",
+            "detail": "use make to build the romp tool (must have configured cmake first & built/have librumur)",
+            "group": "build",
+            "command": "g++",
+            "args": [ "-g", "-o", "${workspaceFolder}/tests/germain-rw.test", "${workspaceFolder}/tests/germain-rw.test.cpp"],
+            "dependsOn": ["romp: generate germain test [no-build]"]
+        },
         // {
         //     "type": "make",
         //     "label": "make: build romp",

@@ -74,4 +74,6 @@ bool CodeGenerator::is_prop_enabled(rumur::Property::Category prop) {
   }
 }
 
+CodeGenerator::~CodeGenerator() {}
+
 }

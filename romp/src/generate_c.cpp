@@ -199,21 +199,21 @@ public:
     id_t _id = 0;
     switch (n.property.category) {
     case Property::ASSERTION:
-      *this << ROMP_INVARIANT_HANDLER(n,id);
+      *this << ROMP_INVARIANT_HANDLER(n,prop_id);
       break;
 
     case Property::ASSUMPTION:
-      *this  << ROMP_ASSUMPTION_HANDLER(n,id);
+      *this  << ROMP_ASSUMPTION_HANDLER(n,prop_id);
       break;
 
     case Property::COVER:
       _id = next_cover_id++;
-      *this  << ROMP_COVER_HANDLER(n,id,_id);
+      *this  << ROMP_COVER_HANDLER(n,prop_id,_id);
       break;
 
     case Property::LIVENESS:
       _id = next_liveness_id++;
-      *this << ROMP_LIVENESS_HANDLER(n,id,_id);
+      *this << ROMP_LIVENESS_HANDLER(n,prop_id,_id);
       break;
     }
     // *this << "(" << *n.property.expr << ");\n";
@@ -441,7 +441,12 @@ public:
     //   if (auto v = dynamic_cast<const VarDecl *>(c.get()))
     //     *this << "," << v->name;
     // *this << ")\n";
-    *this << "\n" << indentation() << "//TODO: make the json and stream operators for the state class\n\n";
+    *this << "\n" << indentation() << "//TODO: make the json and stream operators for the state class\n"
+                  << "template<class O> ::romp::ojstream<O>& operator << (::romp::ojstream<O>& out, const " ROMP_STATE_TYPE "& s) {"
+                       "return (out << \"\\\"``json state output'' NOT YET IMPLEMENTED\\\"\"); }\n"
+                  << indentation()
+                  << "::std::ostream& operator << (::std::ostream& out, const " ROMP_STATE_TYPE "& s) {"
+                       "return (out << \"``plain text state output'' NOT YET IMPLEMENTED\"); }\n";
   }
 
   void gen_ruleset_array(const std::vector<rumur::Ptr<rumur::SimpleRule>>& rules) {
@@ -562,7 +567,7 @@ public:
              "#ifdef " ROMP_LIVENESS_PREPROCESSOR_VAR "\n"
              "#define ___propRule_liveness_count___ (" << count_liveness << "ul)\n"
              "#else\n"
-             "#define ___propRule_liveness_count___ (0)\n"
+             "#define ___propRule_liveness_count___ (0)\n";
     *this << "\n/* the number of property rules (after ruleset expansion) in the model */\n"
              "#define " ROMP_PROPERTY_RULES_LEN " ((" << count_invar << "ul) + ___propRule_assume_count___ + ___propRule_cover_count___ + ___propRule_liveness_count___)\n"; 
     *this << "\n" << indentation() << "/* All of the property rules expanded in one place */\n" 
@@ -605,7 +610,7 @@ public:
   }
 
   void visit_propertystmt(const PropertyStmt &n) {
-    id_t id = (next_property_id++;
+    id_t id = next_property_id++;
     id_t _id = 0u;
 
     // *this << indentation() << "if (";
@@ -706,7 +711,7 @@ public:
     // split.state_var_decl.visit(*this);
     for (const Ptr<const VarDecl> &var : sorter.state_var_decls)
       *this << *var << "\n"; 
-    gen_state_to_json(sorter.state_var_decls);
+    // gen_state_to_json(sorter.state_var_decls); // moved outside ot state struct
 
     *this << "\n" << indentation() << "/* ======= Murphi Model Functions ====== */\n\n"; // << std::flush;
     // split.funct_decls.visit(*this);
@@ -736,6 +741,8 @@ public:
   
     dedent();
     *this << "\n" << indentation() << "};\n"; // << std::flush;
+
+    gen_state_to_json(sorter.state_var_decls);
 
     dedent();
     *this << indentation() << "}\n\n";
@@ -826,6 +833,9 @@ public:
   CGenerator& operator << (const std::string& str) { out << str; return *this; }
   // CGenerator& operator << (const char* str) { out << str; return *this; }
   CGenerator& operator << (const int val) { out << val; return *this; }
+  CGenerator& operator << (const unsigned int val) { out << val; return *this; }
+  CGenerator& operator << (const long val) { out << val; return *this; }
+  CGenerator& operator << (const unsigned long val) { out << val; return *this; }
   CGenerator& operator << (const rumur::Node& n) { dispatch(n); return *this; }
   CGenerator& operator << (const Sig& sig) { out << sig; return *this; }
   friend CGenerator& operator << (CGenerator& gen, const SigParam& param) { gen.out << param; return gen; }

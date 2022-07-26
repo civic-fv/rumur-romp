@@ -40,7 +40,6 @@ private:
   const id_t id;
   size_t start_id;
   const unsigned int init_rand_seed;
-  const size_t startstate_id;  //TODO (ANDREW) assign this during init
   unsigned int rand_seed;
   State_t state;
   size_t _fuel = OPTIONS.depth;
@@ -50,11 +49,19 @@ private:
   // tripped thing
   IModelError* tripped = nullptr;
   IModelError* tripped_inside = nullptr;
-  // how many rules have tried to be applied to this state
-  size_t level = 0;
-  // array of integers representing the rul ID's applied to this state (treated
-  // as a circular buffer array)
-  id_t history[_ROMP_STATE_HISTORY_LEN];
+  struct History {
+    const Rule& rule;
+  };
+  size_t history_level = 0;
+  size_t history_size = OPTIONS.history_length;
+  History history* = new History[OPTIONS.history_length];
+  size_t history_start = 0;
+  void add_to_history(const Rule& r) {
+    history[level%history_size] = History{r};
+    ++level;
+    if (level >= history_size)
+      ++history_start;
+  }
 #ifdef __ROMP__DO_MEASURE
   time_t init_time;
   time_t start_time;
@@ -133,7 +140,12 @@ public:
     init_state(this);
   } 
 
-  ~RandWalker() { *json << "}"; json->out.close(); delete json; if (tripped != nullptr) delete tripped; }
+  ~RandWalker() { 
+    if (json != nullptr) delete json; 
+    if (tripped != nullptr) delete tripped;
+    if (tripped_inside != nullptr) delete tripped_inside; 
+    if (history != nullptr) delete[] history; 
+  }
 
 
 private:
@@ -257,28 +269,39 @@ private:
 #endif
                                 << "}" // closes results object
                << "}"; // closes top level trace object
+      rw.json->out.flush();
     }
-    //TODO write result plain text string (not json) to "out" (the variable in func parameter)
-    out << "Random Walkers Information\n"
-        << "\n\t\t RandSeed"<<rw.init_rand_seed;
-        << "\n\t\t StartState of the Random Walker\t"<<::__caller__::STARTSTATES[rw.startstate_id]; 
-        << "\nRandom walkers progress :";
-        << "\n\t\tTrace File(s) is/are stored in the path"<<OPTIONS.trace_dir;
-        << "\n\t\tHistory" // how to get for thr rule vs ruleset
-        << "\n\t\tFinal State value"<<rw.state;
-        << "\nProperty Report :";
-        << "\n\t\t Correctness check for Property "<<::__caller__::ModelPropertyError//isProp?
-        << "\n\t\t valid State" <<rw._valid; //    is it a valid state
-        << "\n\t\tMaximum depth explored by the random-walkers"<<OPTIONS.depth-rw._fuel; //    "depth" explored
+    if (not rw._is_error && not OPTIONS.result_all) return; // don't output non-error state
+    out << "\n====== BEGIN :: Report of Walk #" << rw.id << " ======"
+        << "\n\tRandSeed: " << rw.init_rand_seed
+        << "\n\tStartState: " << ::__caller__::STARTSTATES[rw.start_id]
+        << "\n\tFuel level: " << rw.fuel
+        << "\n\nTrace lite:"
+        << "\n\t" << ((OPTIONS.do_trace) ? 
+                          "see \"" + OPTIONS.trace_dir + rw.init_rand_seed + ".json\" for full trace." 
+                        : "use the --trace/-t option to generate a full & detailed trace." ) 
+        << "\n\t# of rules applied: " << rw.history_level+1
+        << "\n\tHistory:\n"; // how to get for thr rule vs ruleset
+    if (rw.history_start != 0)
+      out << "\t\t... forgotten past ...\n";
+    for (size_t i=rw.history_start; i<=rw.history_level; ++i)
+      out << "\t\t(" << i+1 <<") " << rw.history[i].rule << "\n"
+    out << "\nFinal State value:" << rw.state
+        << "\nProperty/Error Report:"
+        << "\n\tStill a ``valid'' State?: " << (rw._valid ? "true" : "false") //    is it a valid state
+        << "\n\tIn an ``Error State''?: " << (rw._is_error ? "true" : "false") //    is it a valid state
+        << "\n\tProperty Violated: " << *rw.tripped;
+    if (rw.tripped_inside != nullptr)
+      out << "\n\t     While Inside: " << *rw.tripped_inside;
         
 #ifdef __ROMP__DO_MEASURE
-        << "TODO" //  states discovered (TODO)
+    out << "TODO" //  states discovered (TODO)
         << "TODO" //  runtime info sub-header
         << "TODO" //      active time
         << "TODO" // metrics header
         << "TODO" //      total time
 #endif
-        << "=============================END  OF RESULTS==============================";
+    out << "\n======= END :: Report of Walk #" << rw.id << " =======\n" << std::flush;
 
     return out;
   }

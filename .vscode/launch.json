@@ -61,13 +61,12 @@
             ]
         },
         {
-            "name": "(gdb) german full test",
+            "name": "(gdb) german single no-trace test",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/romp/romp",
+            "program": "${workspaceFolder}/tests/german-rw.test",
             "args": [
-                "--output", "${workspaceFolder}/tests/german-rw.test.cpp",
-                "${workspaceFolder}/tests/german.m"
+                "-sw"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -87,16 +86,15 @@
                 }
             ], 
             // "preLaunchTask": "make: build romp"
-            "preLaunchTask": "CMake: build romp"
+            "preLaunchTask": "romp: generate germain test [no-build]"
         },
         {
-            "name": "(gdb) german full test [+build romp]",
+            "name": "(gdb) german single no-trace test [+build romp]",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/romp/romp",
+            "program": "${workspaceFolder}/tests/german-rw.test",
             "args": [
-                "--output", "${workspaceFolder}/tests/german-rw.test.cpp",
-                "${workspaceFolder}/tests/german.m"
+                "-sw"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -116,7 +114,7 @@
                 }
             ], 
             // "preLaunchTask": "make: build romp"
-            "preLaunchTask": "CMake: build romp"
+            "preLaunchTask": "romp: generate germain test"
         },
 
     ]

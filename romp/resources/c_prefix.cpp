@@ -243,10 +243,11 @@ namespace romp {
 
   struct IModelError : public std::logic_error {
     IModelError() : std::logic_error("this is a model error (you should never see this)") {}
+    // const char* what() const noexcept {
     const char* what() const noexcept {
       std::stringstream out;
       this->what(out);
-      return out.str();
+      return out.str().c_str();
     }
     virtual void what(std::ostream& out) const noexcept = 0;
     virtual void to_json(json_file_t& json) const noexcept = 0;

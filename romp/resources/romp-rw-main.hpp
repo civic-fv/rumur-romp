@@ -25,10 +25,10 @@ int main(int argc, char **argv) {
   ::romp::options::parse_args(argc, argv);
 
   if (::romp::OPTIONS.do_single)
-    ::romp::launch_single();
+    ::romp::launch_single(::romp::OPTIONS.rand_seed);
 
   else
-    ::romp::launch_OpenMP();
+    ::romp::launch_OpenMP(::romp::OPTIONS.rand_seed);
 
 
   return EXIT_SUCCESS;
