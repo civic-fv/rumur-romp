@@ -155,7 +155,8 @@ public:
     // property_rules.push_back(Ptr<const PropertyRule>::make(n));
     // function prototype
     *this << indentation() << CodeGenerator::M_PROPERTY__FUNC_ATTRS << "\n"
-          << indentation() << "void " ROMP_PROPERTYRULE_PREFIX << n.name << "(";
+          // << indentation() << "void " ROMP_PROPERTYRULE_PREFIX << n.name << "(";
+          << indentation() << "bool " ROMP_PROPERTYRULE_PREFIX << n.name << "(";
 
     // parameters
     if (n.quantifiers.empty()) {
@@ -189,11 +190,32 @@ public:
       *this << *a;
     }
 
-    processing_global_prop = true;
-    const auto stmt = Ptr<PropertyStmt>::make(n.property,n.name,n.loc);
-    *this // << indentation() // << "return ";
-          << *stmt;
-    processing_global_prop = false;
+    // processing_global_prop = true;
+    // const auto stmt = Ptr<PropertyStmt>::make(n.property,n.name,n.loc);
+    //       << *stmt;
+    // processing_global_prop = false;
+
+    *this << indentation() << "return ";
+    id_t _id = 0;
+    switch (n.property.category) {
+    case Property::ASSERTION:
+      *this << ROMP_INVARIANT_HANDLER(n,id);
+      break;
+
+    case Property::ASSUMPTION:
+      *this  << ROMP_ASSUMPTION_HANDLER(n,id);
+      break;
+
+    case Property::COVER:
+      _id = next_cover_id++;
+      *this  << ROMP_COVER_HANDLER(n,id,_id);
+      break;
+
+    case Property::LIVENESS:
+      _id = next_liveness_id++;
+      *this << ROMP_LIVENESS_HANDLER(n,id,_id);
+      break;
+    }
     // *this << "(" << *n.property.expr << ");\n";
 
     // clean up any aliases we defined
@@ -474,10 +496,14 @@ public:
 
   void gen_property_array(const std::vector<rumur::Ptr<rumur::PropertyRule>>& property_rules) {
     std::stringstream prop_list;
-    prop_list << ROMP_CALLER_PROPERTIES_DECL " = {";
+    prop_list << ROMP_CALLER_PROPERTIES_DECL " = {\n";
     id_t _lid = 0u;
-    size_t count = 0u;
-    std::string sep = "";
+    // size_t count = 0u;
+    size_t count_invar = 0u;
+    size_t count_assume = 0u;
+    size_t count_cover = 0u;
+    size_t count_liveness = 0u;
+    // std::string sep = "";
     // for (const Ptr<const PropertyRule>& _prop : property_rules) {
     for (size_t i=0; i<property_rules.size(); ++i) {
       // const PropertyRule& prop = *_prop;
@@ -488,19 +514,58 @@ public:
         std::string _check = ROMP_PROPERTYRULE_PREFIX + prop.name + "__" + std::to_string(sig.index);  // int_to_hex(sig.index);
         out << indentation() 
             << CodeGenerator::M_PROPERTY__FUNC_ATTRS
-            << " void "
+            // << " void "
+            << " bool "
             << _check
             << "(const State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
                "return s." ROMP_PROPERTYRULE_PREFIX << sig << "; }\n";
-        prop_list << sep << ROMP_MAKE_PROPERTY_STRUCT(_check,_lid,sig.to_json(),sig.to_string());
-        sep = ", ";
-        ++count;
+        switch (prop.property.category) {
+        case Property::ASSERTION:
+          prop_list << "\t\t" << ROMP_MAKE_PROPERTY_STRUCT(_check,_lid,sig.to_json(),sig.to_string()) << ",\n";
+          ++count_invar;
+          break;
+        case Property::ASSUMPTION:
+          prop_list << "#ifdef " ROMP_ASSUME_PREPROCESSOR_VAR "\n\t\t"
+                    << ROMP_MAKE_PROPERTY_STRUCT(_check,_lid,sig.to_json(),sig.to_string()) << ",\n"
+                       "#endif\n";
+          ++count_assume;
+          break;
+        case Property::COVER:
+          prop_list << "#ifdef " ROMP_COVER_PREPROCESSOR_VAR "\n\t\t"
+                    << ROMP_MAKE_PROPERTY_STRUCT(_check,_lid,sig.to_json(),sig.to_string()) << ",\n"
+                       "#endif\n";
+          ++count_cover;
+          break;
+        case Property::LIVENESS:
+          prop_list << "#ifdef " ROMP_COVER_PREPROCESSOR_VAR "\n\t\t"
+                    << ROMP_MAKE_PROPERTY_STRUCT(_check,_lid,sig.to_json(),sig.to_string()) << ",\n"
+                       "#endif\n";
+          ++count_liveness;
+          break;
+        }
+         
+        // sep = ",";
+        // ++count;
       }
       ++_lid;
       this->out << std::flush;
     }
-    *this << "\n\n#define " ROMP_PROPERTY_RULES_LEN " (" << count <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"; 
-    *this << "\n" << indentation() << "// All of the rule sets in one place\n" 
+    // *this << "\n\n#define " ROMP_PROPERTY_RULES_LEN " (" << count <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"; 
+    *this << "\n#ifdef " ROMP_ASSUME_PREPROCESSOR_VAR "\n"
+             "#define ___propRule_assume_count___ (" << count_assume << "ul)\n"
+             "#else\n"
+             "#define ___propRule_assume_count___ (0)\n"
+             "#ifdef " ROMP_COVER_PREPROCESSOR_VAR "\n"
+             "#define ___propRule_cover_count___ (" << count_cover << "ul)\n"
+             "#else\n"
+             "#define ___propRule_cover_count___ (0)\n"
+             "#ifdef " ROMP_LIVENESS_PREPROCESSOR_VAR "\n"
+             "#define ___propRule_liveness_count___ (" << count_liveness << "ul)\n"
+             "#else\n"
+             "#define ___propRule_liveness_count___ (0)\n"
+    *this << "\n/* the number of property rules (after ruleset expansion) in the model */\n"
+             "#define " ROMP_PROPERTY_RULES_LEN " ((" << count_invar << "ul) + ___propRule_assume_count___ + ___propRule_cover_count___ + ___propRule_liveness_count___)\n"; 
+    *this << "\n" << indentation() << "/* All of the property rules expanded in one place */\n" 
           << prop_list.str() << "};\n\n";
     this->out << std::flush;
   }
@@ -524,8 +589,8 @@ public:
             << CodeGenerator::M_STARTSTATE__FUNC_ATTRS
             << " void "
             << _init
-            << "(State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
-               "return s." ROMP_STARTSTATE_PREFIX << sig << "; }\n";
+            << "(State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") { "
+               "s." ROMP_STARTSTATE_PREFIX << sig << "; }\n";
         prop_list << sep << ROMP_MAKE_STARTSTATE_STRUCT(_init,count,info_id,sig.to_json(),sig.to_string());
         sep = ", ";
         ++count;
@@ -540,31 +605,34 @@ public:
   }
 
   void visit_propertystmt(const PropertyStmt &n) {
-    id_t id = ((not processing_global_prop) ? (next_property_id++) : (next_property_rule_id-1));
+    id_t id = (next_property_id++;
     id_t _id = 0u;
 
-    *this << indentation() << "if (";
-    indent();
+    // *this << indentation() << "if (";
+    // indent();
 
     switch (n.property.category) {
     case Property::ASSERTION:
-      *this << ROMP_ASSERTION_HANDLER(n,id) << ")\n"
-            << indentation() << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
-      if (not processing_global_prop)
-        prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,id,n.message,ROMP_PROPERTY_TYPE_ASSERT, to_json(n,"assert")) ",";
+      *this << indentation() << "if (" << ROMP_ASSERTION_HANDLER(n,id) << ") "
+            /* << indentation() */ << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
+      prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,id,n.message,ROMP_PROPERTY_TYPE_ASSERT, to_json(n,"assert")) ",";
       break;
 
     case Property::ASSUMPTION:
-      *this << ROMP_ASSUMPTION_HANDLER(n,id) << ")\n"
-            << indentation() << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
+      *this << "#ifdef " ROMP_ASSUME_PREPROCESSOR_VAR "\n"
+            << indentation() << "if (" << ROMP_ASSUMPTION_HANDLER(n,id) << ") "
+            /* << indentation() */ << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n"
+               "#endif\n";
       if (not processing_global_prop)
         prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,id,n.message,ROMP_PROPERTY_TYPE_ASSUME, to_json(n,"assume")) ",";
       break;
 
     case Property::COVER:
       _id = next_cover_id++;
-      *this << ROMP_COVER_HANDLER(n,id,_id) << ")\n"
-            << indentation() << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
+      *this << "#ifdef " ROMP_COVER_PREPROCESSOR_VAR "\n"
+            << indentation() << "if (" << ROMP_COVER_HANDLER(n,id,_id) << ")"
+            /* << indentation() */ << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n"
+            << "#endif\n";
       if (not processing_global_prop)
         prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,_id,n.message,ROMP_PROPERTY_TYPE_COVER, to_json(n,"cover")) ",";
       break;
@@ -572,9 +640,9 @@ public:
     case Property::LIVENESS:
       if (not processing_global_prop)
         throw Error("liveness properties are NOT supported as embedded statements only global rules!", n.loc);
-      _id = next_liveness_id++;
-      *this << ROMP_LIVENESS_HANDLER(n,id,_id) << ")\n"
-            << indentation() << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
+      // _id = next_liveness_id++;
+      // *this << indentation() << "if (" << ROMP_LIVENESS_HANDLER(n,id,_id) << ")\n"
+      //       << indentation() << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
       // prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,_id,n.message,ROMP_PROPERTY_TYPE_LIVENESS, to_json(n,"liveness")) ",";
       break;
     }
@@ -806,6 +874,8 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
   auto _count = std::count(file_path.begin(), file_path.end(), ' ');
   out << "\n#define __model__filename_contains_space (" 
       << ((_count > 0) ? "true" : "false") << ")\n\n";
+
+  romp::CodeGenerator::print_preprocessor_options(out);
 
 
   out << "\n#pragma region inline_library_includes\n\n";

@@ -295,7 +295,7 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const PropertyInfo& pi) noexcept { return (out << pi.type << " \"" << pi.label << "\" " << pi.expr << " @(" << pi.loc << ")"); }
 
    struct Property {
-    void (*check)(const State_t&) throw (IModelError);
+    bool (*check)(const State_t&) throw (IModelError);
     const PropertyInfo& info;
     const std::string quant_json;
     const std::string quant_str;
@@ -347,7 +347,7 @@ namespace romp {
     const std::string quant_str;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& jso  n, const Rule& r) noexcept { return (json << r.info.json_h << ",\"quantifiers\":" << r.quant_json << '}'); }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Rule& r) noexcept { return (json << r.info.json_h << ",\"quantifiers\":" << r.quant_json << '}'); }
   std::ostream& operator << (std::ostream& out, const Rule& r) noexcept { 
     out << "rule \"" << r.info.label << "\" ";
     if (r.quant_str.size() > 0)

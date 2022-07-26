@@ -16,9 +16,11 @@
 
 #pragma once
 
+#include <rumur/rumur.h>
 #include <cstddef>
 #include <string>
 #include <unordered_set>
+#include <ostream>
 // #include <stack>
 
 #include "romp_def.hpp"
@@ -29,6 +31,7 @@ namespace romp {
   class CodeGenerator {
 
   public:
+    
     // function attributes to prepend before the definition of any murphi function's C/C++ function.
     static std::string M_FUNCTION__FUNC_ATTRS;
     // function attributes to prepend before the definition of any murphi simple rule's guard C/C++ function.
@@ -47,7 +50,12 @@ namespace romp {
 
   protected:
 
+    static std::vector<std::string> ENABLED_PREPROCESSOR_OPTIONS;
     static const std::unordered_set<std::string> RESERVED_NAMES;
+    static bool is_assume_enabled;
+    static bool is_cover_enabled;
+    static bool is_liveness_enabled;
+    static bool is_measure_enabled;
 
     // get a white space string for the current indentation level
     std::string indentation() const;
@@ -59,6 +67,14 @@ namespace romp {
     void dedent();
 
   public:
+    static void enable_preprocessor_option(std::string dir);
+    static void enable_assume_property();
+    static void enable_cover_property();
+    static void enable_liveness_property();
+    static void enable_measurements();
+    static bool is_prop_enabled(rumur::Property::Category prop);
+    static void print_preprocessor_options(std::ostream& out);
+
     // make this class abstract
     virtual ~CodeGenerator() = 0;
   };

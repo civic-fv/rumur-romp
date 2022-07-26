@@ -38,6 +38,7 @@ class RandWalker : public ::romp::IRandWalker {
 private:
   static id_t next_id;
   const id_t id;
+  size_t start_id;
   const unsigned int init_rand_seed;
   const size_t startstate_id;  //TODO (ANDREW) assign this during init
   unsigned int rand_seed;
@@ -48,6 +49,7 @@ private:
   json_file_t* json;
   // tripped thing
   IModelError* tripped = nullptr;
+  IModelError* tripped_inside = nullptr;
   // how many rules have tried to be applied to this state
   size_t level = 0;
   // array of integers representing the rul ID's applied to this state (treated
@@ -59,31 +61,43 @@ private:
   time_t active_time = 0;
 #endif
   
-  static void init_state(RandWalker* rw) noexcept {
+  void init_state() noexcept {
+    if (OPTIONS.do_even_start)
+      start_id = id % _ROMP_STARTSTATES_LEN;
+    else if (OPTIONS.start_id)
+      start_id = OPTIONS.start_id;
+    else
+      start_id = rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN);
+    const StartState& startstate = ::__caller__::STARTSTATES[start_id]
+#ifdef __ROMP__DO_MEASURE
+    start_time = time(NULL);
+#endif
     try {
-      // TODO: (ANDREW) generate startstate randomly from rand_seed
+      startstate.initialize(state);
       if (OPTIONS.do_trace)
-        *rw->json << "{\"$type\":\"init\",\"startstate\":"<< "todo" << ",\"state\":"<< state <<"}";
+        *json << "{\"$type\":\"init\",\"startstate\":" << startstate << ",\"state\":" << state <<"}";
     } catch (const IModelError& me) {
-       rw->__handle_exception<IModelError>(me);
+       __handle_exception<StartState,IModelError>(startstate,me); return;
     } catch (const std::exception& ex) {
-      rw->__handle_exception<std::exception>(ex);
+      __handle_exception<StartState,std::exception>(startstate,ex); return;
     } catch (...) {
-      std::cerr << "unknown non std::exception was thrown while initializing a Random Walker!\n" << std::flush;
+      std::cerr << "unknown non std::exception was thrown while initializing a Random Walker!\t[dev-error]\n" << std::flush;
     }
-    if (rw->json != nullptr) delete rw->json;
+    // if (json != nullptr) delete json;
 #ifdef __ROMP__DO_MEASURE
     active_time += time(NULL) - start_time;
 #endif
   }
 
-  template<typename T>
-  void __handle_exception(const T& er) noexcept {
+  template<typename R, typename E>
+  void __handle_exception(const R& r, const E& er) noexcept {
     if (OPTIONS.do_trace) {
        *json << "],\"error-trace\":[" << er << "]";
     } 
-    tripped = new T(er);
-    valid = false;
+    tripped_inside = new E(r);
+#ifdef __ROMP__DO_MEASURE
+    active_time += time(NULL)-start_time;
+#endif
   }
 
   void trace_metadata_out() const {
@@ -95,18 +109,18 @@ public:
   bool is_valid() { return _valid; }
   size_t is_error() { return _is_error; }
   
-  void (/* RandWalker:: */*sim1Step)();
+  void (RandWalker::*sim1Step)();
 
-  RandWalker(State_t startstate, unsigned int rand_seed_) 
-    : state(startstate), 
-      rand_seed(rand_seed_),
+  RandWalker(unsigned int rand_seed_) 
+    : rand_seed(rand_seed_),
       init_rand_seed(rand_seed_),
-#ifdef __ROMP__DO_MEASURE
-      init_time(time(NULL)),
-#endif
       id(RandWalker::next_id++) 
   { 
     state.__rw__ = this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ 
+#ifdef __ROMP__DO_MEASURE
+    init_time = time(NULL);
+#endif
+    init_state(this);
     if (OPTIONS.do_trace) {
       json = new json_file_t(OPTIONS.trace_dir + std::to_string(init_rand_seed) + ".json");
       sim1Step = sim1Step_trace;
@@ -158,44 +172,71 @@ private:
       if ((pass = r.guard(state)) == true) {
         r.action(state);
         --_fuel;
-        for (const Property& prop : ::__caller__::PROPERTIES)
-          prop.check(state); 
       } else {
         *json << ",{\"$type\":\"rule-failed\",\"rule\":" << r << "}";
-#ifdef __ROMP__DO_MEASURE
-        active_time += time(NULL)-start_time;
-#endif
-        return;
       }      
     } catch(IModelError& me) {
-      __handle_exception<IModelError>(me);
+      __handle_exception<Rule,IModelError>(r,me); return;
     } catch (std::exception& ex) {
-      __handle_exception<std::exception>(ex);
+      __handle_exception<Rule,std::exception>(r,ex); return;
     } catch (...) {
-      std::cerr << "unexpected UNKNOWN exception outside of model \t[dev-error]\n";
+      std::cerr << "unexpected UNKNOWN exception inside of model (rule) \t[dev-error]\n";
     }
+    if (pass)
+      for (const auto& prop : ::__caller__::PROPERTIES)
+        try {
+          if (prop.check(state)) { // if tripped
+            tripped = new ModelPropertyError(prop);
+            break;
+          }
+        } catch(IModelError& me) {
+          __handle_exception<Property,IModelError>(prop,me); return;
+        } catch (std::exception& ex) {
+          __handle_exception<Property,std::exception>(prop,ex); return;
+        } catch (...) {
+          std::cerr << "unexpected UNKNOWN exception inside of model (property-rule) \t[dev-error]\n";
+        }
+#ifdef __ROMP__DO_MEASURE
+    active_time += time(NULL)-start_time;
+#endif
   }
 
   void sim1Step_no_trace() noexcept {
-    
-    //TODO: store the mutated state in the history <-- we don't store the old state we store an id_t referring to the rule applied
+#ifdef __ROMP__DO_MEASURE
+    start_time = time(NULL);
+#endif
     const RuleSet& rs= rand_ruleset();
     const Rule& r= rand_rule(rs);
-    try {
-      if (r.guard(state) == false)
-        return;
-      r.action(state);
-      --_fuel;
-      for (const Property& prop : ::__caller__::PROPERTIES)
-          prop.check(state)
-                     
+    bool pass = false;
+    try {  
+      if ((pass = r.guard(state)) == true) {
+        r.action(state);
+        --_fuel;
+      }      
     } catch(IModelError& me) {
-      __handle_exception<IModelError>(me);
+      __handle_exception<Rule,IModelError>(r,me); return;
     } catch (std::exception& ex) {
-      __handle_exception<std::exception>(ex);
+      __handle_exception<Rule,std::exception>(r,ex); return;
     } catch (...) {
-      std::cerr << "unexpected UNKNOWN exception outside of model \t[dev-error]\n";
+      std::cerr << "unexpected UNKNOWN exception inside of model (rule) \t[dev-error]\n";
     }
+    if (pass)
+      for (const auto& prop : ::__caller__::PROPERTIES)
+        try {
+          if (prop.check(state)) { // if tripped
+            tripped = new ModelPropertyError(prop);
+            break;
+          }
+        } catch(IModelError& me) {
+          __handle_exception<Property,IModelError>(prop,me); return;
+        } catch (std::exception& ex) {
+          __handle_exception<Property,std::exception>(prop,ex); return;
+        } catch (...) {
+          std::cerr << "unexpected UNKNOWN exception inside of model (property-rule) \t[dev-error]\n";
+        }
+#ifdef __ROMP__DO_MEASURE
+    active_time += time(NULL)-start_time;
+#endif             
   }
 
   // called when trying to print the results of the random walker when it finishes (will finish up trace file if nessasary too)
@@ -206,7 +247,7 @@ private:
 #endif
     if (OPTIONS.do_trace && rw.json != nullptr) {
       if (rw._valid) // if it didn't end in an error we need to: 
-        *rw->json << "]" // close trace
+        *rw.json << "]" // close trace
                   << ",\"error-trace\":[]"; // output empty error-trace
       *rw.json << ",\"results\":{\"depth\":"<< OPTIONS.depth-rw._fuel <<",\"valid\":" << rw._valid << ",\"is-error\":"<< rw._is_error
 #ifdef __ROMP__DO_MEASURE
@@ -214,8 +255,8 @@ private:
 #else
                                   << ",\"active-time\":null,\"total-time\":null" 
 #endif
-                                <<"}" // closes results object
-               << "}" // closes top level trace object
+                                << "}" // closes results object
+               << "}"; // closes top level trace object
     }
     //TODO write result plain text string (not json) to "out" (the variable in func parameter)
     out << "TODO" /* opening remarks */
@@ -241,35 +282,72 @@ private:
     return out;
   }
 
-  bool assertion_handler(bool expr, id_t prop_id) {
-
+  bool error_handler(id_t error_id) {
+    tripped = new ModelMErrorError(error_id);
+    _valid = false;
+    _is_error = true;
+    return true;
   }
+
+  bool assertion_handler(bool expr, id_t prop_id) {
+    if (expr) return false;
+    tripped = new ModelPropertyError(prop_id);
+    _valid = false;
+    _is_error = true;
+    return true;
+  }
+  bool invariant_handler(bool expr, id_t prop_id) {
+    if (expr) return false;
+    // no need to store exception in tripped if a property rule the catch will give us a better error dump
+    // invar_handler is only called from a property rule
+    _valid = false;
+    _is_error = true;
+    return true;
+  }
+#ifdef __romp__ENABLE_assume_property
+  bool assumption_handler(bool expr, id_t prop_id) {
+    if (expr) return false;
+    tripped = new ModelPropertyError(prop_id);
+    _valid = false;
+    _is_error = false; // this is what makes an assumption different from an assertion
+    return true;
+  }
+#else
+  bool assumption_handler(bool expr, id_t prop_id) {
+    return false;  // don't do anything if the assume property is nto enabled
+  }
+#endif
+#ifdef __romp__ENABLE_cover_property
+  bool cover_handler(bool expr, id_t cover_id, id_t prop_id) {
+    return false;  // TODO actually handle this as described in the help page
+  }
+#else
+  bool cover_handler(bool expr, id_t cover_id, id_t prop_id) {
+    return false;  // don't throw anything if cover is not enabled
+  }
+#endif
+#ifdef __romp__ENABLE_liveness_property
+  bool liveness_handler(bool expr, id_t liveness_id, id_t prop_id) {
+    return false;  // TODO actually handle this as described in the help page
+  }
+#else
+  bool liveness_handler(bool expr, id_t liveness_id, id_t prop_id) {
+    // no need to store exception in tripped if a property rule the catch will give us a better error dump
+    return false;  // don't throw anything if liveness is not enabled
+  }
+#endif
+
 
 }; //? END class RandomWalker
 
 id_t RandWalker::next_id = 0u;
-
-
-/**
- * @brief generate all startstates of the model. 
- * To do - how to get the size of startstate
- * 
- */
-std::vector<State_t> gen_startstates() throw (IModelError) {
-  std::vector<State_t> states;
-  for (int i=0; i<_ROMP_STARTSTATES_LEN; i++) {
-    states.push_back(State_t{});
-    ::__caller__::STARTSTATES[i].initialize(states[states.size()-1]);
-  }
-  return states;
-}
 
 /**
  * @brief to generate random seeds for the no of random-walkers
  * rand is generated using UNIX timestamp 
  * @param root_seed the parent seed for generating the random seeds.
  */
-unsigned int genrandomseed(unsigned int &root_seed) {
+unsigned int gen_random_seed(unsigned int &root_seed) {
   return rand_choice(root_seed, 1u, UINT32_MAX);
 }
 
@@ -278,12 +356,10 @@ unsigned int genrandomseed(unsigned int &root_seed) {
  * To do - how to get the size of startstate
  * 
  */
-std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_seed, size_t fuel) throw (IModelError) {
+std::vector<RandWalker> gen_random_walkers(unsigned int root_seed) throw (IModelError) {
   std::vector<RandWalker> rws;
-  auto startstates = gen_startstates();
-  for(int i=0; i<rw_count; i++) {
-    auto copied_startstate = State_t(startstates[i%startstates.size()]);
-    RandWalker rw1(copied_startstate, get_random_seed(root_seed), fuel);
+  for(int i=0; i<OPTIONS.random_walkers; i++) {
+    rws.push_back(RandWalker(get_random_seed(root_seed)));
   }
   return rws;
 }
@@ -305,12 +381,12 @@ std::vector<RandWalker> gen_random_walkers(size_t rw_count, unsigned int root_se
  * @param fuel the max number of rules any \c RandWalker will try to apply.
  * @param thread_count the max number of threads to use to accomplish all said random walks.
  */
-void launch_OpenMP(size_t rw_count, unsigned int rand_seed, size_t fuel, size_t thread_count) {
+void launch_OpenMP(unsigned int root_seed) {
   std::cout << "\n\t!! NOT YET IMPLEMENTED !!\n" << std::endl; return; //!! temp, remove when finished !! 
   
   std::vector<RandWalker> rws;
   try {
-    rws = gen_random_walkers(rw_count, rand_seed, fuel);
+    rws = gen_random_walkers(rw_count, root_seed, fuel);
   } catch (const IModelError& ex) {
     std::cerr << "\nModel raised an error when initializing our start state(s)!! (message below)\n"
                << ex.what << std::endl;
@@ -323,30 +399,30 @@ void launch_OpenMP(size_t rw_count, unsigned int rand_seed, size_t fuel, size_t 
  * @brief (NOT YET IMPLEMENTED) \n
  *        Implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
  *        and no of random-walkers specified by the user options .
- * @param rand_seed the starting random seed that will generate all other random seeds
+ * @param root_seed the starting random seed that will generate all other random seeds
  * @param fuel the max number of rules any \c RandWalker will try to apply.
  */
-void launch_CUDA(unsigned int rand_seed, size_t fuel);
+void launch_CUDA(unsigned int root_seed);
 
 
 /**
  * @brief (NOT YET IMPLEMENTED) \n
  *        Implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
  *        and no of random-walkers specified by the user options .
- * @param rand_seed the starting random seed that will generate all other random seeds
+ * @param root_seed the starting random seed that will generate all other random seeds
  * @param fuel the max number of rules any \c RandWalker will try to apply.
  */
-void launch_SYCL(unsigned int rand_seed, size_t fuel);
+void launch_SYCL(unsigned int root_seed);
 
 
 /**
  * @brief (NOT YET IMPLEMENTED) \n
  *        Implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
  *        and no of random-walkers specified by the user options .
- * @param rand_seed the starting random seed that will generate all other random seeds
+ * @param root_seed the starting random seed that will generate all other random seeds
  * @param fuel the max number of rules any \c RandWalker will try to apply.
  */
-void launch_OpenMPI(unsigned int rand_seed, size_t fuel);
+void launch_OpenMPI(unsigned int root_seed);
 
 
 /**
@@ -354,21 +430,10 @@ void launch_OpenMPI(unsigned int rand_seed, size_t fuel);
  * @param rand_seed the random seed
  * @param fuel the max number of rules to try to apply
  */
-void launch_single(unsigned int rand_seed, size_t fuel) {
-  /* ----> to do how to obtain the total no of rule set (treating rules as singleton rules )*/
-  unsigned int _seed_cpy = rand_seed;
-  State_t start_state;
-  try {
-    ::__caller__::STARTSTATES[rand_choice(_seed_cpy, 0ul, _ROMP_STARTSTATES_LEN)].initialize(start_state);
-  } catch (const IModelError& ex) {
-    std::cerr << "\nModel raised an error when initializing our start state!! (message below)\n"
-               << ex.what() << std::endl;
-    return;
-  }
-  RandWalker* rw = new RandWalker(start_state,rand_seed);
+void launch_single(unsigned int rand_seed) {
+  RandWalker* rw = new RandWalker(rand_seed);
   while( rw->is_valid() && rw->fuel() > 0)
     rw->sim1Step();
-
   std::cout << "Single ROMP RESULT:\n" << *rw << std::endl;  // example of writing one RW's results to cout
 }
 

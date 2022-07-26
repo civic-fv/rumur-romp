@@ -70,7 +70,8 @@
         "regex": "cpp",
         "condition_variable": "cpp",
         "shared_mutex": "cpp",
-        "__config": "cpp"
+        "__config": "cpp",
+        "thread": "cpp"
     },
     "doxdocgen.file.fileOrder": [
         "custom",

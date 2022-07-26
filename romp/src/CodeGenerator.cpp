@@ -30,6 +30,48 @@ void CodeGenerator::dedent() {
   indent_level--;
 }
 
-CodeGenerator::~CodeGenerator() {}
+std::vector<std::string> CodeGenerator::ENABLED_PREPROCESSOR_OPTIONS{};
+
+void CodeGenerator::enable_preprocessor_option(std::string option) {
+  ENABLED_PREPROCESSOR_OPTIONS.push_back(option);
+}
+void CodeGenerator::print_preprocessor_options(std::ostream& out) {
+  for (auto var : ENABLED_PREPROCESSOR_OPTIONS)
+    out << "\n#define " << var << "\n";
+}
+
+bool CodeGenerator::is_assume_enabled = false;
+void CodeGenerator::enable_assume_property() {
+  is_assume_enabled = true;
+  ENABLED_PREPROCESSOR_OPTIONS.push_back(ROMP_ASSUME_PREPROCESSOR_VAR);
+}
+bool CodeGenerator::is_cover_enabled = false;
+void CodeGenerator::enable_cover_property() {
+  is_cover_enabled = true;
+  ENABLED_PREPROCESSOR_OPTIONS.push_back(ROMP_COVER_PREPROCESSOR_VAR);
+}
+bool CodeGenerator::is_liveness_enabled = false;
+void CodeGenerator::enable_liveness_property() {
+  is_liveness_enabled = true;
+  ENABLED_PREPROCESSOR_OPTIONS.push_back(ROMP_LIVENESS_PREPROCESSOR_VAR);
+}
+bool CodeGenerator::is_measure_enabled = false;
+void CodeGenerator::enable_measurements() {
+  is_measure_enabled = true;
+  ENABLED_PREPROCESSOR_OPTIONS.push_back(ROMP_MEASURE_PREPROCESSOR_VAR);
+}
+
+bool CodeGenerator::is_prop_enabled(rumur::Property::Category prop) {
+  switch (prop) {
+  case rumur::Property::ASSERTION:
+    return true;
+  case rumur::Property::ASSUMPTION:
+    return is_assume_enabled;
+  case rumur::Property::COVER:
+    return is_cover_enabled;
+  case rumur::Property::LIVENESS:
+    return is_liveness_enabled;
+  }
+}
 
 }

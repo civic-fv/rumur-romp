@@ -17,6 +17,10 @@
 
 #ifndef __romp__GENERATED_CODE
 
+#define __romp__ENABLE_assume_property
+#define __romp__ENABLE_cover_property
+#define __romp__ENABLE_liveness_property
+
 #ifndef _ROMP_STATE_HISTORY_LEN
 #define _ROMP_STATE_HISTORY_LEN (16ul)
 #endif
@@ -77,6 +81,9 @@ namespace __model__ { // LANGUAGE SERVER SUPPORT ONLY!!
   struct __State__ { // LANGUAGE SERVER SUPPORT ONLY !!
     ::romp::IRandWalker* __rw__; // LANGUAGE SERVER SUPPORT ONLY !!
     size_t test1[16]; // LANGUAGE SERVER SUPPORT ONLY !!
+    
+    template <class O> friend ::romp::ojstream<O> operator << (::romp::ojstream<O> out, const __State__& s); // LANGUAGE SERVER SUPPORT ONLY !!
+    friend ::std::ostream operator << (::std::ostream out, const __State__& s); // LANGUAGE SERVER SUPPORT ONLY !!
   }; // LANGUAGE SERVER SUPPORT ONLY !!
 } // LANGUAGE SERVER SUPPORT ONLY !!
 
