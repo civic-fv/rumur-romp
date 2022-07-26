@@ -259,25 +259,26 @@ private:
                << "}"; // closes top level trace object
     }
     //TODO write result plain text string (not json) to "out" (the variable in func parameter)
-    out << "TODO" /* opening remarks */
-        << "TODO" // rw.init_rand_seed
-        << "TODO" // startstate selected (use ::__caller__::STARTSTATES[rw.startstate_id])
-        << "TODO" // Trace info Lite™ (header)
-        << "TODO" //    history (if it exists)
-        << "TODO" //    final state value
-        << "TODO" // ... maybe more stuff ...
-        << "TODO" // report of conditions (header)
-        << "TODO" //    the property violated if any else report max depth reached (combines is-error & the cause from error-trace)
-        << "TODO" //    is it a valid state
-        << "TODO" //    "depth" explored
-        << "TODO" // metrics header
+    out << "Random Walkers Information\n"
+        << "\n\t\t RandSeed"<<rw.init_rand_seed;
+        << "\n\t\t StartState of the Random Walker\t"<<::__caller__::STARTSTATES[rw.startstate_id]; 
+        << "\nRandom walkers progress :";
+        << "\n\t\tTrace File(s) is/are stored in the path"<<OPTIONS.trace_dir;
+        << "\n\t\tHistory" // how to get for thr rule vs ruleset
+        << "\n\t\tFinal State value"<<rw.state;
+        << "\nProperty Report :";
+        << "\n\t\t Correctness check for Property "<<::__caller__::ModelPropertyError//isProp?
+        << "\n\t\t valid State" <<rw._valid; //    is it a valid state
+        << "\n\t\tMaximum depth explored by the random-walkers"<<OPTIONS.depth-rw._fuel; //    "depth" explored
+        
 #ifdef __ROMP__DO_MEASURE
         << "TODO" //  states discovered (TODO)
         << "TODO" //  runtime info sub-header
         << "TODO" //      active time
+        << "TODO" // metrics header
         << "TODO" //      total time
 #endif
-        << "TODO" /* closing remarks */;
+        << "=============================END  OF RESULTS==============================";
 
     return out;
   }

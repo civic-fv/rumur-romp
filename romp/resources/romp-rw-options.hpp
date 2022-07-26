@@ -134,7 +134,35 @@ void parse_args(const int argc, const char **argv) {
       exit(EXIT_SUCCESS);
     } else if ("-l" == argv[i] || "-y" == argv[i]) {
       OPTIONS.skip_launch_prompt = true;
-    } else if ("-d" == argv[i] || "--depth" == argv[i]) {
+    }else if ("-es" == argv[i] || "--even-start" == argv[i]) {
+      OPTIONS.do_even_start = true;
+    }else if ("--list-starts" == argv[i]) {
+      list_starts();
+      exit(EXIT_SUCCESS);
+    }
+     else if ("-sid" == argv[i] || "--start-id" == argv[i]) {
+      if (i + 1 < argc && '-' != argv[i + 1][0]) { 
+        ++i;
+        try {
+          OPTIONS.start_id = std::stoul(argv[i], nullptr, 0);
+        } catch (std::invalid_argument &ia) {
+          std::cerr << "invalid argument : provided walk/search depth was not a number (NaN) !! (for -sid/--start-id flag)\n"
+                    << std::flush;
+          exit(EXIT_FAILURE);
+        } catch (std::out_of_range &oor) {
+          std::cerr << "invalid argument : provided walk/search depth was out of range (for --sid/--start-id flag) must be "
+                       "unsigned int (aka must be positive)\n"
+                    << std::flush;
+          exit(EXIT_FAILURE);
+        }
+      } else {
+        std::cerr << "invalid argument : -sid/--start-id requires you to provide a value immediately after (positive integer),\n"
+                     "                      else exclude it to use default value: "
+                  <<OPTIONS.start_id<< std::endl;
+        exit(EXIT_FAILURE);
+      }
+    }
+     else if ("-d" == argv[i] || "--depth" == argv[i]) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
         try {
@@ -321,15 +349,6 @@ void parse_args(const int argc, const char **argv) {
       OPTIONS.do_trace = true;
       if (i + 1 < argc && argv[i + 1][0] != '-')
         OPTIONS.trace_dir = validate_dir_path(std::string(argv[++i]));
-        try{
-            int lenofstr = strlen(OPTIONS.trace_dir);
-            if(OPTIONS.trace_dir[lenofstr-1] == '/')
-              bool trace_dir =true;
-        }catch (std::invalid_argument &ia) {
-          std::cerr << "invalid argument : provided trace directory without '/'\n"
-                    << std::flush;
-          exit(EXIT_FAILURE);
-        }
       else
         std::cerr << "\nWARNING : you have not specified an out directory after using the -t/--trace flag !!\n"
                      "        |-> `./traces/` will be used by default !!\n"
