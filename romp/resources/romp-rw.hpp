@@ -52,10 +52,10 @@ private:
   struct History {
     const Rule* rule;
   };
-  size_t history_level = 0;
+  size_t history_level = 1;
   size_t history_size = OPTIONS.history_length;
   History* history = new History[OPTIONS.history_length];
-  size_t history_start = 0;
+  size_t history_start = 1;
   /**
    * @brief call if rule is applied to store what rule made the change in the
    * history circular buffer.
@@ -128,8 +128,8 @@ public:
     : rand_seed(rand_seed_),
       init_rand_seed(rand_seed_),
       sim1Step(((OPTIONS.do_trace) 
-                  ? std::function<void()>([this](){sim1Step_no_trace();}) 
-                  : std::function<void()>([this](){sim1Step_trace();}))),
+                  ? std::function<void()>([this](){sim1Step_trace();}) 
+                  : std::function<void()>([this](){sim1Step_no_trace();}))),
       id(RandWalker::next_id++) 
   { 
     state.__rw__ = this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ 
@@ -273,26 +273,26 @@ private:
     }
     if (not rw._is_error && not OPTIONS.result_all) return out; // don't output non-error state
     out << "\n====== BEGIN :: Report of Walk #" << rw.id << " ======"
-        << "\n\tRandSeed: " << rw.init_rand_seed
-        << "\n\tStartState: " << ::__caller__::STARTSTATES[rw.start_id]
-        << "\n\tFuel level: " << rw._fuel
+        << "\n  RandSeed: " << rw.init_rand_seed
+        << "\n  StartState: " << ::__caller__::STARTSTATES[rw.start_id]
+        << "\n  Fuel level: " << rw._fuel
         << "\n\nTrace lite:"
-        << "\n\t" << ((OPTIONS.do_trace) ? 
+        << "\n  " << ((OPTIONS.do_trace) ? 
                           "see \"" + OPTIONS.trace_dir + std::to_string(rw.init_rand_seed) + ".json\" for full trace." 
                         : "use the --trace/-t option to generate a full & detailed trace." ) 
-        << "\n\t# of rules applied: " << rw.history_level+1
-        << "\n\tHistory:\n"; // how to get for thr rule vs ruleset
-    if (rw.history_start != 0)
-      out << "\t\t... forgotten past ...\n";
+        << "\n  # of rules applied: " << rw.history_level+1
+        << "\n  History:\n"; // how to get for thr rule vs ruleset
+    if (rw.history_start > 1)
+      out << "    ... forgotten past ...\n";
     for (size_t i=rw.history_start; i<=rw.history_level; ++i)
-      out << "\t\t(" << i+1 <<") " << *(rw.history[i].rule) << "\n";
-    out << "\nFinal State value:" << rw.state
+      out << "    (" << i+1 <<") " << *(rw.history[i%rw.history_size].rule) << "\n";
+    out << "\nFinal State value:" << rw.state << "\n"
         << "\nProperty/Error Report:"
-        << "\n\tStill a ``valid'' State?: " << (rw._valid ? "true" : "false") //    is it a valid state
-        << "\n\tIn an ``Error State''?: " << (rw._is_error ? "true" : "false") //    is it a valid state
-        << "\n\tProperty Violated: " << *rw.tripped;
+        << "\n  Still a ``valid'' State?: " << (rw._valid ? "true" : "false") //    is it a valid state
+        << "\n  In an ``Error State''?: " << (rw._is_error ? "true" : "false") //    is it a valid state
+        << "\n  Property Violated: " << *rw.tripped;
     if (rw.tripped_inside != nullptr)
-      out << "\n\t     While Inside: " << *rw.tripped_inside;
+      out << "\n       While Inside: " << *rw.tripped_inside;
         
 #ifdef __ROMP__DO_MEASURE
     out << "TODO" //  states discovered (TODO)

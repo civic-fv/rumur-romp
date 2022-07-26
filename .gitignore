@@ -3,6 +3,10 @@ bin/**
 build/**
 CMakeFiles/**
 
+#ignore romp model-checker gnerated trace files
+**/traces/**
+**/traces/*.json
+
 # debug files
 tests/german-rw-test.cpp
 tests/*.test.cpp

@@ -128,19 +128,19 @@ void parse_args(int argc, char **argv) {
 
   for (int i = 0; i < argc; ++i) {
 
-    if ("-h" == argv[i] || "--help" == argv[i]) { // to print help message and ( result of comparison
+    if ("-h" == std::string(argv[i]) || "--help" == std::string(argv[i])) { // to print help message and ( result of comparison
                                                   // against a string literal is unspecified)
       print_help();
       exit(EXIT_SUCCESS);
-    } else if ("-l" == argv[i] || "-y" == argv[i]) {
+    } else if ("-l" == std::string(argv[i]) || "-y" == std::string(argv[i])) {
       OPTIONS.skip_launch_prompt = true;
-    }else if ("-es" == argv[i] || "--even-start" == argv[i]) {
+    } else if ("-es" == std::string(argv[i]) || "--even-start" == std::string(argv[i])) {
       OPTIONS.do_even_start = true;
-    }else if ("--list-starts" == argv[i]) {
+    } else if ("--list-starts" == std::string(argv[i])) {
       list_starts();
       exit(EXIT_SUCCESS);
     }
-     else if ("-sid" == argv[i] || "--start-id" == argv[i]) {
+     else if ("-sid" == std::string(argv[i]) || "--start-id" == std::string(argv[i])) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) { 
         ++i;
         try {
@@ -162,7 +162,7 @@ void parse_args(int argc, char **argv) {
         exit(EXIT_FAILURE);
       }
     }
-     else if ("-d" == argv[i] || "--depth" == argv[i]) {
+     else if ("-d" == std::string(argv[i]) || "--depth" == std::string(argv[i])) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
         try {
@@ -183,7 +183,7 @@ void parse_args(int argc, char **argv) {
                   << ((OPTIONS.depth == INT32_MAX) ? "INT32_MAX" : std::to_string(OPTIONS.depth)) << std::endl;
         exit(EXIT_FAILURE);
       }
-    } else if ("-ptn" == argv[i] || "--threads" == argv[i]) {
+    } else if ("-ptn" == std::string(argv[i]) || "--threads" == std::string(argv[i])) {
       threads_provided = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) {
         ++i;
@@ -206,9 +206,9 @@ void parse_args(int argc, char **argv) {
             << OPTIONS.threads << std::endl;
         exit(EXIT_FAILURE);
       }
-    } else if ("-sw" == argv[i] || "--single-walk" == argv[i]) {
+    } else if ("-sw" == std::string(argv[i]) || "--single-walk" == std::string(argv[i])) {
       OPTIONS.do_single = true;
-    } else if ("-w" == argv[i] || "--walks" == argv[i] || "--walk-count" == argv[i]) {
+    } else if ("-w" == std::string(argv[i]) || "--walks" == std::string(argv[i]) || "--walk-count" == std::string(argv[i])) {
       walks_provided = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
@@ -233,7 +233,7 @@ void parse_args(int argc, char **argv) {
                   << std::flush;
         exit(EXIT_FAILURE);
       }
-    } else if ("-s" == argv[i] || "--seed" == argv[i]) {
+    } else if ("-s" == std::string(argv[i]) || "--seed" == std::string(argv[i])) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) {
         OPTIONS.seed_str = argv[i + 1];
         try {
@@ -252,9 +252,9 @@ void parse_args(int argc, char **argv) {
                   << std::flush;
         exit(EXIT_FAILURE);
       }
-    } else if ("-nd" == argv[i] || "--no-deadlock" == argv[i]) {
+    } else if ("-nd" == std::string(argv[i]) || "--no-deadlock" == std::string(argv[i])) {
       OPTIONS.deadlock = true;
-    } else if ("-lc" == argv[i] || "--liveness-check" == argv[i]) {
+    } else if ("-lc" == std::string(argv[i]) || "--liveness-check" == std::string(argv[i])) {
       OPTIONS.liveness = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
@@ -273,7 +273,7 @@ void parse_args(int argc, char **argv) {
           exit(EXIT_FAILURE);
         }
       }
-    } else if ("-cc" == argv[i] || "--complete-on-cover" == argv[i] || "--cover-check" == argv[i]) {
+    } else if ("-cc" == std::string(argv[i]) || "--complete-on-cover" == std::string(argv[i]) || "--cover-check" == std::string(argv[i])) {
       OPTIONS.complete_on_cover = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
@@ -292,7 +292,7 @@ void parse_args(int argc, char **argv) {
           exit(EXIT_FAILURE);
         }
       }
-    } else if ("-ag" == argv[i] || "-ll" == argv[i] || "--attempted-guard" == argv[i] || "--loop-limit") {
+    } else if ("-ag" == std::string(argv[i]) || "-ll" == std::string(argv[i]) || "--attempted-guard" == std::string(argv[i]) || "--loop-limit") {
       // OPTIONS.do_attempt_guard = true;  // just check to make sure this value is not 0
       OPTIONS.attempt_limit = _ROMP_RULE_COUNT;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
@@ -315,7 +315,7 @@ void parse_args(int argc, char **argv) {
         std::cerr << "\nWARNING : no attempt limit was provided, but it was enabled.\n"
                      "        |-> default value will be used (default: # of rules post ruleset expansion)\n"
                   << std::flush;
-    } else if ("-rhl" == argv[i] || "--r-history" == argv[i]) {
+    } else if ("-rhl" == std::string(argv[i]) || "--r-history" == std::string(argv[i])) {
       // OPTIONS.result_history = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
@@ -333,11 +333,11 @@ void parse_args(int argc, char **argv) {
           exit(EXIT_FAILURE);
         }
       }
-    } else if ("-ra" == argv[i] || "--result-all" == argv[i]) {
+    } else if ("-ra" == std::string(argv[i]) || "--result-all" == std::string(argv[i])) {
       OPTIONS.result_all = true;
-    } else if ("--r-assume" == argv[i]) {
+    } else if ("--r-assume" == std::string(argv[i])) {
       OPTIONS.r_assume = true;
-    } else if ("-o" == argv[i] || "--output" == argv[i]) {
+    } else if ("-o" == std::string(argv[i]) || "--output" == std::string(argv[i])) {
       OPTIONS.output_results = true;
       if (i + 1 < argc && argv[i + 1][0] != '-')
         OPTIONS.result_out_file = std::string(argv[++i]);
@@ -345,7 +345,7 @@ void parse_args(int argc, char **argv) {
         std::cerr << "\nWARNING : you have not specified an outfile after using the -o/--output flag !!\n"
                      "        |-> `${CWD}/results.txt` will be used by default !!\n"
                   << std::flush;
-    } else if ("-t" == argv[i] || "--trace" == argv[i]) {
+    } else if ("-t" == std::string(argv[i]) || "--trace" == std::string(argv[i])) {
       OPTIONS.do_trace = true;
       if (i + 1 < argc && argv[i + 1][0] != '-')
         OPTIONS.trace_dir = validate_dir_path(std::string(argv[++i]));
@@ -356,7 +356,7 @@ void parse_args(int argc, char **argv) {
       std::cerr << "\nWARNING : enabling traces can significantly reduce performance "
                    "& take up a large amount of system recourses !!\n"
                 << std::flush;
-    } else if ("--list-starts" == argv[i]) {
+    } else if ("--list-starts" == std::string(argv[i])) {
       list_starts();
       exit(EXIT_SUCCESS);
     }

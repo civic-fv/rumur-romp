@@ -113,12 +113,12 @@
             "preLaunchTask": "romp: generate germain test"
         },
         {
-            "name": "C/C++: romp-rw g++ build and debug active file",
+            "name": "C/C++: romp-rw g++ build and debug active file (single-walk test)",
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [
-                "-h"
+                "-sw", "-s", "test-seed"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
