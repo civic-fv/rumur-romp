@@ -42,8 +42,8 @@ void print_help() {
                "GENERAL OPTIONS:\n"
                "   -h | --help      Display help information (this page).\n"
                "   -y | -l          Launch without prompting (skip launch prompt).\n"
-               "   --list-starts    Output a list of all startstates & their id's.\n"  //TODO call list_starts() then exit(EXIT_SUCCESS)
-               "                      (see --start-id/-sid for more info)\n"
+               "   --list-starts    Output a list of all startstates & their id's.\n"
+               "     | -ls            (see --start-id/-sid for more info)\n"
                "\n"
                "RANDOM WALKER OPTIONS:\n"
                "  --depth <int>     Maximum number of rules to apply in a walk \n"
@@ -58,46 +58,73 @@ void print_help() {
                "                              & -w/--walks/--walk-count\n"
                "  --seed <str/int>  Random seed for generating the random walks\n"
                "    | -s <str/int>    default: current system time\n"
-               "  --even-start      Determine startstate for even distribution\n"       //TODO OPTIONS.do_even_start
+               "  --even-start      Determine startstate for even distribution\n"
                "    | -es             rather than random choice (default behavior).\n"
-               "  --start-id <id>   Set a single startstate to use (For all walks).\n"  //TODO OPTIONS.start_id (default: 0)
+               "  --start-id <id>   Set a single startstate to use (For all walks).\n"  
                "    | -sid <id>       <id> is an int determined by a startstate's\n"
                "                      position in the file after ruleset expansion.\n"
-               "                      NOTE: only for --single-walk/-sw \n"
-               "                              and --even-start/-es\n"
+               "                      NOTE: overrides --even-start/-es\n"
                "\n"
                "PROPERTY CONFIGURATIONS :\n"
-               "  -nd or --no_deadlock \t Disable Deadlock detection \n"
-               "  -lc {int} or --liveness_check {int}\t Allows you to specify the max "
-               "number of successful steps a random walker can have in a row before "
-               "any given liveness property must evaluate to true.\n"
-               "\t\t\t\t\tIt takes an optional argument int else default value of "
-               "MAX_INT is considered\n"
-               "  -cc {int} or --complete-on-cover {int}\tIt considers the random walk "
-               "to be  complete when each statement has been reached. \n"
-               "\t\t\t\tTakes in "
-               "the optional argument int if not provided then default value is "
-               "INT16_MAX\n"
-               "  -ag <int> or --attempt-guard <int> \t It is used to mark a random "
-               "walker to be in deadlock state if the walker has failed to apply any "
-               "rules."
-               "\t\t\t\t If optional argument of integer not provided then default value of "
-               "MAX_INT is considered\n"
+               "  --no-deadlock           Disable Deadlock detection.\n"
+               "    | -nd                   (overrides all property options below)\n"
+#ifdef __romp__ENABLE_liveness_property
+               "  --liveness-check {int}  Allows you to enable a heuristic test for\n"
+               "    | -lc {int}             rumur's liveness property. Where it \n"
+               "                            require the properties expr to resolve\n"
+               "                            to true with in {int} rule applications\n"
+               "                            since the start or the last time it was\n"
+               "                            true."
+               "                            {int} - an optional arg (see above).\n"
+               "                              default: " << OPTIONS.lcount << "\n"
+#endif
+#ifdef __romp__ENABLE_cover_property
+               "  --complete-on-cover {int} Allows you to enable a heuristic test"
+               "    | --cover-check {int}     for rumur's cover property. Where it\n"
+               "    | -cc {int}               considers a walk complete once every\n"
+               "                              cover property has been reached {int}\n"
+               "                              times.\n"
+               "                              {int} - an optional arg (see above).\n"
+               "                                default: " << OPTIONS.cover_count << "\n"
+#endif
+               "  --attempt-guard {int}   Stop a random walk if no randomly \n"
+               "    | -ag {int}             selected rule can be applied to a State\n"
+               "                            after {int} many rules in a row.\n"
+               "                            {int} - an optional arg (see above).\n"
+               "                                default: #-of-rules in the model\n"
+               "  --loop-limit {int}      Same thing as --attempt-guard/-ag. \n"
+               "    | -ll {int}             {int} - an optional arg (see above).\n"
+               "                                default: #-of-rules in the model\n"
                "\n"
                "Trace Options\t\n"
-               "  -t {dir-path} or --trace {dir-path}\t To output the trace "
-               "results of each random walkers.The optional argument <str:out-dir> "
-               "specifies the directory path to where the trace files has to be "
-               "written.\n"
-               "\t\t\t\tIf not provided then it is stored in ./traces/\n"
+               "  --trace {dir-path}    Enable detailed traces to be made for every\n"
+               "    | -t {dir-path}       random walk performed. Outputs as a \n"
+               "                          separate ``compressed json'' file for \n"
+               "                          each random walk performed.\n"
+               "                          NOTE: slows down the process noticeably!\n"
+               "                          {dir-path} - (optional) the directory you\n"
+               "                            want to have the trace files output to.\n"
+               "                            default: \""<< OPTIONS.trace_dir <<"\"\n"
                "\n"
                "RESULT OUTPUT OPTIONS:\n"
-               "  -rhl <int> or --r-history <int> Maximum number of previous states "
-               "and rules to keep track off and output in the results.\n"
-               "  -ra or --r-all \t Report all results not just violating\n"
-               "  -r-assume \t Report all violating  assumptions\n"
-               "  -o <str:file_path> or --output <str:file_path> A string containing "
-               "path to a directory where the system will output the diagram files\n"
+               "  --r-history <int>     Specify how much of a history of rules\n"
+               "    | -rhl <int>          applied you want to see in the results."
+               "                          <int> - (required) size of history buffer\n"
+               "                            default: " << OPTIONS.history_length << "\n"
+              //  "                          NOTE: larger the size == more RAM used.\n"
+               "  --report-all          Report on all walks not just those with \n"
+               "    | --all              ``errors''. Including those stopped by \n"
+               "    | -a                  the --attempt-guard/-ag/--loop-limit/-ll\n"
+               "                          option, or max --depth/-d being reached.\n"
+#ifdef __romp__ENABLE_assume_property
+               "                          This also performs --report-assume/-ra.\n"
+               "  --report-assume       Report walks that are violate an assume\n"
+               "    | -ra                 property (defined by rumur), rather than\n"
+               "                          just discarding them as invalid states.\n"
+#endif
+              //  "  --output <file-path>  Specify a file you wish to output to\n"
+              //  "    | -o <file-path>      instead of to stdout.\n"
+               "\n"
             << std::endl;
 }
 
@@ -118,13 +145,16 @@ std::string validate_dir_path(const std::string val) {
 }
 
 void list_starts() {
-  //TODO output a nice readable list of startstates to std::cout
-  std::cout << "\n\tNOT YET IMPLEMENTED\n" << std::flush;
+  std::cout << "\nStartState List (w/ id's)\n";
+  for (size_t i=0; i<_ROMP_STARTSTATES_LEN; ++i)
+    std::cout << "  (" << i << ") " << ::__caller__::STARTSTATES[i] << "\n";
+  std::cout << std::flush;
 }
 
 void parse_args(int argc, char **argv) {
   bool threads_provided = false;
   bool walks_provided = false;
+  bool start_provided = false;
 
   for (int i = 0; i < argc; ++i) {
 
@@ -136,11 +166,12 @@ void parse_args(int argc, char **argv) {
       OPTIONS.skip_launch_prompt = true;
     } else if ("-es" == std::string(argv[i]) || "--even-start" == std::string(argv[i])) {
       OPTIONS.do_even_start = true;
-    } else if ("--list-starts" == std::string(argv[i])) {
+    } else if ("-ls" == std::string(argv[i]) || "--list-starts" == std::string(argv[i])) {
       list_starts();
       exit(EXIT_SUCCESS);
     }
      else if ("-sid" == std::string(argv[i]) || "--start-id" == std::string(argv[i])) {
+      start_provided = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { 
         ++i;
         try {
@@ -254,6 +285,7 @@ void parse_args(int argc, char **argv) {
       }
     } else if ("-nd" == std::string(argv[i]) || "--no-deadlock" == std::string(argv[i])) {
       OPTIONS.deadlock = true;
+#ifdef __romp__ENABLE_liveness_property
     } else if ("-lc" == std::string(argv[i]) || "--liveness-check" == std::string(argv[i])) {
       OPTIONS.liveness = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
@@ -273,6 +305,8 @@ void parse_args(int argc, char **argv) {
           exit(EXIT_FAILURE);
         }
       }
+#endif
+#ifdef __romp__ENABLE_cover_property
     } else if ("-cc" == std::string(argv[i]) || "--complete-on-cover" == std::string(argv[i]) || "--cover-check" == std::string(argv[i])) {
       OPTIONS.complete_on_cover = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
@@ -292,6 +326,7 @@ void parse_args(int argc, char **argv) {
           exit(EXIT_FAILURE);
         }
       }
+#endif
     } else if ("-ag" == std::string(argv[i]) || "-ll" == std::string(argv[i]) || "--attempted-guard" == std::string(argv[i]) || "--loop-limit") {
       // OPTIONS.do_attempt_guard = true;  // just check to make sure this value is not 0
       OPTIONS.attempt_limit = _ROMP_RULE_COUNT;
@@ -333,10 +368,12 @@ void parse_args(int argc, char **argv) {
           exit(EXIT_FAILURE);
         }
       }
-    } else if ("-ra" == std::string(argv[i]) || "--result-all" == std::string(argv[i])) {
+    } else if ("-a" == std::string(argv[i]) || "--all" == std::string(argv[i]) || "--report-all" == std::string(argv[i])) {
       OPTIONS.result_all = true;
+#ifdef __romp__ENABLE_assume_property
     } else if ("--r-assume" == std::string(argv[i])) {
       OPTIONS.r_assume = true;
+#endif
     } else if ("-o" == std::string(argv[i]) || "--output" == std::string(argv[i])) {
       OPTIONS.output_results = true;
       if (i + 1 < argc && argv[i + 1][0] != '-')
@@ -356,28 +393,56 @@ void parse_args(int argc, char **argv) {
       std::cerr << "\nWARNING : enabling traces can significantly reduce performance "
                    "& take up a large amount of system recourses !!\n"
                 << std::flush;
-    } else if ("--list-starts" == std::string(argv[i])) {
-      list_starts();
-      exit(EXIT_SUCCESS);
     }
     // modifying values to match complex default values
-    if (threads_provided && not walks_provided)
-      OPTIONS.random_walkers = _ROMP_THREAD_TO_RW_RATIO * OPTIONS.threads;
+    
     // check for inconsistent or contradictory options here
     // TODO (OPTIONAL) check OPTIONS to make sure config is valid and output
-    if (not threads_provided && OPTIONS.threads == 0) {
-      std::cerr << "ERROR : could not determine hardware thread capacity & no --threads/-ptn option was provided !!\n"
-                   "         try again using the --threads/-ptn flag to set the number of threads you want to use.\n"
-                   <<std::flush;
+    if (OPTIONS.history_length == 0) {
+      std::cerr << "\nERROR : history size cannot be 0 (--r-history/-rhl)\n" << std::flush;
       exit(EXIT_FAILURE);
     }
+    if (OPTIONS.attempt_limit == 0) {
+      std::cerr << "\nERROR : attempt limit cannot be 0 (--loop-limit/-ll/--attempt-guard/-ag)\n" << std::flush;
+      exit(EXIT_FAILURE);
+    }
+    if (OPTIONS.depth == 0) {
+      std::cerr << "\nERROR : max depth cannot be 0 (--depth/-d)\n" << std::flush;
+      exit(EXIT_FAILURE);
+    }
+#ifdef __romp__ENABLE_cover_property
+    if (OPTIONS.cover_count == 0) {
+      std::cerr << "\nERROR : cover check goal cannot be 0 (--cover-check/-cc)\n" << std::flush;
+      exit(EXIT_FAILURE);
+    }
+#endif
+#ifdef __romp__ENABLE_cover_property
+    if (OPTIONS.l_count == 0) {
+      std::cerr << "\nERROR : liveness limit cannot be 0 (--liveness-check/-lc)\n" << std::flush;
+      exit(EXIT_FAILURE);
+    }
+#endif
     if (OPTIONS.do_single) {
       if (walks_provided)
         std::cerr << "\nWARNING : -w/--walks/--walk_count is ignored when the -sw/--single-walk flag is set !!\n"
                   << std::flush;
-      if (OPTIONS.do_single && threads_provided)
+      if (threads_provided)
         std::cerr << "\nWARNING : -ptn/--threads is ignored when the -sw/--single-walk flag(s) is set !!\n" << std::flush;
-    } else {
+    } else { // not doing a single walk
+      if (not threads_provided && OPTIONS.threads == 0) {
+        std::cerr << "\nERROR : could not determine hardware thread capacity & no --threads/-ptn option was provided !!\n"
+                    "         try again using the --threads/-ptn flag to set the number of threads you want to use.\n"
+                    <<std::flush;
+        exit(EXIT_FAILURE);
+      }
+      if (OPTIONS.threads == 0) {
+        std::cerr << "\nERROR : number of threads cannot be 0 (--threads/-ptn)\n" << std::flush;
+        exit(EXIT_FAILURE);
+      }
+      if (OPTIONS.random_walkers == 0) {
+        std::cerr << "\nERROR : number of walks cannot be 0 (--walks/-w)\n" << std::flush;
+        exit(EXIT_FAILURE);
+      }
       if (not threads_provided)
         std::cerr << "\nINFO : the number of threads to use was not specified (with -ptn/--threads flags)\n"
                      "     |-> defaults to "
@@ -388,7 +453,12 @@ void parse_args(int argc, char **argv) {
                   << _ROMP_THREAD_TO_RW_RATIO * OPTIONS.threads << "(= " << _ROMP_THREAD_TO_RW_RATIO << " * "
                   << OPTIONS.threads << ")\n"
                   << std::flush;
+      if (threads_provided && not walks_provided)
+        OPTIONS.random_walkers = _ROMP_THREAD_TO_RW_RATIO * OPTIONS.threads;  // post parse assign default value
     }
+    if (start_provided && OPTIONS.do_even_start)
+      std::cerr << "\nWARNING : -w/--walks/--walk_count is ignored when the -sw/--single-walk flag is set !!\n"
+                  << std::flush;
     // warnings and end with errors as appropriate
   }
 }

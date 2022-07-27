@@ -74,11 +74,13 @@ private:
 #endif
   
   void init_state() noexcept {
-    if (OPTIONS.do_even_start)
+    if (OPTIONS.do_even_start) {
+      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
       start_id = id % _ROMP_STARTSTATES_LEN;
-    else if (OPTIONS.start_id)
+    } else if (OPTIONS.start_id) {
+      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
       start_id = OPTIONS.start_id;
-    else
+    } else
       start_id = rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN);
     const StartState& startstate = ::__caller__::STARTSTATES[start_id];
 #ifdef __ROMP__DO_MEASURE
@@ -271,7 +273,10 @@ private:
                << "}"; // closes top level trace object
       rw.json->out.flush();
     }
-    if (not rw._is_error && not OPTIONS.result_all) return out; // don't output non-error state
+    if (not rw._is_error && not OPTIONS.result_all) return out; // don't output non-error state unless --report-all
+#ifdef __romp__ENABLE_assume_property
+    if (not rw._is_error && rw.tripped != nullptr && not OPTIONS.r_assume) return out; // don't output assumption violations unless --report-assume
+#endif
     out << "\n====== BEGIN :: Report of Walk #" << rw.id << " ======"
         << "\n  RandSeed: " << rw.init_rand_seed
         << "\n  StartState: " << ::__caller__::STARTSTATES[rw.start_id]
@@ -380,7 +385,7 @@ unsigned int gen_random_seed(unsigned int &root_seed) {
  * To do - how to get the size of startstate
  * 
  */
-std::vector<RandWalker> gen_random_walkers(unsigned int root_seed) throw (IModelError) {
+std::vector<RandWalker> gen_random_walkers(unsigned int root_seed)   {
   std::vector<RandWalker> rws;
   for(int i=0; i<OPTIONS.random_walkers; i++) {
     rws.push_back(RandWalker(gen_random_seed(root_seed)));

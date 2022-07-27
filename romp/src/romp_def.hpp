@@ -42,7 +42,7 @@
 #define ROMP_MEASURE_PREPROCESSOR_VAR "__ROMP__DO_MEASURE"
 #define ROMP_ASSUME_PREPROCESSOR_VAR "__romp__ENABLE_assume_property"
 #define ROMP_COVER_PREPROCESSOR_VAR "__romp__ENABLE_cover_property"
-#define ROMP_LIVENESS_PREPROCESSOR_VAR "__romp__ENABLE_liveness_prop"
+#define ROMP_LIVENESS_PREPROCESSOR_VAR "__romp__ENABLE_liveness_property"
 
 // #define ROMP_CALLER_RULE_DECL "const ::romp::Rule ";
 #define ROMP_RULESETS_LEN "_ROMP_RULESETS_LEN"

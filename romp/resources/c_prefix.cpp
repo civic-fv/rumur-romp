@@ -116,21 +116,26 @@ namespace romp {
       unsigned int threads =  get_default_thread_count(); 
       size_t depth = INT32_MAX;      
       unsigned int random_walkers = threads*_ROMP_THREAD_TO_RW_RATIO; 
-      unsigned int
-          rand_seed = time(NULL); 
+      unsigned int rand_seed = time(NULL); 
       std::string seed_str; 
       bool do_single = false;
-      bool liveness = false;
-      size_t lcount = INT16_MAX;
-      size_t cover_count = INT16_MAX; 
-      size_t attempt_limit= 0; // disabled if 0/NULL
+      size_t attempt_limit = UINT64_MAX; // disabled if UINT64_MAX
       std::string trace_dir = "./traces/"; // path for the trace file to be created during each walk
       bool deadlock = false; // separate bool for each property or consider having a valid bool
       bool result = false; // result output
-      bool result_all = false;
-      bool r_assume = false;
-      bool complete_on_cover= false;
       bool output_results = false;
+      bool result_all = false;
+#ifdef __romp__ENABLE_assume_property
+      bool r_assume = false;
+#endif
+#ifdef __romp__ENABLE_cover_property
+      bool complete_on_cover = false;
+      size_t cover_count = INT16_MAX; 
+#endif
+#ifdef __romp__ENABLE_liveness_property
+      bool liveness = false;
+      size_t lcount = INT16_MAX;
+#endif
       std::string result_out_file = "results.txt";
       bool do_even_start = false;
       id_t start_id = 0;
@@ -170,7 +175,7 @@ namespace romp {
   protected: ojstream(O out_) : out(out_) {}
     // int ex_level = 0;
   public:
-    ~ojstream() { out << ']}\n' << std::flush; out.close(); } // probs move this to random walker
+    ~ojstream() { out << std::flush; out.close(); } // probs move this to random walker
     template<typename... Args> ojstream(Args &&...args) 
       : out(O(std::forward<Args>(args)...)) {
       out << "{\"$type\":\"romp-trace\""; // probs move this to random walker
@@ -297,7 +302,7 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const PropertyInfo& pi) noexcept { return (out << pi.type << " \"" << pi.label << "\" " << pi.expr << " @(" << pi.loc << ")"); }
 
    struct Property {
-    bool (*check)(const State_t&) throw (IModelError);
+    bool (*check)(const State_t&) ;
     const PropertyInfo& info;
     const std::string quant_json;
     const std::string quant_str;
@@ -348,8 +353,8 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const RuleInfo& ri) noexcept { return (out << "rule \""<< ri.label << "\" @(" << ri.loc << ")"); }
 
   struct Rule {
-    bool (*guard)(const State_t&) throw (IModelError);
-    void (*action)(State_t&) throw (IModelError);
+    bool (*guard)(const State_t&) ;
+    void (*action)(State_t&) ;
     const RuleInfo& info;
     const std::string quant_json;
     const std::string quant_str;
@@ -413,7 +418,7 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const StartStateInfo& si) noexcept { return (out << "startstate \""<< si.label << "\" @(" << si.loc << ")"); }
 
   struct StartState {
-    void (*initialize)(State_t&) throw (IModelError);
+    void (*initialize)(State_t&) ;
     const StartStateInfo& info;
     const id_t id;
     const std::string quant_json;

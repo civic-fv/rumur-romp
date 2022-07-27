@@ -124,7 +124,7 @@ public:
     }
     *this << ") ";
     if (n.is_pure()) *this << "const "; // if function never changes the state mark it as const (allowed in guards and property_rules)
-    *this << " throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
+    *this << " " /* "throw (" ROMP_MODEL_EXCEPTION_TYPE ")" */  "{\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
     
@@ -178,7 +178,7 @@ public:
       }
     }
 
-    *this << ") const throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
+    *this << ") const "  /* " throw (" ROMP_MODEL_EXCEPTION_TYPE ")" */  "{\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
     
@@ -262,7 +262,7 @@ public:
       }
     }
 
-    *this << ") const throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
+    *this << ") const "  /* " throw (" ROMP_MODEL_EXCEPTION_TYPE ")" */  "{\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
     
@@ -317,7 +317,7 @@ public:
       }
     }
 
-    *this << ") throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
+    *this << ") " /* " throw (" ROMP_MODEL_EXCEPTION_TYPE ")" */ "{\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n";
     
@@ -386,7 +386,7 @@ public:
       }
     }
 
-    *this << ") throw (" ROMP_MODEL_EXCEPTION_TYPE ") {\n";
+    *this << ")"  /* " throw (" ROMP_MODEL_EXCEPTION_TYPE ")" */  "{\n";
     indent();
     *this << indentation() << "using namespace ::" ROMP_TYPE_NAMESPACE ";\n"; 
 
@@ -477,13 +477,13 @@ public:
               << CodeGenerator::M_RULE_GUARD__FUNC_ATTRS
               << " bool "
               << _guard
-              << "(const State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
+              << "(const State_t& s)" /* " throw (" ROMP_MODEL_EXCEPTION_TYPE ")" */ "{"
               "return s." ROMP_RULE_GUARD_PREFIX << sig/* _str */ << "; }\n"
               << indentation()
               << CodeGenerator::M_RULE_ACTION__FUNC_ATTRS
               << " void "
               << _action
-              << "(State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
+              << "(State_t& s)"  /* " throw (" ROMP_MODEL_EXCEPTION_TYPE ")" */  "{"
               "s." ROMP_RULE_ACTION_PREFIX << sig/* _str */ << "; }\n";
         // rule_c++;
         r_sep = ", ";
@@ -524,7 +524,7 @@ public:
             // << " void "
             << " bool "
             << _check
-            << "(const State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") {"
+            << "(const State_t& s)"  /* " throw (" ROMP_MODEL_EXCEPTION_TYPE ")" */  " {"
                "return s." ROMP_PROPERTYRULE_PREFIX << sig << "; }\n";
         switch (prop.property.category) {
         case Property::ASSERTION:
@@ -599,7 +599,7 @@ public:
             << CodeGenerator::M_STARTSTATE__FUNC_ATTRS
             << " void "
             << _init
-            << "(State_t& s) throw (" ROMP_MODEL_EXCEPTION_TYPE ") { "
+            << "(State_t& s)"  /* " throw (" ROMP_MODEL_EXCEPTION_TYPE ")" */  "{ "
                "s." ROMP_STARTSTATE_PREFIX << sig << "; }\n";
         prop_list << sep << ROMP_MAKE_STARTSTATE_STRUCT(_init,count,info_id,sig.to_json(),sig.to_string());
         sep = ", ";
@@ -676,6 +676,8 @@ public:
   void visit_model(const Model &n) {
     ModelSplitter sorter;
     sorter.sort_model(n.children);
+    if (sorter.startstate_decls.size() < 1) 
+      throw Error("Model must contain at least one startstate rule!!",n.loc);
     next_property_id = sorter.next_property_id;
     next_cover_id = sorter.next_cover_id;
     next_liveness_id = sorter.next_liveness_id;
