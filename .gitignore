@@ -17,6 +17,7 @@ tests/*.test.h
 tests/*.test.c
 tests/*.test.C
 tests/*.test.H
+tests/*.test
 
 # murphi generated c files
 *.m.c
