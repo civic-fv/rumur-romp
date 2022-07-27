@@ -327,7 +327,8 @@ void parse_args(int argc, char **argv) {
         }
       }
 #endif
-    } else if ("-ag" == std::string(argv[i]) || "-ll" == std::string(argv[i]) || "--attempted-guard" == std::string(argv[i]) || "--loop-limit") {
+    } else if ("-ag" == std::string(argv[i]) || "-ll" == std::string(argv[i]) 
+                || "--attempted-guard" == std::string(argv[i]) || "--loop-limit" == std::string(argv[i])) {
       // OPTIONS.do_attempt_guard = true;  // just check to make sure this value is not 0
       OPTIONS.attempt_limit = _ROMP_RULE_COUNT;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
