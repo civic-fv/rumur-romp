@@ -30,7 +30,7 @@ template<typename T>
 T rand_choice(unsigned int &seed, T min, T max) {
     //not done fully
     seed = (((seed ^ (seed >> 3)) >> 12) & 0xffff) | ((seed & 0x7fff) << 16); // modifies the seed
-    int choice = seed % (max-min+1) + min;  // generates the random number
+    int choice = seed % (max-min) + min;  // generates the random number
     return choice;
 }
 
