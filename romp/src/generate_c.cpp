@@ -904,7 +904,11 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
 
   out << "\n#pragma region model_prefixes\n\n";
   // write the static prefix to the beginning of the source file
+#ifdef _ROMP_DEV_DEBUG_INCLUDE_DIR
+  out << "#include \"" <<  _ROMP_DEV_DEBUG_INCLUDE_DIR << "/c_prefix.cpp\"\n";
+#else
   output_embedded_code_file(out, resources_c_prefix_cpp, resources_c_prefix_cpp_len);
+#endif
   out << "\n#pragma endregion model_prefixes\n\n" << std::flush;
 
 
@@ -914,13 +918,25 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
   out << "\n\n#pragma endregion generated_code\n\n" << std::flush;
 
   out << "\n#pragma region romp_rw\n\n";
+#ifdef _ROMP_DEV_DEBUG_INCLUDE_DIR
+  out << "#include \"" <<  _ROMP_DEV_DEBUG_INCLUDE_DIR << "/romp-rw.hpp\"\n";
+#else
   output_embedded_code_file(out, resources_romp_rw_hpp, resources_romp_rw_hpp_len);
+#endif
   out << "\n#pragma endregion romp_rw\n\n" << std::flush;
   out << "\n#pragma region romp_rw_options\n\n";
+#ifdef _ROMP_DEV_DEBUG_INCLUDE_DIR
+  out << "#include \"" <<  _ROMP_DEV_DEBUG_INCLUDE_DIR << "/romp-rw-options.hpp\"\n";
+#else
   output_embedded_code_file(out, resources_romp_rw_options_hpp, resources_romp_rw_options_hpp_len);
+#endif
   out << "\n#pragma endregion romp_rw_options\n\n" << std::flush;
   out << "\n#pragma region romp_rw_main\n\n";
+#ifdef _ROMP_DEV_DEBUG_INCLUDE_DIR
+  out << "#include \"" <<  _ROMP_DEV_DEBUG_INCLUDE_DIR << "/romp-rw-main.hpp\"\n";
+#else
   output_embedded_code_file(out, resources_romp_rw_main_hpp, resources_romp_rw_main_hpp_len);
+#endif
   out << "\n#pragma endregion romp_rw_main\n" << std::flush;
 
 

@@ -17,6 +17,14 @@
 #ifndef _romp_src_romp_def_hpp
 #define _romp_src_romp_def_hpp
 
+#ifdef DEBUG  // CMAKE debug config should take care of this
+#ifndef _ROMP_DEV_DEBUG_INCLUDE_DIR  // manually adjust this here if you want it to be different than the auto cmake system config default
+/* Define to make debugging the generated model checker easier
+     set it to the path from the generated model checker file to the romp/resources dir to work */
+#define _ROMP_DEV_DEBUG_INCLUDE_DIR "../romp/resources"
+#endif
+#endif
+
 #define ROMP_UTIL_NAMESPACE_NAME "romp"
 
 #define ROMP_UTIL_NAMESPACE "::" ROMP_UTIL_NAMESPACE_NAME

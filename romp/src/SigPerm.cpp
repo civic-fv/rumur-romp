@@ -391,7 +391,7 @@ namespace romp {
     auto _param = quant.values[ii];
     sig.params[level] = _param;
 #else
-    sig.param[level] = quant.values[ii];
+    sig.params[level] = quant.values[ii];
 #endif
     // if (level > perm.param_count) throw rumur::Error("SigPerm::Iterator tried to iterate too far \t[dev-error]",perm.rule.loc);
     // if (level <= 0) { index = perm.size(); return; }

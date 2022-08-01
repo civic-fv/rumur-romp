@@ -7,8 +7,7 @@ include(GNUInstallDirs)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -W -Wall -Wextra -Wformat=2 \
   -Wwrite-strings -Wmissing-declarations -Wshadow -Wundef \
-  -D DEBUG \
-  ")
+  ") # remove debug line to build proper
 
 # enable even more warnings if the compiler supports them
 include(CheckCXXCompilerFlag)

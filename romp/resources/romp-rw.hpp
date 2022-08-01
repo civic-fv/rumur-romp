@@ -148,6 +148,7 @@ public:
     } else {
       // sim1Step = std::function<void()>([this]() {sim1Step_no_trace();});
     }
+    for (int i=0; i<_ROMP_RULESETS_LEN; ++i) next_rule[i] = 0;
   } 
 
   ~RandWalker() { 
@@ -163,22 +164,31 @@ private:
   /**
    * @brief to pick a rule in random for simulation step
    */
-  const RuleSet& rand_ruleset(){
-    return ::__caller__::RULESETS[rand_choice<size_t>(rand_seed,0ul,_ROMP_RULESETS_LEN)]; 
-  }
+  // const RuleSet& rand_ruleset(){
+  //   return ::__caller__::RULESETS[rand_choice<size_t>(rand_seed,0ul,_ROMP_RULESETS_LEN)]; 
+  // }
+  id_t next_rule[_ROMP_RULESETS_LEN];
   /**
    * @brief to pick a rule in random for simulation step
    */
-  const Rule& rand_rule(const RuleSet& rs){
-    return rs.rules[rand_choice<size_t>(rand_seed,0ul,rs.rules.size())];  
+  const Rule& get_rand_rule(){
+    // return rs.rules[rand_choice<size_t>(rand_seed,0ul,rs.rules.size())];
+    const size_t rs_id = rand_choice<size_t>(rand_seed,0ul,_ROMP_RULESETS_LEN);
+    id_t& r_id = next_rule[rs_id];  // this is a refrence
+    const RuleSet& rs = ::__caller__::RULESETS[rs_id];
+    const Rule& r = rs.rules[r_id]; 
+    if (++r_id >= rs.rules.size())
+      r_id = 0;
+    return r;
   }
 
   void sim1Step_trace() noexcept {
 #ifdef __ROMP__DO_MEASURE
     start_time = time(NULL);
 #endif
-    const RuleSet& rs= rand_ruleset();
-    const Rule& r= rand_rule(rs);
+    // const RuleSet& rs = rand_ruleset();
+    // const Rule& r = rand_rule(rs);
+    const Rule& r = get_rand_rule();
     bool pass = false;
     try {  
       if ((pass = r.guard(state)) == true) {
@@ -218,8 +228,9 @@ private:
 #ifdef __ROMP__DO_MEASURE
     start_time = time(NULL);
 #endif
-    const RuleSet& rs= rand_ruleset();
-    const Rule& r= rand_rule(rs);
+    // const RuleSet& rs= rand_ruleset();
+    // const Rule& r= rand_rule(rs);
+    const Rule& r = get_rand_rule();
     bool pass = false;
     try {  
       if ((pass = r.guard(state)) == true) {

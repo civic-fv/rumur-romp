@@ -47,6 +47,8 @@ add_custom_command(# convert jsonlib to
   DEPENDS ../misc/xxd.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -D_ROMP_DEV_DEBUG_INCLUDE_DIR='\"${CMAKE_CURRENT_SOURCE_DIR}/resources\"'")
+
 add_executable(romp
   ${CMAKE_CURRENT_BINARY_DIR}/resources_c_prefix.cpp
   # ${CMAKE_CURRENT_BINARY_DIR}/resources_h_prefix.cpp
