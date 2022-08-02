@@ -64,7 +64,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/tests/german-rw.test",
             "args": [
-                "-sw"
+                "-sw", "-s", "test-seed"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -83,15 +83,15 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "romp: generate germain test [no-build]"
+            "preLaunchTask": "build german test [no-build]"
         },
         {
-            "name": "(gdb) german single no-trace test [+build romp]",
+            "name": "(gdb) german single TRACE test ",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/tests/german-rw.test",
             "args": [
-                "-sw"
+                "-sw", "-s", "test-seed", "-t"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -110,7 +110,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "romp: generate germain test"
+            "preLaunchTask": "build german test [no-build]"
         },
         {
             "name": "C/C++: romp-rw g++ build and debug active file (single-walk test)",

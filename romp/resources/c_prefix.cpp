@@ -177,11 +177,11 @@ namespace romp {
   public:
     ~ojstream() { out << std::flush; out.close(); } // probs move this to random walker
     template<typename... Args> ojstream(Args &&...args) 
-      : out(O(std::forward<Args>(args)...)) {
-      out << "{\"$type\":\"romp-trace\""; // probs move this to random walker
-    }
+      : out(O(std::forward<Args>(args)...)) {}
     // template<typename T> 
     // friend ojstream<O>& operator << (ojstream<O>& json, const T& val);
+    template <typename T>
+    ojstream<O>& operator << (const T* ptr) { if (ptr != nullptr) *this << *ptr; else out << "null"; return *this; }
     ojstream<O>& operator << (const std::string& str) { out << str; return *this; }
     ojstream<O>& operator << (const char* str) { out << str; return *this; }
     ojstream<O>& operator << (const unsigned char val) { out << val; return *this; }

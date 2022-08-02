@@ -49,6 +49,8 @@ private:
   // tripped thing
   IModelError* tripped = nullptr;
   IModelError* tripped_inside = nullptr;
+  size_t _attempt_limit = OPTIONS.attempt_limit;
+  const size_t init_attempt_limit = OPTIONS.attempt_limit;
   struct History {
     const Rule* rule;
   };
@@ -122,8 +124,10 @@ private:
 public:
   const std::function<void()> sim1Step;
   size_t fuel() { return _fuel; }
+  size_t attempt_limit() { return _attempt_limit; }
   bool is_valid() { return _valid; }
   size_t is_error() { return _is_error; }
+  bool is_done() { return not (_valid && _fuel > 0 && _attempt_limit > 0); }
   
 
   RandWalker(unsigned int rand_seed_) 
@@ -135,10 +139,6 @@ public:
       id(RandWalker::next_id++) 
   { 
     state.__rw__ = this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ 
-#ifdef __ROMP__DO_MEASURE
-    init_time = time(NULL);
-#endif
-    init_state();
     if (OPTIONS.do_trace) {
       json = new json_file_t(OPTIONS.trace_dir + std::to_string(init_rand_seed) + ".json");
       // sim1Step = std::function<void()>([this]() {sim1Step_trace();});
@@ -149,6 +149,10 @@ public:
       // sim1Step = std::function<void()>([this]() {sim1Step_no_trace();});
     }
     for (int i=0; i<_ROMP_RULESETS_LEN; ++i) next_rule[i] = 0;
+#ifdef __ROMP__DO_MEASURE
+    init_time = time(NULL);
+#endif
+    init_state();
   } 
 
   ~RandWalker() { 
@@ -194,9 +198,14 @@ private:
       if ((pass = r.guard(state)) == true) {
         r.action(state);
         --_fuel;
+        _attempt_limit = init_attempt_limit;
         add_to_history(r);
+        *json << ",{\"$type\":\"rule-applied\",\"rule\":" << r << ","
+                 "\"state\":" << state
+              << "}";
       } else {
-        *json << ",{\"$type\":\"rule-failed\",\"rule\":" << r << "}";
+        *json << ",{\"$type\":\"rule-tried\",\"rule\":" << r << "}";
+        --_attempt_limit;
       }      
     } catch(IModelError& me) {
       __handle_exception<Rule,IModelError>(r,me); return;
@@ -236,8 +245,9 @@ private:
       if ((pass = r.guard(state)) == true) {
         r.action(state);
         --_fuel;
+        _attempt_limit = init_attempt_limit;
         add_to_history(r);
-      }      
+      } else { --_attempt_limit; }
     } catch(IModelError& me) {
       __handle_exception<Rule,IModelError>(r,me); return;
     } catch (std::exception& ex) {
@@ -271,15 +281,17 @@ private:
     time_t total_time = (time(NULL)-rw.init_time);
 #endif
     if (OPTIONS.do_trace && rw.json != nullptr) {
+      *rw.json << "]"; // close trace
       if (rw._valid) // if it didn't end in an error we need to: 
-        *rw.json << "]" // close trace
-                  << ",\"error-trace\":[]"; // output empty error-trace
+        *rw.json << ",\"error-trace\":[]"; // output empty error-trace
       *rw.json << ",\"results\":{\"depth\":"<< OPTIONS.depth-rw._fuel <<",\"valid\":" << rw._valid << ",\"is-error\":"<< rw._is_error
 #ifdef __ROMP__DO_MEASURE
                                   << ",\"active-time\":" << rw.active_time << ",\"total-time\":" << total_time
 #else
                                   << ",\"active-time\":null,\"total-time\":null" 
 #endif
+              << ",\"property-violated\":" << rw.tripped
+              << ",\"tripped-inside\":" << rw.tripped_inside
                                 << "}" // closes results object
                << "}"; // closes top level trace object
       rw.json->out.flush();
@@ -296,19 +308,23 @@ private:
         << "\n  " << ((OPTIONS.do_trace) ? 
                           "see \"" + OPTIONS.trace_dir + std::to_string(rw.init_rand_seed) + ".json\" for full trace." 
                         : "use the --trace/-t option to generate a full & detailed trace." ) 
-        << "\n  # of rules applied: " << rw.history_level+1
+        << "\n  # of rules applied: " << rw.history_level-1
         << "\n  History:\n"; // how to get for thr rule vs ruleset
     if (rw.history_start > 1)
       out << "    ... forgotten past ...\n";
-    for (size_t i=rw.history_start; i<=rw.history_level; ++i)
-      out << "    (" << i+1 <<") " << *(rw.history[i%rw.history_size].rule) << "\n";
+    for (size_t i=rw.history_start; i<rw.history_level; ++i)
+      out << "    (" << i <<") " << *(rw.history[i%rw.history_size].rule) << "\n";
     out << "\nFinal State value:" << rw.state << "\n"
         << "\nProperty/Error Report:"
         << "\n  Still a ``valid'' State?: " << (rw._valid ? "true" : "false") //    is it a valid state
-        << "\n  In an ``Error State''?: " << (rw._is_error ? "true" : "false") //    is it a valid state
-        << "\n  Property Violated: " << *rw.tripped;
-    if (rw.tripped_inside != nullptr)
-      out << "\n       While Inside: " << *rw.tripped_inside;
+        << "\n  In an ``Error State''?: " << (rw._is_error ? "true" : "false"); //    is it a valid state
+    if (rw.tripped != nullptr) {
+        out << "\n  Property Violated: " << *rw.tripped;
+      if (rw.tripped_inside != nullptr)
+        out << "\n       While Inside: " << *rw.tripped_inside;
+    } else out << "\n  Property Violated: " << ((rw._fuel == 0) ? "MAX DEPTH REACHED" : 
+                                             ((rw._attempt_limit == 0) ? "ATTEMPT LIMIT REACHED" 
+                                                : "UNKNOWN"));
         
 #ifdef __ROMP__DO_MEASURE
     out << "TODO" //  states discovered (TODO)
@@ -472,7 +488,7 @@ void launch_OpenMPI(unsigned int root_seed);
  */
 void launch_single(unsigned int rand_seed) {
   RandWalker* rw = new RandWalker(rand_seed);
-  while( rw->is_valid() && rw->fuel() > 0)
+  while( not rw->is_done() )
     rw->sim1Step();
   std::cout << "Single ROMP RESULT:\n" << *rw << std::endl;  // example of writing one RW's results to cout
 }

@@ -50,14 +50,14 @@
         },
         {
             "type": "shell",
-            "label": "romp: generate germain test",
+            "label": "romp: generate german test",
             "detail": "use make to build the romp tool (must have configured cmake first & built/have librumur)",
             "group": "build",
-            "command": "${workspaceFolder}/build/romp",
+            "command": "${workspaceFolder}/build/romp/romp",
             "args": [
                 "--output",
-                "${workspaceFolder}/tests/germain-rw.test.cpp",
-                "${workspaceFolder}/tests/germain.m"
+                "${workspaceFolder}/tests/german-rw.test.cpp",
+                "${workspaceFolder}/tests/german.m"
             ],
             "dependsOn": [
                 "CMake: build romp"
@@ -65,46 +65,46 @@
         },
         {
             "type": "shell",
-            "label": "build germain test",
+            "label": "build german test",
             "detail": "use make to build the romp tool (must have configured cmake first & built/have librumur)",
             "group": "build",
             "command": "g++",
             "args": [
                 "-g",
                 "-o",
-                "${workspaceFolder}/tests/germain-rw.test",
-                "${workspaceFolder}/tests/germain-rw.test.cpp"
+                "${workspaceFolder}/tests/german-rw.test",
+                "${workspaceFolder}/tests/german-rw.test.cpp"
             ],
             "dependsOn": [
-                "romp: generate germain test"
+                "romp: generate german test"
             ]
         },
         {
             "type": "shell",
-            "label": "romp: generate germain test [no-build]",
+            "label": "romp: generate german test [no-build]",
             "detail": "use make to build the romp tool (must have configured cmake first & built/have librumur)",
             "group": "build",
-            "command": "${workspaceFolder}/build/romp",
+            "command": "${workspaceFolder}/build/romp/romp",
             "args": [
                 "--output",
-                "${workspaceFolder}/tests/germain-rw.test.cpp",
-                "${workspaceFolder}/tests/germain.m"
+                "${workspaceFolder}/tests/german-rw.test.cpp",
+                "${workspaceFolder}/tests/german.m"
             ]
         },
         {
             "type": "shell",
-            "label": "build germain test [no-build]",
+            "label": "build german test [no-build]",
             "detail": "use make to build the romp tool (must have configured cmake first & built/have librumur)",
             "group": "build",
             "command": "g++",
             "args": [
                 "-g",
                 "-o",
-                "${workspaceFolder}/tests/germain-rw.test",
-                "${workspaceFolder}/tests/germain-rw.test.cpp"
+                "${workspaceFolder}/tests/german-rw.test",
+                "${workspaceFolder}/tests/german-rw.test.cpp"
             ],
             "dependsOn": [
-                "romp: generate germain test [no-build]"
+                "romp: generate german test [no-build]"
             ]
         },
         {

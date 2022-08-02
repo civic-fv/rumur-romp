@@ -35,17 +35,17 @@ add_custom_command(# file with CLI config options
   MAIN_DEPENDENCY resources/romp-rw-options.hpp
   DEPENDS ../misc/xxd.py
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-add_custom_command(# retrieve verified version of the json lib we use nlohmann/json (https://github.com/nlohmann/json)
-  OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/resources/lib/nlohmann_json.hpp
-  COMMAND curl -L https://github.com/nlohmann/json/releases/download/v3.10.5/json.hpp > ${CMAKE_CURRENT_SOURCE_DIR}/resources/lib/nlohmann_json.hpp
-  # MAIN_DEPENDENCY resources/lib/nlohmann_json.hpp
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-add_custom_command(# convert jsonlib to 
-  OUTPUT resources_lib_nlohmann_json.cpp
-  COMMAND ../misc/xxd.py resources/lib/nlohmann_json.hpp ${CMAKE_CURRENT_BINARY_DIR}/resources_lib_nlohmann_json.cpp
-  MAIN_DEPENDENCY resources/lib/nlohmann_json.hpp
-  DEPENDS ../misc/xxd.py
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+# add_custom_command(# retrieve verified version of the json lib we use nlohmann/json (https://github.com/nlohmann/json)
+#   OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/resources/lib/nlohmann_json.hpp
+#   COMMAND curl -L https://github.com/nlohmann/json/releases/download/v3.10.5/json.hpp > ${CMAKE_CURRENT_SOURCE_DIR}/resources/lib/nlohmann_json.hpp
+#   # MAIN_DEPENDENCY resources/lib/nlohmann_json.hpp
+#   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+# add_custom_command(# convert jsonlib to 
+#   OUTPUT resources_lib_nlohmann_json.cpp
+#   COMMAND ../misc/xxd.py resources/lib/nlohmann_json.hpp ${CMAKE_CURRENT_BINARY_DIR}/resources_lib_nlohmann_json.cpp
+#   MAIN_DEPENDENCY resources/lib/nlohmann_json.hpp
+#   DEPENDS ../misc/xxd.py
+#   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -D_ROMP_DEV_DEBUG_INCLUDE_DIR='\"${CMAKE_CURRENT_SOURCE_DIR}/resources\"'")
 

@@ -327,8 +327,8 @@ void parse_args(int argc, char **argv) {
         }
       }
 #endif
-    } else if ("-ag" == std::string(argv[i]) || "-ll" == std::string(argv[i]) 
-                || "--attempted-guard" == std::string(argv[i]) || "--loop-limit" == std::string(argv[i])) {
+    } else if ("-ag" == std::string(argv[i]) || "-ll" == std::string(argv[i]) || "-al" == std::string(argv[i]) 
+                || "--attempt-guard" == std::string(argv[i]) || "--loop-limit" == std::string(argv[i]) || "--attempt-limit" == std::string(argv[i])) {
       // OPTIONS.do_attempt_guard = true;  // just check to make sure this value is not 0
       OPTIONS.attempt_limit = _ROMP_RULE_COUNT;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
@@ -347,10 +347,12 @@ void parse_args(int argc, char **argv) {
                     << std::flush;
           exit(EXIT_FAILURE);
         }
-      } else
+      } else {
+        OPTIONS.attempt_limit = _ROMP_RULE_COUNT;
         std::cerr << "\nWARNING : no attempt limit was provided, but it was enabled.\n"
                      "        |-> default value will be used (default: # of rules post ruleset expansion)\n"
                   << std::flush;
+      }
     } else if ("-rhl" == std::string(argv[i]) || "--r-history" == std::string(argv[i])) {
       // OPTIONS.result_history = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
@@ -392,7 +394,7 @@ void parse_args(int argc, char **argv) {
                      "        |-> `./traces/` will be used by default !!\n"
                   << std::flush;
       std::cerr << "\nWARNING : enabling traces can significantly reduce performance "
-                   "& take up a large amount of system recourses !!\n"
+                   "& can take up a large amount of system recourses !!\n"
                 << std::flush;
     }
     // modifying values to match complex default values
@@ -463,5 +465,7 @@ void parse_args(int argc, char **argv) {
     // warnings and end with errors as appropriate
   }
 }
+
+
 } // namespace options
 } // namespace romp
