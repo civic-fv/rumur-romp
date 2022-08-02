@@ -126,7 +126,16 @@ void ModelSplitter::insert_to_global_decls(Ptr<ConstDecl> n) {
   global_decls.push_back(n);
   cTypeNames.insert(n->name);
 }
-
+inline bool
+  operator== (const position& pos1, const position& pos2)
+  {
+    return pos1.line == pos2.line && pos1.column == pos2.column;
+  }
+  inline bool
+  operator== (const location& loc1, const location& loc2)
+  {
+    return loc1.begin == loc2.begin && loc1.end == loc2.end;
+  }
 void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
   for (const Ptr<Node> &_c : children) {
   // for (const Ptr<Node> &c : children) {
