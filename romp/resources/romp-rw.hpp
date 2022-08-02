@@ -76,12 +76,12 @@ private:
 #endif
   
   void init_state() noexcept {
-    if (OPTIONS.do_even_start) {
-      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
-      start_id = id % _ROMP_STARTSTATES_LEN;
-    } else if (OPTIONS.start_id) {
+    if (OPTIONS.start_id) {
       rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
       start_id = OPTIONS.start_id;
+    } else if (OPTIONS.do_even_start) {
+      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
+      start_id = id % _ROMP_STARTSTATES_LEN;
     } else
       start_id = rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN);
     const StartState& startstate = ::__caller__::STARTSTATES[start_id];

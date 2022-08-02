@@ -350,7 +350,7 @@ void parse_args(int argc, char **argv) {
       } else {
         OPTIONS.attempt_limit = _ROMP_RULE_COUNT;
         std::cerr << "\nWARNING : no attempt limit was provided, but it was enabled.\n"
-                     "        |-> default value will be used (default: # of rules post ruleset expansion)\n"
+                     "        |-> default value will be used (default: " << _ROMP_RULE_COUNT << " (# of rules post ruleset expansion))\n"
                   << std::flush;
       }
     } else if ("-rhl" == std::string(argv[i]) || "--r-history" == std::string(argv[i])) {
@@ -407,7 +407,7 @@ void parse_args(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
     if (OPTIONS.attempt_limit == 0) {
-      std::cerr << "\nERROR : attempt limit cannot be 0 (--loop-limit/-ll/--attempt-guard/-ag)\n" << std::flush;
+      std::cerr << "\nERROR : attempt limit cannot be 0 (--attempt-limit/-al/--loop-limit/-ll/--attempt-guard/-ag)\n" << std::flush;
       exit(EXIT_FAILURE);
     }
     if (OPTIONS.depth == 0) {
@@ -461,7 +461,7 @@ void parse_args(int argc, char **argv) {
         OPTIONS.random_walkers = _ROMP_THREAD_TO_RW_RATIO * OPTIONS.threads;  // post parse assign default value
     }
     if (start_provided && OPTIONS.do_even_start)
-      std::cerr << "\nWARNING : -w/--walks/--walk_count is ignored when the -sw/--single-walk flag is set !!\n"
+      std::cerr << "\nWARNING : --even-start/-es is ignored when --start-id/-sid is provided !!\n"
                   << std::flush;
     // warnings and end with errors as appropriate
 }
