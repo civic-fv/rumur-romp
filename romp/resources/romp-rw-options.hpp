@@ -397,6 +397,7 @@ void parse_args(int argc, char **argv) {
                    "& can take up a large amount of system recourses !!\n"
                 << std::flush;
     }
+  }
     // modifying values to match complex default values
     
     // check for inconsistent or contradictory options here
@@ -463,7 +464,6 @@ void parse_args(int argc, char **argv) {
       std::cerr << "\nWARNING : -w/--walks/--walk_count is ignored when the -sw/--single-walk flag is set !!\n"
                   << std::flush;
     // warnings and end with errors as appropriate
-  }
 }
 
 

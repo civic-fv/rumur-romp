@@ -56,8 +56,8 @@
             "command": "${workspaceFolder}/build/romp/romp",
             "args": [
                 "--output",
-                "${workspaceFolder}/tests/german-rw.test.cpp",
-                "${workspaceFolder}/tests/german.m"
+                "${workspaceFolder}/romp/tests/german.test.cpp",
+                "${workspaceFolder}/romp/tests/german.m"
             ],
             "dependsOn": [
                 "CMake: build romp"
@@ -72,8 +72,8 @@
             "args": [
                 "-g",
                 "-o",
-                "${workspaceFolder}/tests/german-rw.test",
-                "${workspaceFolder}/tests/german-rw.test.cpp"
+                "${workspaceFolder}/romp/tests/german.test",
+                "${workspaceFolder}/romp/tests/german.test.cpp"
             ],
             "dependsOn": [
                 "romp: generate german test"
@@ -87,8 +87,8 @@
             "command": "${workspaceFolder}/build/romp/romp",
             "args": [
                 "--output",
-                "${workspaceFolder}/tests/german-rw.test.cpp",
-                "${workspaceFolder}/tests/german.m"
+                "${workspaceFolder}/romp/tests/german.test.cpp",
+                "${workspaceFolder}/romp/tests/german.m"
             ]
         },
         {
@@ -100,8 +100,8 @@
             "args": [
                 "-g",
                 "-o",
-                "${workspaceFolder}/tests/german-rw.test",
-                "${workspaceFolder}/tests/german-rw.test.cpp"
+                "${workspaceFolder}/romp/tests/german.test",
+                "${workspaceFolder}/romp/tests/german.test.cpp"
             ],
             "dependsOn": [
                 "romp: generate german test [no-build]"

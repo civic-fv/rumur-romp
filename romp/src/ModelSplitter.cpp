@@ -127,14 +127,14 @@ void ModelSplitter::insert_to_global_decls(Ptr<ConstDecl> n) {
   cTypeNames.insert(n->name);
 }
 inline bool
-  operator== (const position& pos1, const position& pos2)
+  equal(const position& pos1, const position& pos2)  // added because newer bison versions don't emit this operator
   {
     return pos1.line == pos2.line && pos1.column == pos2.column;
   }
   inline bool
-  operator== (const location& loc1, const location& loc2)
+  equal(const location& loc1, const location& loc2) // added because newer bison versions don't emit this operator
   {
-    return loc1.begin == loc2.begin && loc1.end == loc2.end;
+    return equal(loc1.begin,loc2.begin) && equal(loc1.end, loc2.end);
   }
 void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
   for (const Ptr<Node> &_c : children) {
@@ -230,7 +230,8 @@ std::string to_string(const Function& f) {
     if (f.parameters.size() >= 2)
       for (int i=1; i<f.parameters.size(); ++i) {
         p = f.parameters[i].get();
-        if (_p->readonly == p->readonly && _p->type->loc == _p->type->loc)
+        if (_p->readonly == p->readonly 
+              && (_p->type->unique_id == p->type->unique_id || equal(_p->type->loc, p->type->loc)))
           buf << ',' << nEscape(p->name);
         else {
           buf << ": " << nEscape(_p->type->to_string()) << "; ";

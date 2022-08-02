@@ -8,8 +8,8 @@
             "program": "${workspaceFolder}/build/romp/romp",
             "args": [
                 "--output",
-                "${workspaceFolder}/tests/german-rw.test.cpp",
-                "${workspaceFolder}/tests/german.m"
+                "${workspaceFolder}/romp/tests/german.test.cpp",
+                "${workspaceFolder}/romp/tests/german.m"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -37,8 +37,8 @@
             "program": "${workspaceFolder}/build/romp/romp",
             "args": [
                 "--output",
-                "${workspaceFolder}/tests/german-rw.test.cpp",
-                "${workspaceFolder}/tests/german.m"
+                "${workspaceFolder}/romp/tests/german.test.cpp",
+                "${workspaceFolder}/romp/tests/german.m"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -62,7 +62,7 @@
             "name": "(gdb) german single no-trace test",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/tests/german-rw.test",
+            "program": "${workspaceFolder}/romp/tests/german.test",
             "args": [
                 "-sw", "-s", "test-seed"
             ],
@@ -89,7 +89,7 @@
             "name": "(gdb) german single TRACE test ",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/tests/german-rw.test",
+            "program": "${workspaceFolder}/romp/tests/german.test",
             "args": [
                 "-sw", "-s", "test-seed", "-t"
             ],
