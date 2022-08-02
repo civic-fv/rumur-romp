@@ -182,6 +182,7 @@ void CTypeGenerator::visit_record(const Record &n) {
   indent();
   indent();
   for (const Ptr<VarDecl> &f : n.fields) {
+    if (f==nullptr) continue;
     check_type_ref(*f, f->type);
     emit_leading_comments(*f);
     *this << indentation() << *(f->type) << " " << f->name << ";";

@@ -209,7 +209,7 @@ std::string to_json(const Function& rule) {
     sep = ",";
   }
   buf << "],\"loc\":{\"$type\":\"location\","
-                    "\"file\":\"" << nEscape(*rule.loc.begin.filename) << "\","
+                    "\"file\":\"" << nEscape(file_path) << "\","
                     // "\"inside\":\"global\","
                     "\"start\":["<< rule.loc.begin.line << "," << rule.loc.begin.column << "],"  
                     "\"end\":["<< rule.loc.end.line << "," << rule.loc.end.column << "]}}";
@@ -224,7 +224,7 @@ std::string to_string(const Function& f) {
       << nEscape(f.name) << '(';
   if (f.parameters.size() >= 1) {
     const VarDecl* _p = f.parameters[0].get();
-    const VarDecl* p = nullptr;
+    const VarDecl* p = _p;
     if (_p->readonly) buf << "var ";
     buf << nEscape(_p->name);
     if (f.parameters.size() >= 2)

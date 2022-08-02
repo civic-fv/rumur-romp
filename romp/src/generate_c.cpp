@@ -486,6 +486,7 @@ public:
               << "(State_t& s)"  /* " throw (" ROMP_MODEL_EXCEPTION_TYPE ")" */  "{"
               "s." ROMP_RULE_ACTION_PREFIX << sig/* _str */ << "; }\n";
         // rule_c++;
+        // rule_count++;
         r_sep = ", ";
       }
       ruleset_array << indentation() << "\t" ROMP_MAKE_RULESET_STRUCT_FOOTER();
@@ -495,6 +496,8 @@ public:
     }
     // *this << "\n#undef " ROMP_RULESETS_LEN "\n"; 
     // *this << "\n#define " ROMP_RULESETS_LEN " " << rules.size() << "\n"; 
+    *this <<"\n/* the number of rules in the model, AFTER ruleset expansion */\n"
+             "#define " ROMP_RULES_LEN " (" << rule_count << "ul)\n";
     *this << "\n\n" << indentation() << "// All of the rule sets in one place\n" 
           << ruleset_array.str() << "};\n\n";
     this->out << std::flush;
@@ -777,8 +780,8 @@ public:
           << indentation() << sorter.startstate_info_list.str() << "};\n"
           << "/* the number of rules in the model, BEFORE ruleset expansion */\n"
              "#define " ROMP_RULESETS_LEN " (" << sorter.rule_decls.size() << "ul)\n"
-          << "/* the number of rules in the model, AFTER ruleset expansion */\n"
-             "#define " ROMP_RULES_LEN " (" << rule_count << "ul)\n"
+          // << "/* the number of rules in the model, AFTER ruleset expansion */\n"
+          //    "#define " ROMP_RULES_LEN " (" << rule_count << "ul)\n"
           << indentation() << "/* the info/metadata about the rules in the model */\n"
           << indentation() << sorter.rule_info_list.str() << "};\n";
     dedent();
