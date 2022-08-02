@@ -567,7 +567,7 @@ void CLikeGenerator::visit_quantifier(const Quantifier &n) {
             << "++)";
     } else {
       // common case
-      *this << "for (__typeof__(" << e->members[0].first << ") " << n.name
+      *this << "for (enum_backend_t " << n.name
             << " = " << e->members[0].first << "; " << n.name
             << " <= " << e->members[e->members.size() - 1].first << "; "
             << n.name << "++)";

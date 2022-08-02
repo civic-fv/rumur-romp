@@ -167,7 +167,7 @@
 #define ROMP_ASSUMPTION_HANDLER(_n,_id) _ROMP_PROPERTY_HANDLER_ASSUME "(" << *((_n).property.expr) << "," << (_id) << "u" ")"
 #define ROMP_COVER_HANDLER(_n,_id,_cn) _ROMP_PROPERTY_HANDLER_COVER "(" << *((_n).property.expr) << "," << (_cn) << "u," << (_id) << "u" ")"
 #define ROMP_LIVENESS_HANDLER(_n,_id,_ln) _ROMP_PROPERTY_HANDLER_LIVENESS "(" << *((_n).property.expr) << "," << (_ln) << "u," << (_id) << "u" ")"
-#define ROMP_ERROR_HANDLER(_id) "this->" _ROMP_ERROR_HANDLER "(" << (_id) << "u" ")"
+#define ROMP_ERROR_HANDLER(_id) _ROMP_ERROR_HANDLER "(" << (_id) << "u" ")"
 
 
 #define ROMP_RESERVED_NAMES "" ROMP_STATE_CLASS_NAME, "to_json", \

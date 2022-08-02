@@ -35,10 +35,11 @@ protected:
   std::function<void(const rumur::ConstDecl&)> f_visit_constdecl;
 
 public:
-  CTypeGenerator(const std::vector<rumur::Comment> &comments_,
+  CTypeGenerator(const std::vector<rumur::Comment> &comments_, const std::vector<bool>& emitted_,
                  std::ostream &out_, bool pack_, 
                  std::function<void(const rumur::ConstDecl&)> f_visit_constdecl_)
-              : CLikeGenerator(comments_, out_, pack_), f_visit_constdecl(f_visit_constdecl_) {}
+              : CLikeGenerator(comments_, out_, pack_), f_visit_constdecl(f_visit_constdecl_)
+                { emitted = emitted_; }
 
 public:
 

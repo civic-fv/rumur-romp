@@ -47,6 +47,7 @@ add_custom_command(# file with CLI config options
 #   DEPENDS ../misc/xxd.py
 #   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wmissing-declarations ")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -D_ROMP_DEV_DEBUG_INCLUDE_DIR='\"${CMAKE_CURRENT_SOURCE_DIR}/resources\"'")
 
 add_executable(romp

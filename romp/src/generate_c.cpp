@@ -147,6 +147,9 @@ public:
     dedent();
     *this << "}\n"; 
     inType = GLOBAL;
+#ifdef DEBUG
+    out << std::flush;  // flush output more frequently for easier debug
+#endif
   }
 
   void visit_propertyrule(const PropertyRule &n) final {
@@ -232,6 +235,9 @@ public:
     dedent();
     *this << indentation() << "}\n";
     inType = GLOBAL;
+#ifdef DEBUG
+    out << std::flush;  // flush output more frequently for easier debug
+#endif
   }
 
   void visit_simplerule(const SimpleRule &n) final {
@@ -294,6 +300,10 @@ public:
     dedent();
     *this << indentation() << "}\n\n";
 
+#ifdef DEBUG
+    out << std::flush;  // flush output more frequently for easier debug
+#endif
+
     *this << indentation() << CodeGenerator::M_RULE_ACTION__FUNC_ATTRS << "\n"
           << indentation() << "void " ROMP_RULE_ACTION_PREFIX << n.name << "(";
 
@@ -330,6 +340,7 @@ public:
       *this << *a;
     }
     for (const Ptr<Decl> &d : n.decls) {
+      if (d == nullptr) continue; // (TMP FIX) not sure why vector's keep getting null Ptr values
       emit_leading_comments(*d);
       *this << *d;
     }
@@ -356,6 +367,10 @@ public:
     dedent();
     *this << indentation() << "}\n";
     inType = GLOBAL;
+
+#ifdef DEBUG
+    out << std::flush;  // flush output more frequently for easier debug
+#endif
   }
 
   void visit_startstate(const StartState &n) final {
@@ -425,6 +440,9 @@ public:
     dedent();
     *this << indentation() << "}\n\n";
     inType = GLOBAL;
+#ifdef DEBUG
+    out << std::flush;  // flush output more frequently for easier debug
+#endif
   }
 
   void visit_vardecl(const VarDecl &n) final {
@@ -659,10 +677,13 @@ public:
       // prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,_id,n.message,ROMP_PROPERTY_TYPE_LIVENESS, to_json(n,"liveness")) ",";
       break;
     }
-    dedent();
+    // dedent();
 
     emit_trailing_comments(n);
     *this << "\n";
+#ifdef DEBUG
+    out << std::flush;  // flush output more frequently for easier debug
+#endif
   }
 
   void visit_errorstmt(const ErrorStmt &n) {
@@ -674,6 +695,9 @@ public:
     emit_trailing_comments(n);
     *this << "\n";
     error_info_list << ROMP_MAKE_ERROR_INFO_STRUCT(n,(inType==FUNCT),to_json(n)) ",";
+#ifdef DEBUG
+    out << std::flush;  // flush output more frequently for easier debug
+#endif
   }
 
   void visit_model(const Model &n) {
@@ -689,17 +713,22 @@ public:
     // prop_info_list = sorter.prop_info_list; // not possible just output this before the one made here
     // SplitModel split = splitter.split_model(n);
 
+    *this << "\n" << indentation() << "/* ======= Header Comments ====== */\n";
+    emit_leading_comments(n);
     *this << "\n\n" << indentation() << "/* ======= Model Type & Const Definitions ====== */\n";
     *this << "\n" << indentation() << "namespace " ROMP_TYPE_NAMESPACE " {\n";
     indent();
 
     *this << indentation() << "typedef " << value_type << " range_t;\n"
-          << indentation() << "typedef unsigned int scalarset_t;\n";
+          << indentation() << "typedef unsigned int scalarset_t;\n"
+          << indentation() << "typedef int enum_backend_t;\n";
 
-    CTypeGenerator type_gen(comments, out, pack, 
+    CTypeGenerator type_gen(comments, emitted, out, pack, 
       [&](const ConstDecl &_n) -> void {visit_constdecl(_n);});
     for (const Ptr<const Decl> &decl : sorter.global_decls)
       type_gen << *decl;
+
+    emitted = type_gen.emitted;
 
     dedent();
     *this << "\n" << indentation() << "}\n\n"; // << std::flush;

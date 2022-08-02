@@ -182,7 +182,7 @@ void CTypeGenerator::visit_record(const Record &n) {
   indent();
   indent();
   for (const Ptr<VarDecl> &f : n.fields) {
-    if (f==nullptr) continue;
+    if (f==nullptr) continue; // (TMP FIX) not sure why vector's keep getting null Ptr values
     check_type_ref(*f, f->type);
     emit_leading_comments(*f);
     *this << indentation() << *(f->type) << " " << f->name << ";";
