@@ -337,13 +337,13 @@ void parse_args(int argc, char **argv) {
           OPTIONS.attempt_limit = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument &ia) {
           std::cerr << "invalid argument : provided attempt limit was not a number (NaN) !!\n"
-                       "                   |-> (for -ag/--attempt-guard or -ll/--loop-limit flag)\n"
+                       "                   |-> (for -al/--attempt-limit or -ag/--attempt-guard or -ll/--loop-limit flag)\n"
                     << std::flush;
           exit(EXIT_FAILURE);
         } catch (std::out_of_range &oor) {
           std::cerr << "invalid argument : provided attempt limit was out of range must be unsigned int (aka "
                        "must be positive & less than 2.147 billion)\n"
-                       "                   |-> (for  -ag/--attempt-guard or -ll/--loop-limit flag)\n"
+                       "                   |-> (for -al/--attempt-limit or -ag/--attempt-guard or -ll/--loop-limit flag)\n"
                     << std::flush;
           exit(EXIT_FAILURE);
         }
