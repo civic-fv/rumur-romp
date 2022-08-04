@@ -107,11 +107,6 @@ void print_help() {
                "                            default: \""<< OPTIONS.trace_dir <<"\"\n"
                "\n"
                "RESULT OUTPUT OPTIONS:\n"
-               "  --r-history <int>     Specify how much of a history of rules\n"
-               "    | -rhl <int>          applied you want to see in the results."
-               "                          <int> - (required) size of history buffer\n"
-               "                            default: " << OPTIONS.history_length << "\n"
-              //  "                          NOTE: larger the size == more RAM used.\n"
                "  --report-all          Report on all walks not just those with \n"
                "    | --all              ``errors''. Including those stopped by \n"
                "    | -a                  the --attempt-guard/-ag/--loop-limit/-ll\n"
@@ -122,6 +117,19 @@ void print_help() {
                "    | -ra                 property (defined by rumur), rather than\n"
                "                          just discarding them as invalid states.\n"
 #endif
+               "  --r-history <int>     Specify how much of a history of rules\n"
+               "    | -rhl <int>          applied you want to see in the results."
+               "                          <int> - (required) size of history buffer\n"
+               "                            default: " << OPTIONS.history_length << "\n"
+              //  "                          NOTE: larger the size == more RAM used.\n"
+               "  --r-show-type         Output variable type next to name when\n"
+               "    | -rst                reporting the value of the model state\n"
+               "  --r-tab-size <int>    Set the indentation size for the result \n"
+               "    | -rts <int>          output (NOTE: not used for trace output)\n"
+               "                          (default: 2 spaces)\n"
+               "  --r-use-tab           Indent using tab chars instead of spaces.\n"
+               "    | -rut                (NOTE: not used in json trace output)\n"
+               "                          (NOTE: overrides --r-tab-size/-rts)\n"
               //  "  --output <file-path>  Specify a file you wish to output to\n"
               //  "    | -o <file-path>      instead of to stdout.\n"
                "\n"
@@ -373,18 +381,44 @@ void parse_args(int argc, char **argv) {
       }
     } else if ("-a" == std::string(argv[i]) || "--all" == std::string(argv[i]) || "--report-all" == std::string(argv[i])) {
       OPTIONS.result_all = true;
+    } else if ("-rst" == std::string(argv[i]) || "--show-type" == std::string(argv[i]) || "--r-show-type" == std::string(argv[i])) {
+      OPTIONS.result_show_type = true;
+    } else if ("-rtc" == std::string(argv[i]) || "--tab-char" == std::string(argv[i]) || "--r-tab-char" == std::string(argv[i])) {
+      OPTIONS.tab_char = '\t';
+    } else if ("-rts" == std::string(argv[i]) || "--tab-size" == std::string(argv[i]) || "--r-tab-size-" == std::string(argv[i])) {
+      if (i + 1 < argc && '-' != argv[i + 1][0]) {
+        ++i;
+        try {
+          OPTIONS.tab_size = std::stoul(argv[i], nullptr, 0);
+        } catch (std::invalid_argument &ia) {
+          std::cerr << "invalid argument : provided tab size was not a number (NaN) !!\n"
+                       "                   |-> (for --r-tab-size/--tab-size/-rts flag)\n"
+                    << std::flush;
+          exit(EXIT_FAILURE);
+        } catch (std::out_of_range &oor) {
+          std::cerr << "invalid argument : provided tab size was out of range must be unsigned int (aka "
+                       "must be positive & less than 2.147 billion)\n"
+                       "                   |-> (for --r-tab-size/--tab-size/-rts flag)\n"
+                    << std::flush;
+          exit(EXIT_FAILURE);
+        }
+      } else {
+        std::cerr << "invalid argument : --r-tab-size/--tab-size/-rts requires an unsigned int to follow as a parameter !!\n"
+                  << std::flush;
+        exit(EXIT_FAILURE);
+      }
 #ifdef __romp__ENABLE_assume_property
     } else if ("--r-assume" == std::string(argv[i])) {
       OPTIONS.r_assume = true;
 #endif
-    } else if ("-o" == std::string(argv[i]) || "--output" == std::string(argv[i])) {
-      OPTIONS.output_results = true;
-      if (i + 1 < argc && argv[i + 1][0] != '-')
-        OPTIONS.result_out_file = std::string(argv[++i]);
-      else
-        std::cerr << "\nWARNING : you have not specified an outfile after using the -o/--output flag !!\n"
-                     "        |-> `${CWD}/results.txt` will be used by default !!\n"
-                  << std::flush;
+    // } else if ("-o" == std::string(argv[i]) || "--output" == std::string(argv[i])) {
+    //   OPTIONS.output_results = true;
+    //   if (i + 1 < argc && argv[i + 1][0] != '-')
+    //     OPTIONS.result_out_file = std::string(argv[++i]);
+    //   else
+    //     std::cerr << "\nWARNING : you have not specified an outfile after using the -o/--output flag !!\n"
+    //                  "        |-> `${CWD}/results.txt` will be used by default !!\n"
+    //               << std::flush;
     } else if ("-t" == std::string(argv[i]) || "--trace" == std::string(argv[i])) {
       OPTIONS.do_trace = true;
       if (i + 1 < argc && argv[i + 1][0] != '-')
@@ -399,6 +433,9 @@ void parse_args(int argc, char **argv) {
     }
   }
     // modifying values to match complex default values
+    if (OPTIONS.tab_char == '\t') {
+      OPTIONS.tab_size = 1;
+    }
     
     // check for inconsistent or contradictory options here
     // TODO (OPTIONAL) check OPTIONS to make sure config is valid and output

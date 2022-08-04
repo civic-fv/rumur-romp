@@ -108,7 +108,7 @@ private:
   template<typename R, typename E>
   void __handle_exception(const R& r, const E& er) noexcept {
     if (OPTIONS.do_trace) {
-       *json << "],\"error-trace\":[" << er << "]";
+       *json << "],\"error-trace\":[" << er; // << "]";
     } 
     tripped_inside = r.make_error();
 #ifdef __ROMP__DO_MEASURE
@@ -219,6 +219,7 @@ private:
         try {
           if (prop.check(state)) { // if tripped
             tripped = new ModelPropertyError(prop);
+            *json << "],\"error-trace\":[" << *tripped; // << "]";
             break;
           }
         } catch(IModelError& me) {
@@ -300,29 +301,33 @@ private:
 #ifdef __romp__ENABLE_assume_property
     if (not rw._is_error && rw.tripped != nullptr && not OPTIONS.r_assume) return out; // don't output assumption violations unless --report-assume
 #endif
+    // ostream_p out(out_,0);
     out << "\n====== BEGIN :: Report of Walk #" << rw.id << " ======"
-        << "\n  RandSeed: " << rw.init_rand_seed
+        << "\nBasic Info: "
+        << "\n    RandSeed: " << rw.init_rand_seed
         << "\n  StartState: " << ::__caller__::STARTSTATES[rw.start_id]
         << "\n  Fuel level: " << rw._fuel
-        << "\n\nTrace lite:"
-        << "\n  " << ((OPTIONS.do_trace) ? 
+        << "\n"
+           "\nTrace lite:"
+        << "\n  NOTE - " << ((OPTIONS.do_trace) ? 
                           "see \"" + OPTIONS.trace_dir + std::to_string(rw.init_rand_seed) + ".json\" for full trace." 
                         : "use the --trace/-t option to generate a full & detailed trace." ) 
-        << "\n  # of rules applied: " << rw.history_level-1
-        << "\n  History:\n"; // how to get for thr rule vs ruleset
+        << "\n  rules applied: " << rw.history_level-1
+        << "\n  History: [\n"; // how to get for thr rule vs ruleset
     if (rw.history_start > 1)
-      out << "    ... forgotten past ...\n";
+      out << "        ... forgotten past ...\n";
     for (size_t i=rw.history_start; i<rw.history_level; ++i)
-      out << "    (" << i <<") " << *(rw.history[i%rw.history_size].rule) << "\n";
-    out << "\nFinal State value:" << rw.state << "\n"
+      out << "      (" << i <<") " << *(rw.history[i%rw.history_size].rule) << "\n";
+    out << "    ]"
+        << "\n          State: " << rw.state << "\n"
         << "\nProperty/Error Report:"
         << "\n  Still a ``valid'' State?: " << (rw._valid ? "true" : "false") //    is it a valid state
-        << "\n  In an ``Error State''?: " << (rw._is_error ? "true" : "false"); //    is it a valid state
+        << "\n    In an ``Error State''?: " << (rw._is_error ? "true" : "false"); //    is it a valid state
     if (rw.tripped != nullptr) {
-        out << "\n  Property Violated: " << *rw.tripped;
+        out << "\n         Property Violated: " << *rw.tripped;
       if (rw.tripped_inside != nullptr)
-        out << "\n       While Inside: " << *rw.tripped_inside;
-    } else out << "\n  Property Violated: " << ((rw._fuel == 0) ? "MAX DEPTH REACHED" : 
+        out << "\n              While Inside: " << *rw.tripped_inside;
+    } else out << "\n         Property Violated: " << ((rw._fuel == 0) ? "MAX DEPTH REACHED" : 
                                              ((rw._attempt_limit == 0) ? "ATTEMPT LIMIT REACHED" 
                                                 : "UNKNOWN"));
         

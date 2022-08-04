@@ -454,19 +454,26 @@ public:
   }
 
 
-  void gen_state_to_json(std::vector<Ptr<VarDecl>> &children) {
+  void gen_state_to_json(std::vector<Ptr<VarDecl>> &children) {    
+    *this << "\n" << indentation() 
+                  << "template<class O> " ROMP_JSON_STREAM_TYPE "& operator << (" ROMP_JSON_STREAM_TYPE "& json, const " ROMP_STATE_TYPE "& s) { "
+                       "(void) ::" ROMP_MODEL_NAMESPACE_NAME "::" ROMP_MAKE_JSON_CONVERTER_CALL(ROMP_STATE_CLASS_NAME,"s") "; return json; }\n"
+                      //  "(void) ::" ROMP_TYPE_NAMESPACE "::" ROMP_MAKE_JSON_CONVERTER_CALL(ROMP_STATE_CLASS_NAME,"s") "; return json; }\n"
+                  << indentation() 
+                  << ROMP_OUT_STREAM_TYPE "& operator << (" ROMP_OUT_STREAM_TYPE "& out, const " ROMP_STATE_TYPE "& s) { "
+                       "(void) ::" ROMP_MODEL_NAMESPACE_NAME "::" ROMP_MAKE_STREAM_CONVERTER_CALL(ROMP_STATE_CLASS_NAME,"s") "; return out; }\n"
+                      //  "(void) ::" ROMP_TYPE_NAMESPACE "::" ROMP_MAKE_JSON_CONVERTER_CALL(ROMP_STATE_CLASS_NAME,"s") "; return json; }\n"
+                  << indentation()
+                  << "::std::ostream& operator << (::std::ostream& out_, const " ROMP_STATE_TYPE "& s) { "
+                       ROMP_OUT_STREAM_TYPE " out(out_,2); "
+                       "(void) ::" ROMP_MODEL_NAMESPACE_NAME "::" ROMP_MAKE_STREAM_CONVERTER_CALL(ROMP_STATE_CLASS_NAME,"s") "; return out_; }\n";
+                      //  "(void) ::" ROMP_TYPE_NAMESPACE "::" ROMP_MAKE_STREAM_CONVERTER_CALL(ROMP_STATE_CLASS_NAME,"s") "; return out_; }\n";
     // *this << "\n" << indentation() << "NLOHMANN_DEFINE_TYPE_INTRUSIVE("
     //       ROMP_STATE_CLASS_NAME;
     // for (const Ptr<const VarDecl> &c : children) 
     //   if (auto v = dynamic_cast<const VarDecl *>(c.get()))
     //     *this << "," << v->name;
     // *this << ")\n";
-    *this << "\n" << indentation() << "//TODO: make the json and stream operators for the state class\n"
-                  << "template<class O> ::romp::ojstream<O>& operator << (::romp::ojstream<O>& out, const " ROMP_STATE_TYPE "& s) {"
-                       "return (out << \"\\\"``json state output'' NOT YET IMPLEMENTED\\\"\"); }\n"
-                  << indentation()
-                  << "::std::ostream& operator << (::std::ostream& out, const " ROMP_STATE_TYPE "& s) {"
-                       "return (out << \"``plain text state output'' NOT YET IMPLEMENTED\"); }\n";
   }
 
   void gen_ruleset_array(const std::vector<rumur::Ptr<rumur::SimpleRule>>& rules) {
@@ -780,13 +787,28 @@ public:
   
     dedent();
     *this << "\n" << indentation() << "};\n"; // << std::flush;
+    // dedent();
+    // *this << indentation() << "}\n\n";
 
+    *this << "\n" << indentation() << "/* ======= Murphi Model Output Functions ====== */\n";
+    // *this << indentation() << "namespace " ROMP_TYPE_NAMESPACE " {\n";
+    // indent();
+    auto state = Record(sorter.state_var_decls,n.loc);
+    // ModelSplitter::pretty_type_reprs[state.unique_id] = ROMP_STATE_CLASS_NAME;
+    ModelSplitter::model_unique_id = state.unique_id;
+    // type_gen.indent();
+    type_gen.emit_stream_operators__record(ROMP_STATE_CLASS_NAME, state);
+    // type_gen.dedent();
+    dedent();
+    *this << indentation() << "}\n"
+          << indentation() << "namespace " ROMP_UTIL_NAMESPACE_NAME " {";
+    indent();
     gen_state_to_json(sorter.state_var_decls);
-
     dedent();
     *this << indentation() << "}\n\n";
+
     
-    *this << indentation() << "/* ======= Murphi Model Infos & MetaData ====== */\n"; // << std::flush;
+    *this << "\n\n" << indentation() << "/* ======= Murphi Model Infos & MetaData ====== */\n"; // << std::flush;
     *this << indentation() << "namespace " ROMP_INFO_NAMESPACE_NAME " {\n\n";
     indent();
     *this << "/* the number of functions & procedures in the model */\n"

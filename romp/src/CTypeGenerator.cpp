@@ -20,8 +20,10 @@
 #include "options.h"
 #include "romp_def.hpp"
 #include "nested_escape.hpp"
+#include "ModelSplitter.hpp"
 // #include "../../common/escape.h"
 #include <rumur/rumur.h>
+#include <sstream>
 
 using namespace rumur;
 
@@ -79,7 +81,7 @@ void CTypeGenerator::visit_array(const Array &n) {
         << *n.element_type 
         // << " data[" << *(n.index_type) << "];";
         << " data[" << count.get_str() << "]; "
-        << "size_t size() {return (size_t)(" << count.get_str() <<  ");}";
+        << "size_t size() const {return (" << count.get_str() <<  "ul);}";
 
   // // The index for this array may be an enum declared inline:
   // //
@@ -95,38 +97,72 @@ void CTypeGenerator::visit_array(const Array &n) {
 
 }
 
-void CTypeGenerator::emit_stream_operators__array(const std::string &name, const Array &te) {
-  return; //todo ...
-  if (auto _e = dynamic_cast<const Enum *>(te.index_type.get())) { 
-    *this << indentation() << ROMP_MAKE_JSON_CONVERTER_HEADER(name);
+void CTypeGenerator::emit_stream_operators__array(const std::string &name, const Array &te) { 
+  std::string type_str = nEscape(ModelSplitter::get_pretty_rep(te));
+  std::string el_type;
+  if (auto _tid = dynamic_cast<const TypeExprID*>(te.element_type.get()))
+    el_type = _tid->referent->name;
+  else throw Error("Was not made anonymous before export \t[dev-error]", te.element_type->loc);
+  if (auto _e = dynamic_cast<const Enum *>(te.index_type->resolve().get())) { 
+    *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { ";
     *this << "json << \"" // double escape time
                 "{\\\"$type\\\":\\\"enum-array-value\\\","
-                "\\\"type\\\":\\\"" << nEscape(te.to_string()) << "\\\","
+                "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
                 // "\\\"element-type\\\":\\\"" << nEscape(et_str) << "\\\"
                 // "\\\"index-type\\\":\\\"" << nEscape(it_str) <<"\\\","
                 "\\\"size\\\":\" << val.size() << \","
-                "\\\"value\\\":[";
+                "\\\"elements\\\":[";
     std::string sep;
     for (int i=0; i<_e->members.size(); ++i) {
       *this << sep << "{\\\"$type\\\":\\\"kv-pair\\\",\\\"key\\\":\\\"" << nEscape(_e->members[i].first)
-                   << "\\\"value\\\":\" << val.data[" << std::to_string(i) << "] << \"}";
+                   << "\\\"value\\\":\" << " ROMP_MAKE_JSON_CONVERTER_CALL(el_type,"val.data[" + std::to_string(i) + "]") " << \"}";
       sep = ",";
     }
-    *this << "]}\";";
-    // *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
-    
+    *this << "]}\"; "
+             // "return json; "
+             "return \"\"; "
+             "}\n";
+
+    *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
+    *this << "out << \"[\\n\" "
+                  "<< out.indent() ";
+    for (int i=0; i<_e->members.size(); ++i) {
+      *this << "<< out.indentation() << \"[" << _e->members[i].first << "]: \" "
+               "<< " ROMP_MAKE_STREAM_CONVERTER_CALL(el_type,"val.data[" + std::to_string(i) + "]") " << '\\n'";
+    }
+                    // "out ; } "
+    *this << "out << out.dedent() << out.indentation() << ']'; "
+            // "return out; "
+            "return \"\"; "
+              "}\n";
   } else {
-    *this << indentation() << ROMP_MAKE_JSON_CONVERTER_HEADER(name);
+    *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " {";
     *this << "json << \"" // double escape time
                 "{\\\"$type\\\":\\\"array-value\\\","
-                "\\\"type\\\":\\\"" << nEscape(te.to_string()) << "\\\","
+                "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
                 // "\\\"element-type\\\":\\\"" << nEscape(et_str) << "\\\","
                 // "\\\"index-type\\\":\\\"" << nEscape(it_str) <<"\\\","
                 "\\\"size\\\":\" << val.size() << \","
-                "\\\"value\\\":[\"; " // end double escape time
-            "std::string sep; for (size_t i=0; i<val.size(); ++i) { json << sep <<  val.data[i]; sep = \",\"}"
-            "json << \"]\"}";
-    // *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
+                "\\\"elements\\\":[\"; " // end double escape time
+            "std::string sep; "
+            "for (size_t i=0; i<val.size(); ++i) { "
+                    "json << sep << " ROMP_MAKE_JSON_CONVERTER_CALL(el_type,"val.data[i]") "; "
+                    "sep = \",\"; } "
+            "json << \"]}\"; "
+            // "return json; "
+            "return \"\"; "
+            "}\n";
+    
+  *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
+  *this << "out << \"[\\n\" "
+                "<< out.indent(); "
+                "for (size_t i=0; i<val.size(); ++i) { "
+                  "out << out.indentation() << \"[\" << i << \"]: \""
+                      "<< " ROMP_MAKE_STREAM_CONVERTER_CALL(el_type,"val.data[i]") " << '\\n'; } ";
+  *this << "out << out.dedent() << out.indentation() << ']'; "
+           // "return out; "
+           "return \"\"; "
+            "}\n";
   }
   // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
   //          "if (" << ROMP_SHOW_TYPE_OPTION_EXPR << ") {" 
@@ -145,12 +181,27 @@ void CTypeGenerator::visit_enum(const Enum &n) {
 }
 
 void CTypeGenerator::emit_stream_operators__enum(const std::string &name, const Enum &te) {
-  return; //todo ...
-  *this << indentation() << ROMP_MAKE_JSON_CONVERTER_HEADER(name);
-  *this << "json << \"{\\\"$type\":\\\"enum-value\\\","
-                      "\\\"type\\\":\"" << nEscape(te.to_string()) << "\\\","
-                      "\\\"value\\\":\\\"\"; "
-           "switch (val) { case: }"; // TODO
+  std::string type_str = nEscape(ModelSplitter::get_pretty_rep(te));
+  *this << indentation() << "std::string to_string(const " << name << " val) { "
+           "switch (val) { ";
+  for (auto val : te.members)
+    *this << "case " << val.first << ": return \"" << val.first << "\"; ";
+  *this << "default: break; } return \"" << name << "::__UNKNOWN_ENUM_VALUE__\"; }\n";
+
+  *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { ";
+  *this << "json << \"{\\\"$type\\\":\\\"enum-value\\\","
+                      "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
+                      "\\\"value\\\":\\\"\" << to_string(val) <<\"\\\"}\"; "
+           // "return json; "
+           "return \"\"; "
+           "}\n";
+
+  *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
+  // *this << "out << \": " << type_str << " := \" << to_string(val); "
+  *this << "out << to_string(val); "
+           // "return out; "
+           "return \"\"; "
+           "}\n";
 
   // *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
   // *this << indentation() << "NLOHMANN_JSON_SERIALIZE_ENUM( " << name << ", { ";
@@ -167,13 +218,30 @@ void CTypeGenerator::visit_range(const Range &) { *this << "range_t"; }
 
 
 void CTypeGenerator::emit_stream_operators__range(const std::string &name, const Range &te) {
-  return; //todo ...
-  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
-        "if (" ROMP_SHOW_TYPE_OPTION_EXPR ") {" 
-          "j = " ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"}, "
-                          "{\"value\",(" << value_type << ")data}};"
-        "} else {"
-          "to_json(j,(" << value_type << ")data);} }\n";
+  std::string type_str = nEscape(ModelSplitter::get_pretty_rep(te));
+  *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { ";
+  *this << "json << \"{\\\"$type\\\":\\\"range-value\\\","
+                      "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
+                      "\\\"min\\\":\" << (" << te.lower_bound() << ") << \","
+                      "\\\"max\\\":\" << (" << te.upper_bound() << ") << \","
+                      "\\\"value\\\":\" << ((range_t)val) << \"}\"; "
+            // "return json; "
+            "return \"\"; "
+            "}\n";
+
+  *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
+  // *this << "out << \": " << type_str << " := \" << ((range_t)val); "
+  *this << "out << ((range_t)val); "
+           // "return out; "
+           "return \"\"; "
+           "}\n";
+
+  // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
+  //       "if (" ROMP_SHOW_TYPE_OPTION_EXPR ") {" 
+  //         "j = " ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"}, "
+  //                         "{\"value\",(" << value_type << ")data}};"
+  //       "} else {"
+  //         "to_json(j,(" << value_type << ")data);} }\n";
 }
 
 
@@ -196,16 +264,57 @@ void CTypeGenerator::visit_record(const Record &n) {
 
 
 void CTypeGenerator::emit_stream_operators__record(const std::string &name, const Record &te) {
-  return; //todo ...
-  std::string conv_str = ROMP_JSON_TYPE "{";
-  for (const Ptr<VarDecl> &f : te.fields)
-    conv_str += "{\"" + f->name + "\", data." + f->name + "},";
-  conv_str += "}";
-  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
-        "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? (" 
-            ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"},"
-            "{\"value\"," << conv_str << "}}"
-          ") : (" << conv_str << "); }\n";
+  std::string type_str = nEscape(ModelSplitter::get_pretty_rep(te));
+  std::string m_type;
+  *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { using namespace ::" ROMP_TYPE_NAMESPACE "; ";
+  *this << "json << \"{\\\"$type\\\":\\\"record-value\\\","
+                      "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
+                      "\\\"fields\\\":[\" ";
+  std::string sep;
+  for (const auto& m : te.fields) {
+    if (m==nullptr) continue; // (TMP-FIX) Figure out why vector's keep init-ing w/ nullptr's 
+    if (const auto _tid = dynamic_cast<const TypeExprID*>(m->type.get()))
+      m_type = _tid->referent->name;
+    else throw Error("type wan not anonymized durring intermediary processing \t[dev-error]",m->type->loc);
+    *this << sep 
+          << "<< \"{\\\"$type\\\":\\\"kv-pair\\\","
+                    "\\\"key\\\":\\\"" << m->name << "\\\","
+                    "\\\"value\\\":\" << " ROMP_MAKE_JSON_CONVERTER_CALL(m_type,"val." + m->name);
+    sep = " << \"},\" ";
+  }
+  *this << "<< \"}]}\"; "
+            // "return json; "
+            "return \"\"; "
+            "}\n";
+
+  *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { using namespace ::" ROMP_TYPE_NAMESPACE "; ";
+  *this << "out << \"{\\n\" "
+            "<< out.indent() ";
+  for (const auto& m : te.fields) {
+    if (m==nullptr) continue; // (TMP-FIX) Figure out why vector's keep init-ing w/ nullptr's 
+    if (const auto _tid = dynamic_cast<const TypeExprID*>(m->type.get()))
+      m_type = _tid->referent->name;
+    else throw Error("type wan not anonymized durring intermediary processing \t[dev-error]",m->type->loc);
+    std::string field_type = nEscape(ModelSplitter::get_pretty_rep(*m->type));
+    *this << "<< out.indentation() "
+             "<< \"" << m->name << " \" << ((" ROMP_SHOW_TYPE_OPTION_EXPR ") ? \": " << field_type << " =\" : \":=\") << ' ' "
+             "<< " ROMP_MAKE_STREAM_CONVERTER_CALL(m_type,"val." + m->name) << " << '\\n' ";
+  }
+  *this << "<< out.dedent()"
+           "<< out.indentation() << '}'; "
+           // "return out; "
+           "return \"\"; "
+           "}\n";
+
+  // std::string conv_str = ROMP_JSON_TYPE "{";
+  // for (const Ptr<VarDecl> &f : te.fields)
+  //   conv_str += "{\"" + f->name + "\", data." + f->name + "},";
+  // conv_str += "}";
+  // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
+  //       "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? (" 
+  //           ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"},"
+  //           "{\"value\"," << conv_str << "}}"
+  //         ") : (" << conv_str << "); }\n";
 }
 
 
@@ -213,27 +322,52 @@ void CTypeGenerator::visit_scalarset(const Scalarset &) { *this << "scalarset_t"
 
 
 void CTypeGenerator::emit_stream_operators__scalarset(const std::string &name, const Scalarset &te) {
-  return; //todo ...
-  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
-        "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? (" 
-          ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"}, "
-                          "{\"value\",(" << value_type << ")data}} "
-          ") : ( to_json((" << value_type << ")data) ); }\n";
+  std::string type_str = nEscape(ModelSplitter::get_pretty_rep(te));
+  *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { ";
+  *this << "json << \"{\\\"$type\\\":\\\"scalarset-value\\\","
+                      "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
+                      "\\\"bound\\\":" << te.bound->constant_fold().get_str() << ","
+                      "\\\"value\\\":\" << ((scalarset_t)val) << \"}\"; "
+            // "return json; "
+            "return \"\"; "
+            "}\n";
+
+  *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
+  // *this << "out << \": " << type_str << " := \" << ((scalarset_t)val); "
+  *this << "out << ((scalarset_t)val); "
+           // "return out; "
+           "return \"\"; "
+           "}\n";
+
+  // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
+  //       "j = (" ROMP_SHOW_TYPE_OPTION_EXPR ") ? (" 
+  //         ROMP_JSON_TYPE "{{\"type\",\"" << name << ": " << te.to_string() << "\"}, "
+  //                         "{\"value\",(" << value_type << ")data}} "
+  //         ") : ( to_json((" << value_type << ")data) ); }\n";
 }
 
 
 void CTypeGenerator::emit_stream_operators__typeexprid(const std::string &name, const TypeExprID &te) {
-  return; //todo ...
-  *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
-        "to_json(j,(" << te.referent->name << ")data); "
-        "}\n";
+  std::string type_id = te.referent->name;
+  *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name);
+  *this << "json << " ROMP_MAKE_JSON_CONVERTER_CALL(type_id,"((" + type_id + ")val)") "; "
+            // "return json; "
+            "return \"\"; "
+            "}\n";
+
+  *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
+  *this << "out << " ROMP_MAKE_STREAM_CONVERTER_CALL(type_id,"((" + type_id + ")val)") "; "
+           // "return out; "
+           "return \"\"; "
+           "}\n";
+
+  // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
+  //       "to_json(j,(" << te.referent->name << ")data); "
+  //       "}\n";
 }
 
 
 void CTypeGenerator::emit_stream_operators(const std::string &name, const Ptr<const TypeExpr> &te) {
-  return; //todo ...
-  *this << indentation() << "/* NOT YET IMPLEMENTED !\n";
-  indent();
   class type_dispatcher : public ConstBaseTypeTraversal {
     const std::string& _name;
     CTypeGenerator* parent;
@@ -252,8 +386,6 @@ void CTypeGenerator::emit_stream_operators(const std::string &name, const Ptr<co
   };
   type_dispatcher tf(name,this);
   tf.dispatch(*te);
-  dedent();
-  *this << indentation() << " */\n";
 }
 
 void CTypeGenerator::__throw_unreachable_error(const Node &n) {

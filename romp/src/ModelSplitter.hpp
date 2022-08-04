@@ -25,6 +25,7 @@
 // #include <iostream>
 // #include <unordered_map>
 #include <unordered_set>
+#include <unordered_map>
 #include <rumur/rumur.h>
 #include <sstream>
 #include "romp_def.hpp"
@@ -57,6 +58,8 @@ public: // ---- Public Class Members ---- //
   std::vector<rumur::Ptr<rumur::StartState>> startstate_decls;
   std::vector<rumur::Ptr<rumur::SimpleRule>> rule_decls;
   std::vector<rumur::Ptr<rumur::PropertyRule>> property_decls;
+  static std::unordered_map<size_t,std::string> pretty_type_reprs;
+  static size_t model_unique_id;
   std::stringstream funct_info_list;
   std::stringstream rule_info_list;
   std::stringstream startstate_info_list;
@@ -188,6 +191,11 @@ public:
   virtual void visit_xor(rumur::Xor &n) { __throw_unreachable_error(n); }
   
 
+protected:
+  static void set_pretty_str_rep_type(const rumur::Node& t, int max_level=1);
+public:
+  static const std::string get_pretty_rep(const rumur::TypeExpr& t);
+
   // void visit_constdecl(ConstDecl &n) final; // pretty sure I don't need this!
 
 
@@ -195,7 +203,7 @@ public:
   // ModelSplitter &operator<<(rumur::Node &n);
 
   // void dispatch(const rumur::Node &n);
-  
+
 };
 
 } // namespace romp

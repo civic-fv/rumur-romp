@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <iostream>
+#include <iomanip>
 // #include <stdlib.h>
 #include <string>
 #include <string.h>  // required for memset
@@ -123,8 +124,10 @@ namespace romp {
       std::string trace_dir = "./traces/"; // path for the trace file to be created during each walk
       bool deadlock = false; // separate bool for each property or consider having a valid bool
       bool result = false; // result output
-      bool output_results = false;
       bool result_all = false;
+      bool result_show_type = false;
+      unsigned int tab_size = 2;
+      char tab_char = ' ';
 #ifdef __romp__ENABLE_assume_property
       bool r_assume = false;
 #endif
@@ -136,7 +139,6 @@ namespace romp {
       bool liveness = false;
       size_t lcount = INT16_MAX;
 #endif
-      std::string result_out_file = "results.txt";
       bool do_even_start = false;
       id_t start_id = 0;
       bool skip_launch_prompt = false;
@@ -192,7 +194,7 @@ namespace romp {
     ojstream<O>& operator << (const int val) { out << val; return *this; }
     ojstream<O>& operator << (const unsigned short val) { out << val; return *this; }
     ojstream<O>& operator << (const short val) { out << val; return *this; }
-    ojstream<O>& operator << (const bool val) { out << (val) ? "true" : "false"; return *this; }
+    ojstream<O>& operator << (const bool val) { out << ((val) ? "true" : "false"); return *this; }
     ojstream<O>& operator << (const IModelError& me) noexcept;
     ojstream<O>& operator << (const std::exception& ex) noexcept { 
       // if (ex_level++ == 0) out << "],\"error-trace\":["
@@ -207,6 +209,26 @@ namespace romp {
       else return "Not Allowed for non stringstream base (json_str_t) !!\t[dev-error]";
     }
   };
+
+  class ostream_p {
+    unsigned int _width;
+    std::string _indentation;
+  public:
+    std::ostream& out;
+    ostream_p(std::ostream& out_, unsigned int level_) 
+        : out(out_), _width(level_*OPTIONS.tab_size) 
+      { _indentation = std::string(_width,OPTIONS.tab_char); }
+    inline int width() { return _width; }
+    inline const std::string indent() { _indentation = std::string((_width+=OPTIONS.tab_size),OPTIONS.tab_char); return ""; }
+    inline const std::string dedent() { _indentation = std::string((_width-=OPTIONS.tab_size),OPTIONS.tab_char); return ""; }
+    inline const std::string indentation() { return _indentation; }
+    template <typename T>
+    inline ostream_p& operator << (const T val);  
+  };
+    template <typename T>
+    inline ostream_p& ostream_p::operator << (const T val) { out << val; return *this; }  
+    template <>
+    inline ostream_p& ostream_p::operator << <std::_Setw>(const std::_Setw val) { _width = val._M_n; return *this; } 
 
 
   typedef ojstream<std::ofstream> json_file_t;
@@ -619,4 +641,9 @@ namespace romp {
 
 namespace __type__ {
   typedef bool boolean; // builtin type mask for Murphi's boolean
+  template<class O> const std::string boolean_to_json(::romp::ojstream<O>& json, const ::__type__::boolean val) { 
+    json << "{\"$type\":\"boolean-value\",\"value\":" << ((bool)val) << "}"; 
+    return ""; 
+  }
+  const std::string boolean_to_str(::romp::ostream_p& out, const ::__type__::boolean val) { out << (((bool)val) ? "true" : "false" ); return ""; }
 }

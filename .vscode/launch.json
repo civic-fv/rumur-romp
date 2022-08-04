@@ -319,7 +319,7 @@
             "name": "(gdb) german single TRACE test ",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/romp/tests/german.test",
+            "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
                 "-sw", "-s", "test-seed", "-t"
             ],

@@ -56,7 +56,7 @@
             "command": "${workspaceFolder}/build/romp/romp",
             "args": [
                 "--output",
-                "${workspaceFolder}/romp/tests/german.test.cpp",
+                "${workspaceFolder}/romp/tests/german.m.test.cpp",
                 "${workspaceFolder}/romp/tests/german.m"
             ],
             "dependsOn": [
@@ -72,8 +72,8 @@
             "args": [
                 "-g",
                 "-o",
-                "${workspaceFolder}/romp/tests/german.test",
-                "${workspaceFolder}/romp/tests/german.test.cpp"
+                "${workspaceFolder}/romp/tests/german.m.test",
+                "${workspaceFolder}/romp/tests/german.m.test.cpp"
             ],
             "dependsOn": [
                 "romp: generate german test"
@@ -87,7 +87,7 @@
             "command": "${workspaceFolder}/build/romp/romp",
             "args": [
                 "--output",
-                "${workspaceFolder}/romp/tests/german.test.cpp",
+                "${workspaceFolder}/romp/tests/german.m.test.cpp",
                 "${workspaceFolder}/romp/tests/german.m"
             ]
         },
@@ -100,8 +100,8 @@
             "args": [
                 "-g",
                 "-o",
-                "${workspaceFolder}/romp/tests/german.test",
-                "${workspaceFolder}/romp/tests/german.test.cpp"
+                "${workspaceFolder}/romp/tests/german.m.test",
+                "${workspaceFolder}/romp/tests/german.m.test.cpp"
             ],
             "dependsOn": [
                 "romp: generate german test [no-build]"

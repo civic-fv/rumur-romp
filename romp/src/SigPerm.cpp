@@ -16,6 +16,7 @@
  */
 
 #include "SigPerm.hpp"
+#include "ModelSplitter.hpp"
 // #include "../../common/escape.h"
 #include "nested_escape.hpp"
 
@@ -121,7 +122,7 @@ namespace romp {
     // if (auto _tid = dynamic_cast<const rumur::TypeExprID*>(qe.type.get())) {
     //   return "{\"type\":\"" + _tid->referent->name + ": " + _tid->referent->value->to_string() + "\","
     //                 "\"value\":""\"" + value_str +"\"}";
-    return "{\"$type\":\""+ nEscape(json_val_type) + "\",\"type\":\"" + nEscape(qe.type->resolve()->to_string()) + "\",\"value\":" + value_str +"}"; 
+    return "{\"$type\":\""+ nEscape(json_val_type) + "\",\"type\":\"" + nEscape(ModelSplitter::get_pretty_rep(*qe.type)) + "\",\"value\":" + value_str +"}"; 
   }
 
   // << ========================================================================================== >> 
@@ -140,7 +141,7 @@ namespace romp {
     : type(q.decl->type->clone())
   {
     if (auto _tid = dynamic_cast<const rumur::TypeExprID*>(q.decl->type.get()))
-      type_id = _tid->referent->name;
+      type_id = _tid->name;
     else
       throw rumur::Error("Unprocessed anonymous type found in ruleset quantifier!!\t[dev-error]",q.type->loc);
     if (q.type == nullptr)
@@ -176,7 +177,9 @@ namespace romp {
                             i,
                             i.get_str(),
                             SigParam::to_string(i.get_str(), *this),
-                            SigParam::to_json(i.get_str(), *this, "quantifier-value"),
+                            "{\"$type\":\"quantifier-value\","
+                              "\"type\":\"" + nEscape(q.to_string()) + "\","
+                              "\"value\":" + i.get_str() +"}",
                             *this
                           });
     try {

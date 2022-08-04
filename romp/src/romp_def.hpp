@@ -107,10 +107,17 @@
 
 #define ROMP_JSON_TYPE "nlohmann::json"
 #define ROMP_JSON_STREAM_TYPE "::" ROMP_UTIL_NAMESPACE_NAME "::" "ojstream<O>"
-#define ROMP_MAKE_JSON_CONVERTER_HEADER(_type) "template<class O> " ROMP_JSON_STREAM_TYPE "& operator << (" ROMP_JSON_STREAM_TYPE "& json, const " << (_type) << "& val) noexcept { ";
-#define ROMP_MAKE_JSON_CONVERTER_FOOTER "; return json; }"
+// #define ROMP_OUT_STREAM_TYPE "::std::ostream"
+#define ROMP_OUT_STREAM_TYPE "::" ROMP_UTIL_NAMESPACE_NAME "::" "ostream_p"
+#define ROMP_MAKE_JSON_CONVERTER_SIG(_type) "template<class O> const std::string " << (_type) << "_to_json(" ROMP_JSON_STREAM_TYPE "& json, const " << (_type) << "& val) noexcept"
+#define ROMP_MAKE_STREAM_CONVERTER_SIG(_type) "const std::string " << (_type) << "_to_str(" ROMP_OUT_STREAM_TYPE "& out, const " << (_type) << "& val) noexcept"
+// #define ROMP_MAKE_JSON_CONVERTER_SIG(_type) "template<class O> " ROMP_JSON_STREAM_TYPE "& " << (type_) << "_to_json(" ROMP_JSON_STREAM_TYPE "& json, const " << (_type) << "& val) noexcept"
+// #define ROMP_MAKE_STREAM_CONVERTER_SIG(_type) ROMP_OUT_STREAM_TYPE "& " << (_type) << "_to_str(" ROMP_OUT_STREAM_TYPE "& out, const " << (_type) << "& val) noexcept"
+#define ROMP_MAKE_JSON_CONVERTER_CALL(_type,_val) "" << (_type) << "_to_json(json," << (_val) << ")"
+#define ROMP_MAKE_STREAM_CONVERTER_CALL(_type,_val) "" << (_type) << "_to_str(out," << (_val) << ")"
 
-#define ROMP_SHOW_TYPE_OPTION_EXPR "options.SHOW_TYPE"
+#define ROMP_SHOW_TYPE_OPTION_EXPR "::romp::OPTIONS.result_show_type"
+// #define ROMP_MAKE_SHOW_TYPE_TURN_COND(_type) "((::romp::OPTIONS.result_show_type) ? \\": " + (_type) + " =\\" : \\":=\\")"
 
 #define ROMP_GENERATED_FILE_PREFACE(p) \
         "/*\n" p "\n*/\n"

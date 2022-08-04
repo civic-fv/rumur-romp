@@ -21,6 +21,8 @@
 #include "../../common/escape.h"
 #include "nested_escape.hpp"
 #include "../../common/isa.h"
+#include "nested_escape.hpp"
+#include "type_traverse.hpp"
 #include "options.h"
 #include <cassert>
 #include <cstddef>
@@ -269,23 +271,27 @@ void ModelSplitter::visit_constdecl(ConstDecl &n) {
 
 
 void ModelSplitter::visit_typedecl(TypeDecl &n) {
-  // shouldn't have to do anything here.
+  // if (ModelSplitter::pretty_type_reprs.find(n.value->unique_id) != ModelSplitter::pretty_type_reprs.end())
+  dispatch(*(n.value));
+  if (not isa<TypeExprID>(n.value.get()))
+    ModelSplitter::pretty_type_reprs[n.value->unique_id] = std::string(n.name);
 }
 
 
 void ModelSplitter::visit_typeexprid(TypeExprID &n) {
+  set_pretty_str_rep_type(n);
   // shouldn't need to do anything here
 }
 
 
-
-
 void ModelSplitter::visit_enum(Enum &n) {
+  set_pretty_str_rep_type(n);
   // shouldn't need to do anything here
 }
 
 
 void ModelSplitter::visit_array(Array &n) {
+  set_pretty_str_rep_type(n);
   //TODO: handle the cases of non-TypeExprId TypeExpr values & the nested enums.
 
   if (auto et_id = dynamic_cast<TypeExprID *>(n.element_type.get())) {
@@ -338,12 +344,14 @@ void ModelSplitter::visit_array(Array &n) {
 }
 
 
-void ModelSplitter::visit_range(Range &) {
+void ModelSplitter::visit_range(Range &n) {
+  set_pretty_str_rep_type(n);
   // shouldn't need to do anything here
 }
 
 
 void ModelSplitter::visit_record(Record &n) {
+  set_pretty_str_rep_type(n);
   //TODO: handle the cases of non-TypeExprId TypeExpr values
   std::vector<Ptr<VarDecl>> _fields(n.fields.size());
 
@@ -365,7 +373,8 @@ void ModelSplitter::visit_record(Record &n) {
 }
 
 
-void ModelSplitter::visit_scalarset(Scalarset &n) { 
+void ModelSplitter::visit_scalarset(Scalarset &n) {
+  set_pretty_str_rep_type(n);
   // shouldn't need to do anything here
 }
 
@@ -464,6 +473,7 @@ void ModelSplitter::_visit_quantifier(Quantifier& q) {
 
 void ModelSplitter::visit_and_check_quantifier(Rule& r, Quantifier& q) {
   if (q.type != nullptr) {
+    set_pretty_str_rep_type(*q.type);
     auto type = q.type->resolve();
     if (type->is_simple()) {
       if (q.from == nullptr)
@@ -487,6 +497,7 @@ void ModelSplitter::visit_and_check_quantifier(Rule& r, Quantifier& q) {
     if (not q.from->constant()) throw Error("All bounds of a Ruleset's quantifier must NOT be dependent on variables !!",q.from->loc);
     if (not q.to->constant()) throw Error("All bounds of a Ruleset's quantifier must NOT be dependent on variables !!",q.to->loc);
     auto range = Ptr<Range>::make(q.from, q.to, q.loc);
+    set_pretty_str_rep_type(*range);
     std::string name = gen_new_anon_name();
     Ptr<TypeDecl> decl(new TypeDecl(name, range, q.loc));
     insert_to_global_decls(decl);
@@ -599,7 +610,7 @@ void ModelSplitter::visit_startstate(StartState &n) {
       if (auto et_id = dynamic_cast<TypeExprID *>(vd->type.get())) {
         // do nothing
       } else {
-         dispatch(*(vd->type));
+        dispatch(*(vd->type));
         std::string name = gen_new_anon_name();
         Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(vd->type->clone()), vd->type->loc));
         insert_to_global_decls(decl);
@@ -619,6 +630,80 @@ void ModelSplitter::visit_startstate(StartState &n) {
 
 void ModelSplitter::__throw_unreachable_error(const Node &n) {
   throw Error("The Model Splitter & Organizer visited an unsupported syntactic element!!", n.loc);
+}
+
+
+std::unordered_map<size_t,std::string> ModelSplitter::pretty_type_reprs;
+size_t ModelSplitter::model_unique_id = ~(0ul);
+
+void ModelSplitter::set_pretty_str_rep_type(const Node& t, int max_level) {
+  class pretty_str_rep : public ConstBaseTypeTraversal {
+    std::stringstream out;
+    int level = 0;
+    const int max;
+  public:
+    pretty_str_rep(int max_) 
+      : max(max_), ConstBaseTypeTraversal("Not a TypeExpr!! `pretty_str_rep` can't handle it \t[dev-error]") 
+    {}
+    std::string str() { return out.str(); }
+    void visit_array(const Array& n) {
+      if (level < max) {
+        ++level;
+        out << "Array[";
+        dispatch(*n.index_type);
+        out << "] of ";
+        dispatch(*n.element_type);
+      // } else if (level == max) {
+      //   mpz_class size = n.index_type->count() - 1_mpz;
+      //   out << "Array[" << count.get_str()
+      //       << "] of ";
+      //   dispatch(*n.element_type);
+        --level;
+      } else // if (level > max)
+        out << "anon_array_t";
+    }
+    void visit_enum(const Enum& n) {
+      if (level < max) {
+        out << "Enum {";
+        if (n.members.size() >= 1)
+          out << n.members[0].first;
+        if (n.members.size() == 2)
+          out << ", " << n.members[1].first;
+        else // if (n.members.size() > 2)
+          out << ".." << n.members[n.members.size()-1].first;
+        out << "}";
+      } else if (level == max) {
+        if (n.members.size() >= 1)
+          out << n.members[0].first;
+        if (n.members.size() >= 2)
+          out << ".." << n.members[n.members.size()-1].first;
+      } else // if (level >= max)
+        out << "anon_enum_t"; 
+    }
+    void visit_range(const Range& n) { out << n.to_string(); }
+    void visit_record(const Record& n) { 
+      out << "anon_record_t"; 
+    }
+    void visit_scalarset(const Scalarset& n) { out << n.to_string(); }
+    void visit_typeexprid(const TypeExprID& n) { out << n.to_string(); }
+    // void dispatch(const Node& n) { n->visit(S_OUT); }
+  };
+  if (ModelSplitter::pretty_type_reprs.find(t.unique_id) != ModelSplitter::pretty_type_reprs.end())
+    return;
+  pretty_str_rep psr(max_level);
+  psr.dispatch(t);
+  ModelSplitter::pretty_type_reprs[t.unique_id] = std::string(psr.str()); 
+}
+
+const std::string ModelSplitter::get_pretty_rep(const rumur::TypeExpr& t) {
+  auto res = ModelSplitter::pretty_type_reprs.find(t.unique_id);
+  if (res != ModelSplitter::pretty_type_reprs.end())
+    return res->second;
+  if (const auto _tid = dynamic_cast<const TypeExprID*>(&t))
+    return get_pretty_rep(*(_tid->referent->value));
+  if (t.unique_id == ModelSplitter::model_unique_id)
+    return ROMP_STATE_CLASS_NAME;
+  return "__UNKNOWN_TYPE_REPR__";
 }
 
 
