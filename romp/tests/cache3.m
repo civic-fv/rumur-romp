@@ -19,7 +19,7 @@
 -- Nobody vouches for the accuracy or usefulness of this description	 
 -- for any purpose.							 
 -------------------------------------------------------------------------
-
+ 
 -------------------------------------------------------------------------
 --
 -- File : cache3.m
@@ -209,7 +209,7 @@ Procedure Consume_Message( M_Index:0..NetMax-1);
   End;
   Net.Count := Net.Count -1;
 End;
--- Special send functions
+-- Special send functions
 
 Procedure Send_Cache_Read( Dst:Node;  Src:Node;  Addr:Address);
   Send(Cache_Read, Dst, Src, 0, Addr, 0);

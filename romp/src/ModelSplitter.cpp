@@ -156,8 +156,8 @@ void ModelSplitter::sort_model(const std::vector<Ptr<Node>> &children) {
       state_var_decls.push_back(vd);
     } else if (const auto _f = dynamic_cast<const Function *>(c.get())) {
       Ptr<Function> f(_f->clone());
-      funct_decls.push_back(f);
       dispatch(*f);
+      funct_decls.push_back(f);
     } else if (const auto _r = dynamic_cast<const Rule *>(c.get())) {
       Ptr<Rule> r(_r->clone());
       // rule_decls.push_back(r);  // now sorting into type of usable rule types & flattening on the way down
@@ -404,13 +404,14 @@ void ModelSplitter::visit_function(Function &n) {
     if (auto et_id = dynamic_cast<TypeExprID *>(n.return_type.get())) {
       // do nothing
     } else {
-      
+      dispatch(*(n.return_type));
       std::string name = gen_new_anon_name();
       Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(n.return_type->clone()), n.return_type->loc));
       insert_to_global_decls(decl);
       n.return_type = Ptr<TypeExprID>(new TypeExprID(name, decl, n.return_type->loc));
     }
 
+  // std::vector<Ptr<VarDecl>> _parameters(n.parameters.size());
   for (Ptr<VarDecl> &p : n.parameters)
     if (auto et_id = dynamic_cast<TypeExprID *>(p->type.get())) {
       // do nothing
@@ -419,8 +420,15 @@ void ModelSplitter::visit_function(Function &n) {
       std::string name = gen_new_anon_name();
       Ptr<TypeDecl> decl(new TypeDecl(name, Ptr<TypeExpr>(p->type->clone()), p->type->loc));
       insert_to_global_decls(decl);
-      p->type = Ptr<TypeExprID>(new TypeExprID(name, decl, p->type->loc));
+      p->type = Ptr<TypeExprID>::make(name, decl, p->type->loc);
     }
+  // n.parameters = _parameters;
+
+#ifdef DEBUG
+  // for (Ptr<VarDecl> &p : n.parameters)
+  //   if (not isa<TypeExprID>(p->type.get()))
+  //     throw Error("Failed ot update func/proc parameter !! (still a non TypeExprID after processing) \t[dev-error]",p->loc);
+#endif
 
   std::vector<Ptr<Decl>> _decls(n.decls.size());
   for (Ptr<Decl> &d : n.decls)

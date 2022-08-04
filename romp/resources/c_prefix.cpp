@@ -70,6 +70,7 @@
 #define uint32_t_VALUE_C(v) UINT32_C(v)
 #define int64_t_VALUE_C(v)  INT64_C(v)
 #define uint64_t_VALUE_C(v) UINT64_C(v)
+#define VALUE_C(v) int_VALUE_C((v))
 
 
 namespace romp {
