@@ -319,9 +319,10 @@ private:
       out << "        ... forgotten past ...\n";
     for (size_t i=rw.history_start; i<rw.history_level; ++i)
       out << "      (" << i <<") " << *(rw.history[i%rw.history_size].rule) << "\n";
-    out << "    ]"
-        << "\n          State: " << rw.state << "\n"
-        << "\nProperty/Error Report:"
+    out << "    ]";
+    if (OPTIONS.result_emit_state)
+      out << "\n          State: " << rw.state << "\n";
+    out << "\nProperty/Error Report:"
         << "\n  Still a ``valid'' State?: " << (rw._valid ? "true" : "false") //    is it a valid state
         << "\n    In an ``Error State''?: " << (rw._is_error ? "true" : "false"); //    is it a valid state
     if (rw.tripped != nullptr) {

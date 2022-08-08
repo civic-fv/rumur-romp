@@ -133,6 +133,7 @@ namespace romp {
       bool result = false; // result output
       bool result_all = false;
       bool result_show_type = false;
+      bool result_emit_state = true;
       unsigned int tab_size = 2;
       char tab_char = ' ';
 #ifdef __romp__ENABLE_assume_property

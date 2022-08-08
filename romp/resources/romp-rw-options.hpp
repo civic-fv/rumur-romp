@@ -122,6 +122,8 @@ void print_help() {
                "                          <int> - (required) size of history buffer\n"
                "                            default: " << OPTIONS.history_length << "\n"
               //  "                          NOTE: larger the size == more RAM used.\n"
+               "  --r-omit-state        Don't output the values in the model state\n"
+               "    | -ros                in the results\n"
                "  --r-show-type         Output variable type next to name when\n"
                "    | -rst                reporting the value of the model state\n"
                "  --r-tab-size <int>    Set the indentation size for the result \n"
@@ -383,6 +385,8 @@ void parse_args(int argc, char **argv) {
       OPTIONS.result_all = true;
     } else if ("-rst" == std::string(argv[i]) || "--show-type" == std::string(argv[i]) || "--r-show-type" == std::string(argv[i])) {
       OPTIONS.result_show_type = true;
+    } else if ("-ros" == std::string(argv[i]) || "--omit-state" == std::string(argv[i]) || "--r-omit-state" == std::string(argv[i])) {
+      OPTIONS.result_emit_state = false;
     } else if ("-rtc" == std::string(argv[i]) || "--tab-char" == std::string(argv[i]) || "--r-tab-char" == std::string(argv[i])) {
       OPTIONS.tab_char = '\t';
     } else if ("-rts" == std::string(argv[i]) || "--tab-size" == std::string(argv[i]) || "--r-tab-size-" == std::string(argv[i])) {
@@ -496,6 +500,12 @@ void parse_args(int argc, char **argv) {
                   << std::flush;
       if (threads_provided && not walks_provided)
         OPTIONS.random_walkers = _ROMP_THREAD_TO_RW_RATIO * OPTIONS.threads;  // post parse assign default value
+      if (threads_provided && walks_provided && OPTIONS.threads > OPTIONS.random_walkers) {
+        OPTIONS.threads = OPTIONS.random_walkers;
+        std::cerr << "\nWARNING : you specified more threads than walks !!\n"
+                      "        |-> we will only launch `" << OPTIONS.random_walkers << "` threads!\n"
+                  << std::flush;
+      }
     }
     if (start_provided && OPTIONS.do_even_start)
       std::cerr << "\nWARNING : --even-start/-es is ignored when --start-id/-sid is provided !!\n"
