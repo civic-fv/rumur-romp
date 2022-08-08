@@ -36,7 +36,7 @@ void print_help() {
   std::cout << "This is a murphi model checker generated from the romp random walker tool.\n"
                "   generated from: " __model__filename "\n"
                "\n\n"
-               "CLI USAGE:    <> - required  {} - optional\n"
+               "CLI USAGE:    <> - required  {} - optional  * - can have 0 or more\n"
                "   ./<this-file> {options}*\n"
                "\n\n"
                "GENERAL OPTIONS:\n"

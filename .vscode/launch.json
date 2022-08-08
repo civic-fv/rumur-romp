@@ -294,7 +294,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-sw", "-s", "test-seed", "-a", "-d", "256", "-ll", "64"
+                "-sw", "-s", "1234567890", "-a", "-d", "256", "-ll", "64"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -321,7 +321,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-sw", "-s", "test-seed", "-t", "-a", "-d", "256", "-ll", "64"
+                "-sw", "-s", "1234567890", "-t", "-a", "-d", "256", "-ll", "64"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -348,7 +348,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-w", "16", "-s", "test-seed", "-a", "-d", "256", "-ll", "64"
+                "-w", "16", "-s", "1234567890", "-a", "-d", "256", "-ll", "64"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -375,7 +375,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-w", "16", "-s", "test-seed", "-t", "-a", "-d", "256", "-ll", "64"
+                "-w", "16", "-s", "1234567890", "-t", "-a", "-d", "256", "-ll", "64"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -402,7 +402,7 @@
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [
-                "-sw", "-s", "test-seed", "-a", "-d", "256", "-ll" //, "64"
+                "-sw", "-s", "1234567890", "-a", "-d", "256", "-ll" //, "64"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -430,7 +430,7 @@
             "request": "launch",
             "program": "${file}.test",
             "args": [
-                "-sw", "-s", "test-seed", "-a", "-d", "256", "-ll", "64"
+                "-sw", "-s", "1234567890", "-a", "-d", "256", "-ll", "64"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
