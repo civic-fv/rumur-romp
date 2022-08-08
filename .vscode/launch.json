@@ -294,7 +294,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-sw", "-s", "test-seed"
+                "-sw", "-s", "test-seed", "-a", "-d", "256", "-ll", "64"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -321,7 +321,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-sw", "-s", "test-seed", "-t"
+                "-sw", "-s", "test-seed", "-t", "-a", "-d", "256", "-ll", "64"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -348,7 +348,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-w", "16", "-s", "test-seed"
+                "-w", "16", "-s", "test-seed", "-a", "-d", "256", "-ll", "64"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -375,7 +375,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-w", "16", "-s", "test-seed", "-t"
+                "-w", "16", "-s", "test-seed", "-t", "-a", "-d", "256", "-ll", "64"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
