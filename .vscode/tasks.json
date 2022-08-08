@@ -71,6 +71,7 @@
             "command": "g++",
             "args": [
                 "-g",
+                "-pthread",
                 "-o",
                 "${workspaceFolder}/romp/tests/german.m.test",
                 "${workspaceFolder}/romp/tests/german.m.test.cpp"
@@ -99,6 +100,7 @@
             "command": "g++",
             "args": [
                 "-g",
+                "-pthread",
                 "-o",
                 "${workspaceFolder}/romp/tests/german.m.test",
                 "${workspaceFolder}/romp/tests/german.m.test.cpp"
@@ -130,6 +132,7 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
+                "-pthread",
                 "${file}.test.cpp",
                 "-o",
                 "${file}.test"
@@ -153,6 +156,7 @@
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
+                "-pthread",
                 "${file}",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"

@@ -49,7 +49,8 @@ int main(int argc, char **argv) {
     ::romp::launch_single(::romp::OPTIONS.rand_seed);
 
   else
-    ::romp::launch_OpenMP(::romp::OPTIONS.rand_seed);
+    ::romp::launch_threads(::romp::OPTIONS.rand_seed);
+    // ::romp::launch_OpenMP(::romp::OPTIONS.rand_seed);
 
 
   return EXIT_SUCCESS;

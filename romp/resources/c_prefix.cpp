@@ -27,11 +27,17 @@
 #include <sstream>
 #include <exception>
 #include <vector>
+#include <queue>
 #include <memory>
 #include <utility>
 #include <functional>
 #include <type_traits>
 #include <thread>
+#ifdef _WIN32
+#include <Windows.h>
+#else
+#include <unistd.h>
+#endif
 
 
 

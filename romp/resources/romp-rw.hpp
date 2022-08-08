@@ -418,10 +418,10 @@ unsigned int gen_random_seed(unsigned int &root_seed) {
  * To do - how to get the size of startstate
  * 
  */
-std::vector<RandWalker> gen_random_walkers(unsigned int root_seed)   {
-  std::vector<RandWalker> rws;
+std::vector<RandWalker*> gen_random_walkers(unsigned int root_seed)   {
+  std::vector<RandWalker*> rws;
   for(int i=0; i<OPTIONS.random_walkers; i++) {
-    rws.push_back(RandWalker(gen_random_seed(root_seed)));
+    rws.push_back(new RandWalker(gen_random_seed(root_seed)));
   }
   return rws;
 }
@@ -455,6 +455,7 @@ void launch_OpenMP(unsigned int root_seed) {
   // }
   //TODO: launch the random walkers !!
 }
+
 /**
  * @brief implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
  *        and no of random-walkers specified by the user options .
@@ -463,42 +464,66 @@ void launch_OpenMP(unsigned int root_seed) {
  * @param fuel the max number of rules any \c RandWalker will try to apply.
  * @param thread_count the max number of threads to use to accomplish all said random walks.
  */
-void launch_threads(unsigned int rand_seed) { //rand_seed or root seed ?
-  
-  std::vector<RandWalkers*> in_rws; 
-  std::vector<RandWalkers*> parallel_rws;
-  std::vector<RandWalkers*> out_rws; 
+void launch_threads(unsigned int rand_seed) {
+  auto rws = gen_random_walkers(rand_seed);
+  std::queue<RandWalker*> in_rws(std::deque<RandWalker*>(rws.begin(),rws.end()));
+  // std::queue<RandWalkers*> parallel_rws; // probs threads
+  std::queue<RandWalker*> out_rws; 
   std::mutex in_queue;
   std::mutex out_queue;
-  //int rw_launched = OPTIONS.threads;
-      //launching threads using lambda expressions 
-  std::thread lambda =[in_rws,parallel_rws,out_rws,Randwalker *rw](int rw_count){
-      for(int i=0;i<rw_count;i++)
-      {
-        in_queue.lock();
-          for (int i=0; i<in_rws.size(); i++) // has to pointer to class ? no dequeue modifer in vector 
-           parallel_rws.push_back(in_rws[i]); //iterative copying of vector
-        in_queue.unlock();
-        Randwalker *rw=parallel_rws;
-         if(rw ==nullptr)
-           break;
-        else(not rw->is_done())
-          rw->sim1Step();
-          out_queue.lock();
-          out_rws.push_back(rw);
-          out_queue.unlock();
-      }
+  auto lambda = [&]() { // code the threads run
+    in_queue.lock();
+    do {
+      RandWalker *rw = in_rws.front();
+      in_rws.pop(); 
+      in_queue.unlock();
+
+      if (rw == nullptr) {
+        break;  //DEBUG catch bad data in queue
+        // in_queue.lock();  
+        // continue;
+      };  // just in case might not need (if so remove)
+
+      while (not rw->is_done())
+        rw->sim1Step();
+
+      out_queue.lock();
+      out_rws.push(rw);
+      out_queue.unlock();
+
+      in_queue.lock();
+    } while (in_rws.size() == 0);
+    in_queue.unlock();
+  };
+
+  //TODO create & launch threads
+  std::vector<std::thread> threads(OPTIONS.threads);
+  // std::vector<std::thread> threads(OPTIONS.threads);
+  for (size_t i=0; i<OPTIONS.threads; ++i) {
+    threads.push_back(std::thread(lambda));
+  }
+
+  sleep(1u);
+  std::cout << "\nParallel Thread ROMP RESULTs:\n" << std::flush;
   in_queue.lock();
   out_queue.lock();
-  while (in_rws.size() > 0 || out_rws.size() > 0) {
+  while (in_rws.size() > 0 || out_rws.size() > 0) {  // handel outputs
     in_queue.unlock();
-    RandWalker* rw = out_rws.push_back(); // not actual call figure it out
+    RandWalker* rw = out_rws.front();
+    out_rws.pop();
     out_queue.unlock();
-    std::cout << "Parallel Thread ROMP RESULT:\n" << *rw << std::endl;
-    lambda.join();
-    delete rw;}
+    if (rw != nullptr) { 
+      std::cout << *rw << std::endl;
+      delete rw;
+    }
+    for (int _; _<560; ++_) { _++; }  //DEBUG SLOW ME DOWN
+    in_queue.lock();
+    out_queue.lock();
   }
-  }
+
+  for (size_t i=0; i<OPTIONS.threads; ++i) // join threads
+     threads[i].join();
+}
   
 
 /**
