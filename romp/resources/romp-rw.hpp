@@ -13,7 +13,8 @@
  * @date 2022/05/11
  * @version 0.1
  */
-
+#include <thread>
+#include <mutex>
 #ifndef __romp__GENERATED_CODE
 #include "c_prefix.cpp" // FOR PRE-CODEGEN LANGUAGE SUPPORT ONLY !!
 #endif
@@ -454,7 +455,51 @@ void launch_OpenMP(unsigned int root_seed) {
   // }
   //TODO: launch the random walkers !!
 }
-
+/**
+ * @brief implementing \c rw_count parallel \c RandWalker "simulations" which has the threads 
+ *        and no of random-walkers specified by the user options .
+ * @param rw_count the number of \c RandWalker 's to use.
+ * @param rand_seed the starting random seed that will generate all other random seeds
+ * @param fuel the max number of rules any \c RandWalker will try to apply.
+ * @param thread_count the max number of threads to use to accomplish all said random walks.
+ */
+void launch_threads(unsigned int rand_seed) { //rand_seed or root seed ?
+  
+  std::vector<RandWalkers*> in_rws; 
+  std::vector<RandWalkers*> parallel_rws;
+  std::vector<RandWalkers*> out_rws; 
+  std::mutex in_queue;
+  std::mutex out_queue;
+  //int rw_launched = OPTIONS.threads;
+      //launching threads using lambda expressions 
+  std::thread lambda =[in_rws,parallel_rws,out_rws,Randwalker *rw](int rw_count){
+      for(int i=0;i<rw_count;i++)
+      {
+        in_queue.lock();
+          for (int i=0; i<in_rws.size(); i++) // has to pointer to class ? no dequeue modifer in vector 
+           parallel_rws.push_back(in_rws[i]); //iterative copying of vector
+        in_queue.unlock();
+        Randwalker *rw=parallel_rws;
+         if(rw ==nullptr)
+           break;
+        else(not rw->is_done())
+          rw->sim1Step();
+          out_queue.lock();
+          out_rws.push_back(rw);
+          out_queue.unlock();
+      }
+  in_queue.lock();
+  out_queue.lock();
+  while (in_rws.size() > 0 || out_rws.size() > 0) {
+    in_queue.unlock();
+    RandWalker* rw = out_rws.push_back(); // not actual call figure it out
+    out_queue.unlock();
+    std::cout << "Parallel Thread ROMP RESULT:\n" << *rw << std::endl;
+    lambda.join();
+    delete rw;}
+  }
+  }
+  
 
 /**
  * @brief (NOT YET IMPLEMENTED) \n

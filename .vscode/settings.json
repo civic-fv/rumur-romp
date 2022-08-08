@@ -71,7 +71,8 @@
         "condition_variable": "cpp",
         "shared_mutex": "cpp",
         "__config": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "mutex": "cpp"
     },
     "doxdocgen.file.fileOrder": [
         "custom",
