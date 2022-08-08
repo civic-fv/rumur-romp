@@ -472,7 +472,12 @@ void launch_threads(unsigned int rand_seed) {
   size_t walks_done = 0;
   std::mutex in_queue;
   std::mutex out_queue;
+  // std::mutex _in_queue_mutex;
+  // std::mutex _out_queue_mutex;
+  
   auto lambda = [&]() { // code the threads run
+    // std::lock_guard<std::mutex> in_queue(_in_queue_mutex);
+    // std::lock_guard<std::mutex> out_queue(_out_queue_mutex);
     in_queue.lock();
     do {
       RandWalker *rw = in_rws.front();
@@ -494,22 +499,29 @@ void launch_threads(unsigned int rand_seed) {
       out_queue.unlock();
 
       in_queue.lock();
-    } while (in_rws.size() == 0);
+    } while (in_rws.size() > 0);
     in_queue.unlock();
   };
 
   //TODO create & launch threads
-  std::vector<std::thread> threads(OPTIONS.threads);
+  std::vector<std::thread> threads;
   // std::vector<std::thread> threads(OPTIONS.threads);
   for (size_t i=0; i<OPTIONS.threads; ++i) {
     threads.push_back(std::thread(lambda));
   }
+  // std::lock_guard<std::mutex> in_queue(_in_queue_mutex);
+  // std::lock_guard<std::mutex> out_queue(_out_queue_mutex);
 
   sleep(1u);
   std::cout << "\nParallel Thread ROMP RESULTs:\n" << std::flush;
-  out_queue.lock();
-  do {
-    while (out_rws.size() > 0) {  // handel outputs
+  while (true) {
+    for (int _; _<560; ++_) { _++; }  //DEBUG SLOW ME DOWN
+    while (true) {  // handel outputs
+      out_queue.lock();
+      if (not (out_rws.size() > 0)) {
+        out_queue.unlock();
+        break;
+      }
       RandWalker* rw = out_rws.front();
       out_rws.pop();
       out_queue.unlock();
@@ -517,12 +529,15 @@ void launch_threads(unsigned int rand_seed) {
         std::cout << *rw << std::endl;
         delete rw;
       }
-      out_queue.lock();
     }
-    out_queue.unlock();
     for (int _; _<560; ++_) { _++; }  //DEBUG SLOW ME DOWN
     out_queue.lock();
-  } while (walks_done < OPTIONS.random_walkers);
+    if (not (walks_done < OPTIONS.random_walkers)) {
+      out_queue.unlock();
+      break;
+    }
+    out_queue.unlock();
+  }
   // we might need to do this one more time for the last one
 
   for (size_t i=0; i<OPTIONS.threads; ++i) // join threads
