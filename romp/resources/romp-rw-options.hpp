@@ -65,7 +65,7 @@ void print_help() {
                "                      position in the file after ruleset expansion.\n"
                "                      NOTE: overrides --even-start/-es\n"
                "\n"
-               "PROPERTY CONFIGURATIONS :\n"
+               "PROPERTY CONFIGURATIONS:\n"
                "  --no-deadlock           Disable Deadlock detection.\n"
                "    | -nd                   (overrides all property options below)\n"
 #ifdef __romp__ENABLE_liveness_property

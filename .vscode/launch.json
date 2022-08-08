@@ -289,6 +289,33 @@
             "preLaunchTask": "CMake: build romp"
         },
         {
+            "name": "(gdb) german help/man test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/romp/tests/german.m.test",
+            "args": [
+                "-h"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build german test [no-build]"
+        },
+        {
             "name": "(gdb) german single no-trace test",
             "type": "cppdbg",
             "request": "launch",
