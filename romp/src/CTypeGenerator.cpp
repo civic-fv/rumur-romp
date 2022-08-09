@@ -135,7 +135,7 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
             // "return out; "
             "return \"\"; "
               "}\n";
-  } else {
+  } else { // range/scalarset based array indexes 
     *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " {";
     *this << "json << \"" // double escape time
                 "{\\\"$type\\\":\\\"array-value\\\","
@@ -143,9 +143,11 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
                 // "\\\"element-type\\\":\\\"" << nEscape(et_str) << "\\\","
                 // "\\\"index-type\\\":\\\"" << nEscape(it_str) <<"\\\","
                 "\\\"size\\\":\" << val.size() << \","
+                "\\\"lower-bound\\\":\" << " << te.index_type->lower_bound() << " << \","
+                "\\\"upper-bound\\\":\" << " << te.index_type->upper_bound() << " << \","
                 "\\\"elements\\\":[\"; " // end double escape time
             "std::string sep; "
-            "for (size_t i=0; i<val.size(); ++i) { "
+            "for (size_t i=(0ul); i<val.size(); ++i) { "
                     "json << sep << " ROMP_MAKE_JSON_CONVERTER_CALL(el_type,"val.data[i]") "; "
                     "sep = \",\"; } "
             "json << \"]}\"; "
@@ -157,7 +159,7 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
   *this << "out << \"[\\n\" "
                 "<< out.indent(); "
                 "for (size_t i=0; i<val.size(); ++i) { "
-                  "out << out.indentation() << \"[\" << i << \"]: \""
+                  "out << out.indentation() << \"[\" << (i + (" << te.index_type->lower_bound() << ")) << \"]: \""
                       "<< " ROMP_MAKE_STREAM_CONVERTER_CALL(el_type,"val.data[i]") " << '\\n'; } ";
   *this << "out << out.dedent() << out.indentation() << ']'; "
            // "return out; "
@@ -169,6 +171,10 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
   //             "j = " ROMP_JSON_TYPE "{{\"type\",\"" << name << te.to_string() << "\"},"
   //                           "{\"value\", std::vector<" << et_str << ">(std::begin(data), std::end(data))}};"
   //          "} else {to_json(j, std::vector<" << et_str << ">(std::begin(data), std::end(data))));} }\n";
+
+  // init provider //TODO
+  // *this << indentation() << "void init_"
+
 }
 
 

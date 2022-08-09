@@ -240,7 +240,7 @@ namespace romp {
         qe.stop = n.bound->constant_fold();
         qe.step = 1_mpz;
         qe.values = std::vector<const SigParam*>(/* qe.size() */);
-        for (mpz_class i = qe.start; i<=qe.stop; i += qe.step)
+        for (mpz_class i = qe.start; i<qe.stop; i += qe.step)
           qe.values.push_back(new SigParam{
                                 i,
                                 i.get_str(),

@@ -115,6 +115,8 @@
 // #define ROMP_MAKE_STREAM_CONVERTER_SIG(_type) ROMP_OUT_STREAM_TYPE "& " << (_type) << "_to_str(" ROMP_OUT_STREAM_TYPE "& out, const " << (_type) << "& val) noexcept"
 #define ROMP_MAKE_JSON_CONVERTER_CALL(_type,_val) "" << (_type) << "_to_json(json," << (_val) << ")"
 #define ROMP_MAKE_STREAM_CONVERTER_CALL(_type,_val) "" << (_type) << "_to_str(out," << (_val) << ")"
+#define ROMP_MAKE_TYPE_INIT_SIG(_type) "void _init_" << (_name) << "(" << (_name) << "& val)"
+#define ROMP_MAKE_TYPE_INIT_CALL(_type,_val) "_init_" << (_type) << "(" << (_val) << ")" 
 
 #define ROMP_SHOW_TYPE_OPTION_EXPR "::romp::OPTIONS.result_show_type"
 // #define ROMP_MAKE_SHOW_TYPE_TURN_COND(_type) "((::romp::OPTIONS.result_show_type) ? \\": " + (_type) + " =\\" : \\":=\\")"

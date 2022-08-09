@@ -14,6 +14,8 @@
 
 using namespace rumur;
 
+id_t CLikeGenerator::anon_id = 0;
+
 void CLikeGenerator::visit_add(const Add &n) {
   *this << "(" << *n.lhs << " + " << *n.rhs << ")";
 }
@@ -131,8 +133,9 @@ void CLikeGenerator::visit_errorstmt(const ErrorStmt &n) {
 }
 
 void CLikeGenerator::visit_exists(const Exists &n) {
-  *this << "({ bool res_ = false; " << n.quantifier << " { res_ |= " << *n.expr
-        << "; } res_; })";
+  std::string id = std::to_string(anon_id++);
+  *this << "({ bool res_" << id << " = false; " << n.quantifier << " { res_" << id << " |= " << *n.expr
+        << "; } res_" << id << "; })";
 }
 
 void CLikeGenerator::visit_exprid(const ExprID &n) {
@@ -182,7 +185,7 @@ void CLikeGenerator::visit_for(const For &n) {
 }
 
 void CLikeGenerator::visit_forall(const Forall &n) {
-
+  std::string id = std::to_string(CLikeGenerator::anon_id++);
   // open a GNU statement expression
   *this << "({ ";
 
@@ -191,8 +194,8 @@ void CLikeGenerator::visit_forall(const Forall &n) {
     *this << *e << "; ";
   }
 
-  *this << "bool res_ = true; " << n.quantifier << " { res_ &= " << *n.expr
-        << "; } res_; })";
+  *this << "bool res_"<< id <<" = true; " << n.quantifier << " { res_"<< id <<"&= " << *n.expr
+        << "; } res_"<< id <<"; })";
 }
 
 void CLikeGenerator::visit_functioncall(const FunctionCall &n) {
@@ -583,7 +586,7 @@ void CLikeGenerator::visit_quantifier(const Quantifier &n) {
 
   if (auto s = dynamic_cast<const Scalarset *>(resolved.get())) {
     *this << "for (" << value_type << " " << n.name << " = 0; " << n.name
-          << " <= " << *s->bound << "; " << n.name << "++)";
+          << " < " << *s->bound << "; " << n.name << "++)";  // modified for consistency w/ SigPerm
     return;
   }
 

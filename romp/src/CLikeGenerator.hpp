@@ -16,6 +16,8 @@ class __attribute__((visibility("hidden"))) CLikeGenerator
     : public romp::CodeGenerator,
       public rumur::ConstBaseTraversal {
 
+  static id_t anon_id;
+
 protected:
   std::ostream &out;
   bool pack;
