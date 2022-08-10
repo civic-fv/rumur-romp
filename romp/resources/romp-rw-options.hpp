@@ -33,6 +33,7 @@ namespace options {
 
 void print_help() {
   using namespace std;
+  Options default_opts;
   std::cout << "This is a murphi model checker generated from the romp random walker tool.\n"
                "   generated from: " __model__filename "\n"
                "\n\n"
@@ -48,9 +49,9 @@ void print_help() {
                "RANDOM WALKER OPTIONS:\n"
                "  --depth <int>     Maximum number of rules to apply in a walk \n"
                "    | -d <int>        before termination.\n"
-               "                      default: " << OPTIONS.depth << "\n"
+               "                      default: " << default_opts.depth << "\n"
                "  --threads <int>   Specifies the number of threads to use.\n"
-               "    | -ptn <int>      default: " << OPTIONS.threads << "\n"
+               "    | -ptn <int>      default: " << default_opts.threads << " (machine specific)\n"
                "  --walks <int>     Specifies the number of random  walks to do.\n"
                "     | -w <int>       default: " << _ROMP_THREAD_TO_RW_RATIO << " * #-of-threads\n"
                "  --single-walk     Perform a single random walker on a single thread.\n"
@@ -76,7 +77,7 @@ void print_help() {
                "                            since the start or the last time it was\n"
                "                            true."
                "                            {int} - an optional arg (see above).\n"
-               "                              default: " << OPTIONS.lcount << "\n"
+               "                              default: " << default_opts.lcount << "\n"
 #endif
 #ifdef __romp__ENABLE_cover_property
                "  --complete-on-cover {int} Allows you to enable a heuristic test"
@@ -85,16 +86,16 @@ void print_help() {
                "                              cover property has been reached {int}\n"
                "                              times.\n"
                "                              {int} - an optional arg (see above).\n"
-               "                                default: " << OPTIONS.cover_count << "\n"
+               "                                default: " << default_opts.cover_count << "\n"
 #endif
                "  --attempt-guard {int}   Stop a random walk if no randomly \n"
                "    | -ag {int}             selected rule can be applied to a State\n"
                "                            after {int} many rules in a row.\n"
                "                            {int} - an optional arg (see above).\n"
-               "                                default: #-of-rules in the model\n"
+               "                              (default: #-of-rules in the model)\n"
                "  --loop-limit {int}      Same thing as --attempt-guard/-ag. \n"
                "    | -ll {int}             {int} - an optional arg (see above).\n"
-               "                                default: #-of-rules in the model\n"
+               "                              (default: #-of-rules in the model)\n"
                "\n"
                "Trace Options\t\n"
                "  --trace {dir-path}    Enable detailed traces to be made for every\n"
@@ -104,7 +105,7 @@ void print_help() {
                "                          NOTE: slows down the process noticeably!\n"
                "                          {dir-path} - (optional) the directory you\n"
                "                            want to have the trace files output to.\n"
-               "                            default: \""<< OPTIONS.trace_dir <<"\"\n"
+               "                            default: \""<< default_opts.trace_dir <<"\"\n"
                "\n"
                "RESULT OUTPUT OPTIONS:\n"
                "  --report-all          Report on all walks not just those with \n"
@@ -120,7 +121,7 @@ void print_help() {
                "  --r-history <int>     Specify how much of a history of rules\n"
                "    | -rhl <int>          applied you want to see in the results."
                "                          <int> - (required) size of history buffer\n"
-               "                            default: " << OPTIONS.history_length << "\n"
+               "                            default: " << default_opts.history_length << "\n"
               //  "                          NOTE: larger the size == more RAM used.\n"
                "  --r-omit-state        Don't output the values in the model state\n"
                "    | -ros                in the results\n"
@@ -128,7 +129,7 @@ void print_help() {
                "    | -rst                reporting the value of the model state\n"
                "  --r-tab-size <int>    Set the indentation size for the result \n"
                "    | -rts <int>          output (NOTE: not used for trace output)\n"
-               "                          (default: 2 spaces)\n"
+               "                          (default: "<< default_opts.tab_size <<")\n"
                "  --r-use-tab           Indent using tab chars instead of spaces.\n"
                "    | -rut                (NOTE: not used in json trace output)\n"
                "                          (NOTE: overrides --r-tab-size/-rts)\n"
@@ -162,9 +163,11 @@ void list_starts() {
 }
 
 void parse_args(int argc, char **argv) {
+  Options default_opts;
   bool threads_provided = false;
   bool walks_provided = false;
   bool start_provided = false;
+  bool guard_provided = false;
 
   for (int i = 0; i < argc; ++i) {
 
@@ -340,6 +343,7 @@ void parse_args(int argc, char **argv) {
     } else if ("-ag" == std::string(argv[i]) || "-ll" == std::string(argv[i]) || "-al" == std::string(argv[i]) 
                 || "--attempt-guard" == std::string(argv[i]) || "--loop-limit" == std::string(argv[i]) || "--attempt-limit" == std::string(argv[i])) {
       // OPTIONS.do_attempt_guard = true;  // just check to make sure this value is not 0
+      guard_provided = true;
       OPTIONS.attempt_limit = _ROMP_RULE_COUNT;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
@@ -456,13 +460,13 @@ void parse_args(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
 #ifdef __romp__ENABLE_cover_property
-    if (OPTIONS.cover_count == 0) {
+    if (OPTIONS.complete_on_cover && OPTIONS.cover_count == 0) {
       std::cerr << "\nERROR : cover check goal cannot be 0 (--cover-check/-cc)\n" << std::flush;
       exit(EXIT_FAILURE);
     }
 #endif
-#ifdef __romp__ENABLE_cover_property
-    if (OPTIONS.l_count == 0) {
+#ifdef __romp__ENABLE_liveness_property
+    if (OPTIONS.liveness && OPTIONS.lcount == 0) {
       std::cerr << "\nERROR : liveness limit cannot be 0 (--liveness-check/-lc)\n" << std::flush;
       exit(EXIT_FAILURE);
     }
@@ -511,6 +515,17 @@ void parse_args(int argc, char **argv) {
       std::cerr << "\nWARNING : --even-start/-es is ignored when --start-id/-sid is provided !!\n"
                   << std::flush;
     // warnings and end with errors as appropriate
+    if (OPTIONS.deadlock == false) {
+      if (guard_provided && OPTIONS.result_all)
+        std::cerr << "\nWARNING : --no-deadlock/-nd suppresses the output of walks terminated for violating the rule attempt limit !!\n"
+                       "        |-> (aka the --attempt-limit/-al/--loop-limit/-ll/--attempt-guard/-ag flags)\n" << std::flush;
+#ifdef __romp__ENABLE_liveness_property
+      if (OPTIONS.liveness) {
+        OPTIONS.lcount = default_opts.lcount;
+        std::cerr << "\nWARNING : --no-deadlock/-nd overrides/disables the --liveness-check/-lc flag !!\n" << std::flush;
+      }
+#endif
+    }
 }
 
 

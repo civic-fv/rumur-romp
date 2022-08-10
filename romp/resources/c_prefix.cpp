@@ -100,6 +100,7 @@ namespace __info__ { // LANGUAGE SERVER SUPPORT ONLY!!
 
 namespace romp {
 
+  const time_t ROMP_ID = time(NULL);
   namespace options {
 
     /**
@@ -122,10 +123,10 @@ namespace romp {
       size_t history_length = 4;
       bool do_trace = false;
       unsigned int threads =  get_default_thread_count(); 
-      size_t depth = INT32_MAX;      
+      size_t depth = INT16_MAX;      
       unsigned int random_walkers = threads*_ROMP_THREAD_TO_RW_RATIO; 
-      unsigned int rand_seed = time(NULL); 
-      std::string seed_str; 
+      unsigned int rand_seed = ROMP_ID; 
+      std::string seed_str = std::to_string(ROMP_ID)); 
       bool do_single = false;
       size_t attempt_limit = UINT64_MAX; // disabled if UINT64_MAX
       std::string trace_dir = "./traces/"; // path for the trace file to be created during each walk
@@ -148,11 +149,12 @@ namespace romp {
       size_t lcount = INT16_MAX;
 #endif
       bool do_even_start = false;
-      id_t start_id = 0;
+      id_t start_id = ~0u;
       bool skip_launch_prompt = false;
     };
   }
   options::Options OPTIONS;
+  
 
   typedef _ROMP_STATE_TYPE State_t;
 

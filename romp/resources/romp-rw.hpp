@@ -77,14 +77,10 @@ private:
 #endif
   
   void init_state() noexcept {
-    if (OPTIONS.start_id) {
-      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
-      start_id = OPTIONS.start_id;
-    } else if (OPTIONS.do_even_start) {
-      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
-      start_id = id % _ROMP_STARTSTATES_LEN;
-    } else
-      start_id = rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN);
+#ifdef __ROMP__DO_MEASURE
+    init_time = time(NULL);
+#endif
+    
     const StartState& startstate = ::__caller__::STARTSTATES[start_id];
 #ifdef __ROMP__DO_MEASURE
     start_time = time(NULL);
@@ -112,14 +108,20 @@ private:
        *json << "],\"error-trace\":[" << er; // << "]";
     } 
     tripped_inside = r.make_error();
-#ifdef __ROMP__DO_MEASURE
-    active_time += time(NULL)-start_time;
-#endif
   }
- 
 
   void trace_metadata_out() const {
-    *json << ",\"metadata\":{\"model\":\"" __model__filename "\",\"seed\":" << init_rand_seed << ",\"max-depth\":" << OPTIONS.depth <<"}";
+    *json << ",\"metadata\":{"
+                  "\"model\":\"" __model__filename "\","
+                  "\"romp-id\":" << ROMP_ID << ","
+                  "\"root-seed\":\"" << OPTIONS.seed_str << "\","
+                  "\"seed\":" << init_rand_seed << ","
+                  "\"max-depth\":" << OPTIONS.depth << ","
+                  "\"attempt-limit\":" << ((OPTIONS.attempt_limit != UINT64_MAX) 
+                                            ? std::to_string(OPTIONS.attempt_limit) 
+                                            : "null") << ","
+                  "\"start-id:\"" << start_id << ""
+                  "}";
   }
 
 public:
@@ -139,6 +141,14 @@ public:
                   : std::function<void()>([this](){sim1Step_no_trace();}))),
       id(RandWalker::next_id++) 
   { 
+    if (OPTIONS.start_id != ~0u) {
+      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
+      start_id = OPTIONS.start_id;
+    } else if (OPTIONS.do_even_start) {
+      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
+      start_id = id % _ROMP_STARTSTATES_LEN;
+    } else
+      start_id = rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN);
     state.__rw__ = this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ 
     if (OPTIONS.do_trace) {
       json = new json_file_t(OPTIONS.trace_dir + std::to_string(init_rand_seed) + ".json");
@@ -150,9 +160,6 @@ public:
       // sim1Step = std::function<void()>([this]() {sim1Step_no_trace();});
     }
     for (int i=0; i<_ROMP_RULESETS_LEN; ++i) next_rule[i] = 0;
-#ifdef __ROMP__DO_MEASURE
-    init_time = time(NULL);
-#endif
     init_state();
   } 
 
@@ -284,7 +291,7 @@ private:
 #endif
     if (OPTIONS.do_trace && rw.json != nullptr) {
       *rw.json << "]"; // close trace
-      if (rw._valid) // if it didn't end in an error we need to: 
+      if (rw._valid && rw.tripped != nullptr) // if it didn't end in an error we need to: 
         *rw.json << ",\"error-trace\":[]"; // output empty error-trace
       *rw.json << ",\"results\":{\"depth\":"<< OPTIONS.depth-rw._fuel <<",\"valid\":" << rw._valid << ",\"is-error\":"<< rw._is_error
 #ifdef __ROMP__DO_MEASURE
@@ -302,6 +309,11 @@ private:
 #ifdef __romp__ENABLE_assume_property
     if (not rw._is_error && rw.tripped != nullptr && not OPTIONS.r_assume) return out; // don't output assumption violations unless --report-assume
 #endif
+#ifdef __romp__ENABLE_liveness_property
+    if (OPTIONS.r_assume) return out; // don't output attempt guard violations when --no-deadlock enabled
+#endif
+    if ((OPTIONS.deadlock == false || OPTIONS.result_all == false) && rw._attempt_limit == 0) 
+      return out; // don't output attempt guard violations when --no-deadlock enabled
     // ostream_p out(out_,0);
     out << "\n====== BEGIN :: Report of Walk #" << rw.id << " ======"
         << "\nBasic Info: "
@@ -390,6 +402,15 @@ private:
   }
 #endif
 #ifdef __romp__ENABLE_liveness_property
+private:
+  const bool enable_liveness = OPTIONS.liveness;
+  const size_t init_lcount = OPTIONS.lcount;
+  size_t lcounts[___propRule_liveness_count___];
+public:
+  inline void init_liveness_handler() {
+    for (int i=0; i<___propRule_liveness_count___; ++i)
+      lcounts[i] = 0ul;
+  }
   bool liveness_handler(bool expr, id_t liveness_id, id_t prop_id) {
     return false;  // TODO actually handle this as described in the help page
   }
@@ -399,8 +420,6 @@ private:
     return false;  // don't throw anything if liveness is not enabled
   }
 #endif
-
-
 }; //? END class RandomWalker
 
 id_t RandWalker::next_id = 0u;
