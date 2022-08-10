@@ -126,7 +126,7 @@ namespace romp {
       size_t depth = INT16_MAX;      
       unsigned int random_walkers = threads*_ROMP_THREAD_TO_RW_RATIO; 
       unsigned int rand_seed = ROMP_ID; 
-      std::string seed_str = std::to_string(ROMP_ID)); 
+      std::string seed_str = std::to_string(ROMP_ID); 
       bool do_single = false;
       size_t attempt_limit = UINT64_MAX; // disabled if UINT64_MAX
       std::string trace_dir = "./traces/"; // path for the trace file to be created during each walk
