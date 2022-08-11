@@ -120,7 +120,7 @@ private:
                   "\"attempt-limit\":" << ((OPTIONS.attempt_limit != UINT64_MAX) 
                                             ? std::to_string(OPTIONS.attempt_limit) 
                                             : "null") << ","
-                  "\"start-id:\"" << start_id << ""
+                  "\"start-id\":" << start_id << ""
                   "}";
   }
 
@@ -153,7 +153,7 @@ public:
     if (OPTIONS.do_trace) {
       json = new json_file_t(OPTIONS.trace_dir + std::to_string(init_rand_seed) + ".json");
       // sim1Step = std::function<void()>([this]() {sim1Step_trace();});
-      *json << "{\"$type\":\"romp-trace\"";
+      *json << "{\"$type\":\"romp-trace\",\"$version\":\"0.0.1\"";
       trace_metadata_out();
       *json << ",\"trace\":[";
     } else {
