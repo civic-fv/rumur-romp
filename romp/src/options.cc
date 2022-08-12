@@ -4,4 +4,4 @@
 
 std::string value_type = "int";
 
-std::string file_path = "<stdin>";
+// std::filesystem::path file_path = "<stdin>";

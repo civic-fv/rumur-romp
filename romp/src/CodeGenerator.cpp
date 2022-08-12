@@ -7,6 +7,9 @@
 
 namespace romp {
 
+std::filesystem::path CodeGenerator::input_file_path = "stdin";
+std::filesystem::path CodeGenerator::output_file_path = "./romp.cpp";
+
 const std::unordered_set<std::string> CodeGenerator::RESERVED_NAMES{ROMP_RESERVED_NAMES, ROMP_RESERVED_NAMES};
 
 std::string CodeGenerator::M_FUNCTION__FUNC_ATTRS = "";

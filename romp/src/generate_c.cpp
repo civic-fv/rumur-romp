@@ -865,7 +865,7 @@ public:
     buf << "{\"$type\":\"error-statement\",";
     buf << "\"label\":\"" << nEscape(rule.message) << "\","
             "\"loc\":{\"$type\":\"location\","
-                      "\"file\":\"" << nEscape(file_path) <<  "\","
+                      "\"file\":\"" << nEscape(CodeGenerator::input_file_path.string()) <<  "\","
     //                   "\"inside\":\"";
     // // TODO ...
     // buf <<            "\","
@@ -881,7 +881,7 @@ public:
         << "\"label\":\"" << nEscape(prop.message == "" ? prop.property.expr->to_string() : prop.message) << "\","
         << "\"expr\":\"" << nEscape(prop.property.expr->to_string()) << "\","
             "\"loc\":{\"$type\":\"location\","
-                      "\"file\":\"" << nEscape(file_path) << "\","
+                      "\"file\":\"" << nEscape(CodeGenerator::input_file_path.string()) << "\","
     //                   "\"inside\":\"";
     // // TODO ...
     // buf <<            "\","
@@ -934,15 +934,21 @@ void generate_c(const Node &n, const std::vector<Comment> &comments, bool pack,
                 std::ostream &out, const std::string& build_cmds) {
 
   out << ROMP_GENERATED_FILE_PREFACE("\tGenerated code for a romp \"parallel random walker\" verification tool based off of the Murphi Model described in:\n"
-                                     "\t\tOriginal Murphi Model: " + file_path + "\n"
+                                     "\t\tOriginal Murphi Model: " + romp::CodeGenerator::input_file_path.filename().string() + "\n"
                                      "\tPlease build with the following command(s):\n\t\t" + build_cmds + "") "\n";
 
   out << "\n#define __romp__GENERATED_CODE\n\n";
   out << "\n#define _ROMP_STATE_TYPE " ROMP_STATE_TYPE "\n\n";
   out << "\n#define _ROMP_STATE_HISTORY_LEN (" << 4 << "ul)\n\n";  // TODO: make this adjustable
   out << "\n#define _ROMP_THREAD_TO_RW_RATIO (" << 8 << "ul)\n\n";  // TODO: make this adjustable
-  out << "\n#define __model__filename \"" << nEscape(file_path) << "\"\n\n";
-  auto _count = std::count(file_path.begin(), file_path.end(), ' ');
+  std::string file_path = romp::CodeGenerator::input_file_path.string();
+  out << "\n#define __model__filepath \"" << nEscape(file_path) << "\"\n\n";
+  int _count = std::count(file_path.begin(), file_path.end(), ' ');
+  out << "\n#define __model__filepath_contains_space (" 
+      << ((_count > 0) ? "true" : "false") << ")\n\n";
+  std::string file_name = romp::CodeGenerator::input_file_path.filename().string();
+  out << "\n#define __model__filename \"" << nEscape(file_name) << "\"\n";
+  _count = std::count(file_name.begin(), file_name.end(), ' ');
   out << "\n#define __model__filename_contains_space (" 
       << ((_count > 0) ? "true" : "false") << ")\n\n";
 

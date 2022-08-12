@@ -21,6 +21,7 @@
 #include <string>
 #include <unordered_set>
 #include <ostream>
+#include <filesystem> // C++ 17 or greater
 // #include <stack>
 
 #include "romp_def.hpp"
@@ -31,7 +32,10 @@ namespace romp {
   class CodeGenerator {
 
   public:
-    
+    // the filepath of the input murphi model
+    static std::filesystem::path input_file_path;
+    // the filepath of the output romp model checker
+    static std::filesystem::path output_file_path;
     // function attributes to prepend before the definition of any murphi function's C/C++ function.
     static std::string M_FUNCTION__FUNC_ATTRS;
     // function attributes to prepend before the definition of any murphi simple rule's guard C/C++ function.

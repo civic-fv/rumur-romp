@@ -188,7 +188,7 @@ std::string to_json(const Rule& rule, const std::string rule_type) {
     buf << "\"expr\":\"" << nEscape(_r->guard->to_string()) << "\",";
   buf << "\"label\":\"" << nEscape(rule.name) << "\","
           "\"loc\":{\"$type\":\"location\","
-                    "\"file\":\"" << nEscape(file_path) <<  "\","
+                    "\"file\":\"" << nEscape(CodeGenerator::input_file_path.string()) <<  "\","
                     // "\"inside\":\"global\","
                     "\"start\":["<< rule.loc.begin.line << "," << rule.loc.begin.column << "],"  
                     "\"end\":["<< rule.loc.end.line << "," << rule.loc.end.column << "]}";
@@ -211,7 +211,7 @@ std::string to_json(const Function& rule) {
     sep = ",";
   }
   buf << "],\"loc\":{\"$type\":\"location\","
-                    "\"file\":\"" << nEscape(file_path) << "\","
+                    "\"file\":\"" << nEscape(CodeGenerator::input_file_path.string()) << "\","
                     // "\"inside\":\"global\","
                     "\"start\":["<< rule.loc.begin.line << "," << rule.loc.begin.column << "],"  
                     "\"end\":["<< rule.loc.end.line << "," << rule.loc.end.column << "]}}";

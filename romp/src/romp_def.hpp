@@ -25,6 +25,8 @@
 #endif
 #endif
 
+#define ROMP_VERSION "0.0.1"
+
 #define ROMP_UTIL_NAMESPACE_NAME "romp"
 
 #define ROMP_UTIL_NAMESPACE "::" ROMP_UTIL_NAMESPACE_NAME
@@ -48,6 +50,7 @@
 #define ROMP_TYPE_NAMESPACE "__type__"
 
 #define ROMP_MEASURE_PREPROCESSOR_VAR "__ROMP__DO_MEASURE"
+#define ROMP_SYMMETRY_PREPROCESSOR_VAR "__romp__ENABLE_symmetry"
 #define ROMP_ASSUME_PREPROCESSOR_VAR "__romp__ENABLE_assume_property"
 #define ROMP_COVER_PREPROCESSOR_VAR "__romp__ENABLE_cover_property"
 #define ROMP_LIVENESS_PREPROCESSOR_VAR "__romp__ENABLE_liveness_property"
@@ -109,8 +112,8 @@
 #define ROMP_JSON_STREAM_TYPE "::" ROMP_UTIL_NAMESPACE_NAME "::" "ojstream<O>"
 // #define ROMP_OUT_STREAM_TYPE "::std::ostream"
 #define ROMP_OUT_STREAM_TYPE "::" ROMP_UTIL_NAMESPACE_NAME "::" "ostream_p"
-#define ROMP_MAKE_JSON_CONVERTER_SIG(_type) "template<class O> const std::string " << (_type) << "_to_json(" ROMP_JSON_STREAM_TYPE "& json, const " << (_type) << "& val) noexcept"
-#define ROMP_MAKE_STREAM_CONVERTER_SIG(_type) "const std::string " << (_type) << "_to_str(" ROMP_OUT_STREAM_TYPE "& out, const " << (_type) << "& val) noexcept"
+#define ROMP_MAKE_JSON_CONVERTER_SIG(_type) "template<class O> const ::romp::stream_void& " << (_type) << "_to_json(" ROMP_JSON_STREAM_TYPE "& json, const " << (_type) << "& val) noexcept"
+#define ROMP_MAKE_STREAM_CONVERTER_SIG(_type) "const ::romp::stream_void& " << (_type) << "_to_str(" ROMP_OUT_STREAM_TYPE "& out, const " << (_type) << "& val) noexcept"
 // #define ROMP_MAKE_JSON_CONVERTER_SIG(_type) "template<class O> " ROMP_JSON_STREAM_TYPE "& " << (type_) << "_to_json(" ROMP_JSON_STREAM_TYPE "& json, const " << (_type) << "& val) noexcept"
 // #define ROMP_MAKE_STREAM_CONVERTER_SIG(_type) ROMP_OUT_STREAM_TYPE "& " << (_type) << "_to_str(" ROMP_OUT_STREAM_TYPE "& out, const " << (_type) << "& val) noexcept"
 #define ROMP_MAKE_JSON_CONVERTER_CALL(_type,_val) "" << (_type) << "_to_json(json," << (_val) << ")"

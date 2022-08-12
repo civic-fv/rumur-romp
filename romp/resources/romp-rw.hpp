@@ -74,13 +74,10 @@ private:
   time_t init_time;
   time_t start_time;
   time_t active_time = 0;
+  time_t total_time = 0;
 #endif
   
-  void init_state() noexcept {
-#ifdef __ROMP__DO_MEASURE
-    init_time = time(NULL);
-#endif
-    
+  void init_state() noexcept {    
     const StartState& startstate = ::__caller__::STARTSTATES[start_id];
 #ifdef __ROMP__DO_MEASURE
     start_time = time(NULL);
@@ -108,20 +105,6 @@ private:
        *json << "],\"error-trace\":[" << er; // << "]";
     } 
     tripped_inside = r.make_error();
-  }
-
-  void trace_metadata_out() const {
-    *json << ",\"metadata\":{"
-                  "\"model\":\"" __model__filename "\","
-                  "\"romp-id\":" << ROMP_ID << ","
-                  "\"root-seed\":\"" << OPTIONS.seed_str << "\","
-                  "\"seed\":" << init_rand_seed << ","
-                  "\"max-depth\":" << OPTIONS.depth << ","
-                  "\"attempt-limit\":" << ((OPTIONS.attempt_limit != UINT64_MAX) 
-                                            ? std::to_string(OPTIONS.attempt_limit) 
-                                            : "null") << ","
-                  "\"start-id\":" << start_id << ""
-                  "}";
   }
 
 public:
@@ -160,7 +143,7 @@ public:
       // sim1Step = std::function<void()>([this]() {sim1Step_no_trace();});
     }
     for (int i=0; i<_ROMP_RULESETS_LEN; ++i) next_rule[i] = 0;
-    init_state();
+    
   } 
 
   ~RandWalker() { 
@@ -168,6 +151,30 @@ public:
     if (tripped != nullptr) delete tripped;
     if (tripped_inside != nullptr) delete tripped_inside; 
     if (history != nullptr) delete[] history; 
+  }
+
+  inline void init() noexcept {
+#ifdef __ROMP__DO_MEASURE
+    init_time = time(NULL);
+#endif
+    init_state();
+  }
+
+  inline void finalize() noexcept {
+#ifdef __ROMP__DO_MEASURE
+    total_time = (time(NULL)-init_time);
+#endif
+  }
+
+  Result get_result() noexcept {
+    if (OPTIONS.do_trace && rw.json != nullptr) {
+      trace_result_out();
+      delete json;
+    }
+    Result result{id,_is_error,_valid,tripped,tripped_inside};
+    tripped = nullptr;
+    tripped_inside = nullptr;
+    return result;
   }
 
 
@@ -179,18 +186,25 @@ private:
   // const RuleSet& rand_ruleset(){
   //   return ::__caller__::RULESETS[rand_choice<size_t>(rand_seed,0ul,_ROMP_RULESETS_LEN)]; 
   // }
+
+#ifdef __romp__ENABLE_symmetry
+  // keeps track of what rule to call next for our heuristic symmetry reduction
   id_t next_rule[_ROMP_RULESETS_LEN];
+#endif
   /**
    * @brief to pick a rule in random for simulation step
    */
   const Rule& get_rand_rule(){
-    // return rs.rules[rand_choice<size_t>(rand_seed,0ul,rs.rules.size())];
     const size_t rs_id = rand_choice<size_t>(rand_seed,0ul,_ROMP_RULESETS_LEN);
-    id_t& r_id = next_rule[rs_id];  // this is a refrence
     const RuleSet& rs = ::__caller__::RULESETS[rs_id];
+#ifdef __romp__ENABLE_symmetry
+    id_t& r_id = next_rule[rs_id];  // this is a reference
     const Rule& r = rs.rules[r_id]; 
     if (++r_id >= rs.rules.size())
       r_id = 0;
+#else
+     const Rule& r = rs.rules[rand_choice<size_t>(rand_seed,0ul,rs.rules.size())];
+#endif
     return r;
   }
 
@@ -240,6 +254,8 @@ private:
 #ifdef __ROMP__DO_MEASURE
     active_time += time(NULL)-start_time;
 #endif
+    if (_fuel % _ROMP_FLUSH_FREQ == 0)
+      json->out.flush();
   }
 
   void sim1Step_no_trace() noexcept {
@@ -283,28 +299,73 @@ private:
 #endif             
   }
 
+  void trace_metadata_out() const {
+    *json << ",\"metadata\":{"
+                  "\"model\":\"" __model__filepath "\","
+                  "\"romp-id\":" << ROMP_ID << ","
+                  "\"root-seed\":\"" << OPTIONS.seed_str << "\","
+                  "\"seed\":" << init_rand_seed << ","
+                  "\"max-depth\":" << OPTIONS.depth << ","
+                  "\"attempt-limit\":" << ((OPTIONS.attempt_limit != UINT64_MAX) 
+                                            ? std::to_string(OPTIONS.attempt_limit) 
+                                            : "null") << ","
+#ifdef __romp__ENABLE_symmetry
+                  "\"symmetry-reduction\":true,"
+#else
+                  "\"symmetry-reduction\":false,"
+#endif
+#ifdef __romp__ENABLE_assume_property
+                  "\"enable-assume\":true,"
+#else
+                  "\"enable-assume\":false,"
+#endif
+#ifdef __romp__ENABLE_cover_property
+                  "\"enable-cover\":" << OPTIONS.complete_on_cover << ","
+                  "\"cover-count\":" << ((OPTIONS.complete_on_cover) 
+                                          ? std::to_string(OPTIONS.cover_count) 
+                                          : "null") << ","
+#else
+                  "\"enable-cover\":false,"
+                  "\"cover-count\":null,"
+#endif
+#ifdef __romp__ENABLE_liveness_property
+                  "\"enable-liveness\":" << OPTIONS.liveness << ","
+                  "\"liveness-limit\":" << ((OPTIONS.liveness) 
+                                            ? std::to_string(OPTIONS.l_count) 
+                                            : "null") << ","
+#else
+                  "\"enable-liveness\":false,"
+                  "\"liveness-limit\":null,"
+#endif
+#ifdef __ROMP__DO_MEASURE
+                  "\"do-measure\":true,"
+#else
+                  "\"do-measure\":false,"
+#endif
+                  "\"start-id\":" << start_id << ""
+                  "}";
+  }
+
+  void trace_result_out() {
+    *rw.json << "]"; // close trace
+    if (rw._valid && rw.tripped != nullptr) // if it didn't end in an error we need to: 
+      *rw.json << ",\"error-trace\":[]"; // output empty error-trace
+    *rw.json << ",\"results\":{\"depth\":"<< OPTIONS.depth-rw._fuel <<",\"valid\":" << rw._valid << ",\"is-error\":"<< rw._is_error
+#ifdef __ROMP__DO_MEASURE
+                                << ",\"active-time\":" << rw.active_time << ",\"total-time\":" << total_time
+#else
+                                << ",\"active-time\":null,\"total-time\":null" 
+#endif
+            << ",\"property-violated\":" << rw.tripped
+            << ",\"tripped-inside\":" << rw.tripped_inside
+                              << "}" // closes results object
+              << "}"; // closes top level trace object
+    rw.json->out.flush();
+  }
+
   // called when trying to print the results of the random walker when it finishes (will finish up trace file if nessasary too)
   //  the calling context should ensure that the RandWalker is not being used else where & safe output to the ostream 
   friend std::ostream& operator << (std::ostream& out, const RandWalker& rw) {
-#ifdef __ROMP__DO_MEASURE
-    time_t total_time = (time(NULL)-rw.init_time);
-#endif
-    if (OPTIONS.do_trace && rw.json != nullptr) {
-      *rw.json << "]"; // close trace
-      if (rw._valid && rw.tripped != nullptr) // if it didn't end in an error we need to: 
-        *rw.json << ",\"error-trace\":[]"; // output empty error-trace
-      *rw.json << ",\"results\":{\"depth\":"<< OPTIONS.depth-rw._fuel <<",\"valid\":" << rw._valid << ",\"is-error\":"<< rw._is_error
-#ifdef __ROMP__DO_MEASURE
-                                  << ",\"active-time\":" << rw.active_time << ",\"total-time\":" << total_time
-#else
-                                  << ",\"active-time\":null,\"total-time\":null" 
-#endif
-              << ",\"property-violated\":" << rw.tripped
-              << ",\"tripped-inside\":" << rw.tripped_inside
-                                << "}" // closes results object
-               << "}"; // closes top level trace object
-      rw.json->out.flush();
-    }
     if (not rw._is_error && not OPTIONS.result_all) return out; // don't output non-error state unless --report-all
 #ifdef __romp__ENABLE_assume_property
     if (not rw._is_error && rw.tripped != nullptr && not OPTIONS.r_assume) return out; // don't output assumption violations unless --report-assume
@@ -316,12 +377,12 @@ private:
       return out; // don't output attempt guard violations when --no-deadlock enabled
     // ostream_p out(out_,0);
     out << "\n====== BEGIN :: Report of Walk #" << rw.id << " ======"
-        << "\nBasic Info: "
+        << "\nBASIC INFO: "
         << "\n    RandSeed: " << rw.init_rand_seed
         << "\n  StartState: " << ::__caller__::STARTSTATES[rw.start_id]
         << "\n  Fuel level: " << rw._fuel
         << "\n"
-           "\nTrace lite:"
+           "\nTRACE LITE:"
         << "\n  NOTE - " << ((OPTIONS.do_trace) ? 
                           "see \"" + OPTIONS.trace_dir + std::to_string(rw.init_rand_seed) + ".json\" for full trace." 
                         : "use the --trace/-t option to generate a full & detailed trace." ) 
@@ -334,7 +395,7 @@ private:
     out << "    ]";
     if (OPTIONS.result_emit_state)
       out << "\n          State: " << rw.state << "\n";
-    out << "\nProperty/Error Report:"
+    out << "\nPROPERTY/ERROR REPORT:"
         << "\n  Still a ``valid'' State?: " << (rw._valid ? "true" : "false") //    is it a valid state
         << "\n    In an ``Error State''?: " << (rw._is_error ? "true" : "false"); //    is it a valid state
     if (rw.tripped != nullptr) {
@@ -346,11 +407,11 @@ private:
                                                 : "UNKNOWN"));
         
 #ifdef __ROMP__DO_MEASURE
-    out << "TODO" //  states discovered (TODO)
-        << "TODO" //  runtime info sub-header
-        << "TODO" //      active time
-        << "TODO" // metrics header
-        << "TODO" //      total time
+    out << "\nTIME REPORT:" //  states discovered (TODO)
+        << "\n  Active Time: " << rw.active_time //  runtime info sub-header
+        << "\n   Total Time: " << rw.total_time //      active time
+        // << "TODO" // metrics header
+        // << "TODO" //      total time
 #endif
     out << "\n======= END :: Report of Walk #" << rw.id << " =======\n" << std::flush;
 
@@ -510,8 +571,10 @@ void launch_threads(unsigned int rand_seed) {
         // continue;
       };  // just in case might not need (if so remove)
 
+      rw->init();
       while (not rw->is_done())
         rw->sim1Step();
+      rw->finalize();
 
       out_queue.lock();
       out_rws.push(rw);
@@ -545,8 +608,10 @@ void launch_threads(unsigned int rand_seed) {
       RandWalker* rw = out_rws.front();
       out_rws.pop();
       out_queue.unlock();
-      if (rw != nullptr) { 
-        std::cout << *rw << std::endl;
+      if (rw != nullptr) {
+        if (OPTIONS.result)
+          std::cout << *rw << std::endl;
+        // todo get the results
         delete rw;
       }
     }
@@ -602,8 +667,10 @@ void launch_OpenMPI(unsigned int root_seed);
  */
 void launch_single(unsigned int rand_seed) {
   RandWalker* rw = new RandWalker(rand_seed);
+  rw->init();
   while( not rw->is_done() )
     rw->sim1Step();
+  rw->finalize();
   std::cout << "Single ROMP RESULT:\n" << *rw << std::endl;  // example of writing one RW's results to cout
 }
 

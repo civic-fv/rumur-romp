@@ -5,9 +5,6 @@ project(rumur LANGUAGES CXX)
 # This seems to be some magic to get libraries to install correctly.
 include(GNUInstallDirs)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -W -Wall -Wextra -Wformat=2 \
-  -Wwrite-strings -Wmissing-declarations -Wshadow -Wundef \
-  ") # remove debug line to build proper
 
 # enable even more warnings if the compiler supports them
 include(CheckCXXCompilerFlag)
@@ -31,6 +28,11 @@ CHECK_CXX_COMPILER_FLAG(-Wpointer-arith HAS_WARNING_POINTER_ARITH)
 if(HAS_WARNING_POINTER_ARITH)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpointer-arith")
 endif()
+
+set(OLD_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+set(RUMUR_CMAKE_CXX_FLAGS "-W -Wall -Wextra -Wformat=2 \
+  -Wwrite-strings -Wmissing-declarations -Wshadow -Wundef")
+set(CMAKE_CXX_FLAGS "${OLD_CMAKE_CXX_FLAGS} -std=c++11 ${RUMUR_CMAKE_CXX_FLAGS}")
 
 # Enable --as-needed, present on GNU ld on Linux, to minimise dependencies.
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")

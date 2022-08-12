@@ -34,6 +34,7 @@ namespace options {
 void print_help() {
   using namespace std;
   Options default_opts;
+  // clang-format off
   std::cout << "This is a murphi model checker generated from the romp random walker tool.\n"
                "   generated from: " __model__filename "\n"
                "\n\n"
@@ -108,6 +109,12 @@ void print_help() {
                "                            default: \""<< default_opts.trace_dir <<"\"\n"
                "\n"
                "RESULT OUTPUT OPTIONS:\n"
+               "  --report-error        Provide detailed report for each walk that\n"
+               "    | -re                 ends in an ``error''.\n"
+               "    | -e                  (aka: violates a property or reaches a \n"
+               "                            murphi error statement)\n"
+               "                          (NOTE: --single-walk/-sw only outputs \n"
+               "                            this and not the summery data)"
                "  --report-all          Report on all walks not just those with \n"
                "    | --all              ``errors''. Including those stopped by \n"
                "    | -a                  the --attempt-guard/-ag/--loop-limit/-ll\n"
@@ -115,11 +122,13 @@ void print_help() {
 #ifdef __romp__ENABLE_assume_property
                "                          This also performs --report-assume/-ra.\n"
                "  --report-assume       Report walks that are violate an assume\n"
-               "    | -ra                 property (defined by rumur), rather than\n"
-               "                          just discarding them as invalid states.\n"
+               "    | --r-assume          property (defined by rumur), rather than\n"
+               "    | -ra                 just discarding them as invalid states.\n"
+               "                          (NOTE: only effective if --report-error\n"
+               "                            is provided)\n"
 #endif
                "  --r-history <int>     Specify how much of a history of rules\n"
-               "    | -rhl <int>          applied you want to see in the results."
+               "    | -rhl <int>          applied you want to see in a walks report\n"
                "                          <int> - (required) size of history buffer\n"
                "                            default: " << default_opts.history_length << "\n"
               //  "                          NOTE: larger the size == more RAM used.\n"
@@ -137,6 +146,7 @@ void print_help() {
               //  "    | -o <file-path>      instead of to stdout.\n"
                "\n"
             << std::endl;
+  // clang-format on
 }
 
 std::string validate_dir_path(const std::string val) {
@@ -385,7 +395,10 @@ void parse_args(int argc, char **argv) {
           exit(EXIT_FAILURE);
         }
       }
-    } else if ("-a" == std::string(argv[i]) || "--all" == std::string(argv[i]) || "--report-all" == std::string(argv[i])) {
+    } else if ("-e" == std::string(argv[i]) || "-re" == std::string(argv[i]) || "--report-error" == std::string(argv[i])) {
+      OPTIONS.result = true;
+    } else if ("-a" == std::string(argv[i]) || "--all" == std::string(argv[i]) || "--report-all" == std::string(argv[i]) || "-all" == std::string(argv[i])) {
+      OPTIONS.result = true;
       OPTIONS.result_all = true;
     } else if ("-rst" == std::string(argv[i]) || "--show-type" == std::string(argv[i]) || "--r-show-type" == std::string(argv[i])) {
       OPTIONS.result_show_type = true;
@@ -416,7 +429,7 @@ void parse_args(int argc, char **argv) {
         exit(EXIT_FAILURE);
       }
 #ifdef __romp__ENABLE_assume_property
-    } else if ("--r-assume" == std::string(argv[i])) {
+    } else if ("-ra" == std::string(argv[i]) || "--r-assume" == std::string(argv[i]) || "--report-assume" == std::string(argv[i])) {
       OPTIONS.r_assume = true;
 #endif
     // } else if ("-o" == std::string(argv[i]) || "--output" == std::string(argv[i])) {
@@ -523,6 +536,10 @@ void parse_args(int argc, char **argv) {
       if (OPTIONS.liveness) {
         OPTIONS.lcount = default_opts.lcount;
         std::cerr << "\nWARNING : --no-deadlock/-nd overrides/disables the --liveness-check/-lc flag !!\n" << std::flush;
+      }
+#ifdef __romp__ENABLE_assume_property
+      if (OPTIONS.r_assume && not OPTIONS.result) {
+        std::cerr << "\nINFO : --report-assume/--r-assume/-ra does nothing unless the --report-error/-re flag is set !!\n" << std::flush;
       }
 #endif
     }

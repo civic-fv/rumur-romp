@@ -3,6 +3,7 @@
 #include "compares_complex_values.h"
 #include "generate_c.hpp"
 #include "NestedError.hpp"
+#include "CodeGenerator.hpp"
 // #include "generate_h.h"
 #include "options.h"
 #include "resources.h"
@@ -30,25 +31,37 @@ static dup_t in;
 static std::shared_ptr<std::ostream> out;
 
 // output C source? (as opposed to C header)
-static bool source = true;
+// static bool source = true;
+
+std::filesystem::path make_path(std::string p) {
+  std::filesystem::path _p = p;
+  if (_p.is_relative())
+    return std::filesystem::absolute(_p);
+    return _p;
+}
 
 static void parse_args(int argc, char **argv) {
-
+  bool no_sym_provided = false;
   for (;;) {
     static struct option options[] = {
         // clang-format off
-        { "header",     no_argument,       0, 128 },
-        { "help",       no_argument,       0, 'h' },
-        { "output",     required_argument, 0, 'o' },
-        { "source",     no_argument,       0, 129 },
-        { "value-type", required_argument, 0, 130 },
-        { "version",    no_argument,       0, 131 },
+        { "help",             no_argument,        0,  'h' },
+        { "output",           required_argument,  0,  'o' },
+        { "no-symmetry",      no_argument,        0,  's' },
+        { "enable-assume",    no_argument,        0,  'a' },
+        { "enable-cover",     no_argument,        0,  'c' },
+        { "enable-liveness",  no_argument,        0,  'l' },
+        // { "header",                  no_argument,       0, 128 },
+        // { "source",          no_argument,       0, 129 },
+        { "value-type",       required_argument,  0,  130 },
+        { "version",          no_argument,        0,  131 },
+        { "do-measure",       no_argument,        0,  132 },
         { 0, 0, 0, 0 },
         // clang-format on
     };
 
     int option_index = 0;
-    int c = getopt_long(argc, argv, "ho:", options, &option_index);
+    int c = getopt_long(argc, argv, "ho:sacl", options, &option_index);
 
     if (c == -1)
       break;
@@ -59,27 +72,48 @@ static void parse_args(int argc, char **argv) {
       std::cerr << "run `" << argv[0] << " --help` to see available options\n";
       exit(EXIT_SUCCESS);
 
-    case 128: // --header
-      source = false;
-      break;
-
     case 'h': // --help
       help(doc_romp_1, doc_romp_1_len);
       exit(EXIT_SUCCESS);
 
-    case 'o': {
+    case 'o': { // --output
       auto o = std::make_shared<std::ofstream>(optarg);
       if (!o->is_open()) {
         std::cerr << "failed to open " << optarg << "\n";
         exit(EXIT_FAILURE);
       }
       out = o;
+      romp::CodeGenerator::output_file_path = make_path(optarg);
       break;
     }
 
-    case 129: // --source
-      source = true;
+    case 's': // --no-symmetry
+      no_sym_provided = true;
       break;
+
+    case 'a': // --enable-assume
+      romp::CodeGenerator::enable_assume_property();
+      break;
+
+    case 'c': // --enable-cover
+      romp::CodeGenerator::enable_cover_property();
+      break;
+
+    case 'l': // --enable-liveness
+      romp::CodeGenerator::enable_liveness_property();
+      break;
+
+    case 132: // --do-measure
+      romp::CodeGenerator::enable_preprocessor_option(ROMP_MEASURE_PREPROCESSOR_VAR);
+      break;
+
+    // case 128: // --header
+    //   source = false;
+    //   break;
+
+    // case 129: // --source
+    //   source = true;
+    //   break;
 
     case 130: // --value-type
       // note that we just assume the type the user gave us exists
@@ -87,7 +121,8 @@ static void parse_args(int argc, char **argv) {
       break;
 
     case 131: // --version
-      std::cout << "Murphi2C version " << rumur::get_version() << "\n";
+      std::cout << "ROMP version " ROMP_VERSION "\n"
+                   "Rumur version " << rumur::get_version() << "\n";
       exit(EXIT_SUCCESS);
 
     default:
@@ -119,7 +154,10 @@ static void parse_args(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
     in = dup_t(i, j);
+    romp::CodeGenerator::input_file_path = make_path(in_filename);
   }
+  if (not no_sym_provided)
+    romp::CodeGenerator::enable_preprocessor_option(ROMP_SYMMETRY_PREPROCESSOR_VAR);
 }
 
 static dup_t make_stdin_dup() {
@@ -211,10 +249,10 @@ int main(int argc, char **argv) {
   try {
   // output code
   // if (source) {
-    in_filename = trim(in_filename);
-    auto start = ((in_filename[0]=='"') ? ++(in_filename.begin()) : in_filename.begin() );
-    auto stop = ((in_filename[in_filename.size()-1]=='"') ? --(in_filename.end()) : in_filename.end() );
-    file_path = std::string(start,stop);
+    // in_filename = trim(in_filename);
+    // auto start = ((in_filename[0]=='"') ? ++(in_filename.begin()) : in_filename.begin() );
+    // auto stop = ((in_filename[in_filename.size()-1]=='"') ? --(in_filename.end()) : in_filename.end() );
+    // file_path = std::string(start,stop);
     generate_c(*m, comments, pack, (out == nullptr) ? std::cout : *out, "<not-implemented-yet>");
   // } else {
   //   generate_h(*m, comments, pack, out == nullptr ? std::cout : *out);

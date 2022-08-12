@@ -120,7 +120,7 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
     }
     *this << "]}\"; "
              // "return json; "
-             "return \"\"; "
+             "return ::romp::S_VOID;"
              "}\n";
 
     *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
@@ -133,7 +133,7 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
                     // "out ; } "
     *this << "out << out.dedent() << out.indentation() << ']'; "
             // "return out; "
-            "return \"\"; "
+            "return ::romp::S_VOID;"
               "}\n";
   } else { // range/scalarset based array indexes 
     *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " {";
@@ -152,7 +152,7 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
                     "sep = \",\"; } "
             "json << \"]}\"; "
             // "return json; "
-            "return \"\"; "
+            "return ::romp::S_VOID;"
             "}\n";
     
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
@@ -163,7 +163,7 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
                       "<< " ROMP_MAKE_STREAM_CONVERTER_CALL(el_type,"val.data[i]") " << '\\n'; } ";
   *this << "out << out.dedent() << out.indentation() << ']'; "
            // "return out; "
-           "return \"\"; "
+           "return ::romp::S_VOID;"
             "}\n";
   }
   // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
@@ -199,14 +199,14 @@ void CTypeGenerator::emit_stream_operators__enum(const std::string &name, const 
                       "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
                       "\\\"value\\\":\\\"\" << to_string(val) <<\"\\\"}\"; "
            // "return json; "
-           "return \"\"; "
+           "return ::romp::S_VOID;"
            "}\n";
 
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
   // *this << "out << \": " << type_str << " := \" << to_string(val); "
   *this << "out << to_string(val); "
            // "return out; "
-           "return \"\"; "
+           "return ::romp::S_VOID;"
            "}\n";
 
   // *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
@@ -232,14 +232,14 @@ void CTypeGenerator::emit_stream_operators__range(const std::string &name, const
                       "\\\"max\\\":\" << (" << te.upper_bound() << ") << \","
                       "\\\"value\\\":\" << ((range_t)val) << \"}\"; "
             // "return json; "
-            "return \"\"; "
+            "return ::romp::S_VOID;"
             "}\n";
 
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
   // *this << "out << \": " << type_str << " := \" << ((range_t)val); "
   *this << "out << ((range_t)val); "
            // "return out; "
-           "return \"\"; "
+           "return ::romp::S_VOID;"
            "}\n";
 
   // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
@@ -290,7 +290,7 @@ void CTypeGenerator::emit_stream_operators__record(const std::string &name, cons
   }
   *this << "<< \"}]}\"; "
             // "return json; "
-            "return \"\"; "
+            "return ::romp::S_VOID;"
             "}\n";
 
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { using namespace ::" ROMP_TYPE_NAMESPACE "; ";
@@ -309,7 +309,7 @@ void CTypeGenerator::emit_stream_operators__record(const std::string &name, cons
   *this << "<< out.dedent()"
            "<< out.indentation() << '}'; "
            // "return out; "
-           "return \"\"; "
+           "return ::romp::S_VOID;"
            "}\n";
 
   // std::string conv_str = ROMP_JSON_TYPE "{";
@@ -335,14 +335,14 @@ void CTypeGenerator::emit_stream_operators__scalarset(const std::string &name, c
                       "\\\"bound\\\":" << te.bound->constant_fold().get_str() << ","
                       "\\\"value\\\":\" << ((scalarset_t)val) << \"}\"; "
             // "return json; "
-            "return \"\"; "
+            "return ::romp::S_VOID;"
             "}\n";
 
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
   // *this << "out << \": " << type_str << " := \" << ((scalarset_t)val); "
   *this << "out << ((scalarset_t)val); "
            // "return out; "
-           "return \"\"; "
+           "return ::romp::S_VOID;"
            "}\n";
 
   // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "
@@ -358,13 +358,13 @@ void CTypeGenerator::emit_stream_operators__typeexprid(const std::string &name, 
   *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name);
   *this << "json << " ROMP_MAKE_JSON_CONVERTER_CALL(type_id,"((" + type_id + ")val)") "; "
             // "return json; "
-            "return \"\"; "
+            "return ::romp::S_VOID;"
             "}\n";
 
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
   *this << "out << " ROMP_MAKE_STREAM_CONVERTER_CALL(type_id,"((" + type_id + ")val)") "; "
            // "return out; "
-           "return \"\"; "
+           "return ::romp::S_VOID;"
            "}\n";
 
   // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const ::" ROMP_TYPE_NAMESPACE"::" << name << "& data) { "

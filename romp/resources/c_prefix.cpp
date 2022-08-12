@@ -48,6 +48,11 @@
 // #include "romp-json.hpp" // FOR PRE-CODEGEN LANGUAGE SUPPORT ONLY !! 
 #endif
 
+#ifdef DEBUG
+#define _ROMP_FLUSH_FREQ (32ul)
+#else
+#define _ROMP_FLUSH_FREQ (64ul)
+#endif
 
 // various printf wrappers to deal with the user having passed --value-type
 // static __attribute__((unused)) void print_int     (int v)      { printf("%d",          v); }
@@ -131,7 +136,7 @@ namespace romp {
       size_t attempt_limit = UINT64_MAX; // disabled if UINT64_MAX
       std::string trace_dir = "./traces/"; // path for the trace file to be created during each walk
       bool deadlock = false; // separate bool for each property or consider having a valid bool
-      bool result = false; // result output
+      bool result = false; // print results for each walker in addition to the summery
       bool result_all = false;
       bool result_show_type = false;
       bool result_emit_state = true;
@@ -180,6 +185,9 @@ namespace romp {
   template <class O> struct ojstream;
   template<class O> void __jprint_exception(ojstream<O>& json, const std::exception& ex) noexcept;
 
+  class stream_void { nullptr_t none = nullptr; };
+  const stream_void S_VOID;
+
   template <class O>
   struct ojstream {
     static_assert(std::is_base_of<std::ostream, O>::value, "O must inherit from std::ostream");
@@ -205,6 +213,7 @@ namespace romp {
     ojstream<O>& operator << (const unsigned short val) { out << val; return *this; }
     ojstream<O>& operator << (const short val) { out << val; return *this; }
     ojstream<O>& operator << (const bool val) { out << ((val) ? "true" : "false"); return *this; }
+    ojstream<O>& operator << (const stream_void& me) noexcept { return *this; };
     ojstream<O>& operator << (const IModelError& me) noexcept;
     ojstream<O>& operator << (const std::exception& ex) noexcept { 
       // if (ex_level++ == 0) out << "],\"error-trace\":["
@@ -220,6 +229,9 @@ namespace romp {
     }
   };
 
+  typedef ojstream<std::ofstream> json_file_t;
+  typedef ojstream<std::stringstream> json_str_t;
+
   class ostream_p {
     unsigned int _width;
     std::string _indentation;
@@ -229,8 +241,8 @@ namespace romp {
         : out(out_), _width(level_*OPTIONS.tab_size) 
       { _indentation = std::string(_width,OPTIONS.tab_char); }
     inline int width() { return _width; }
-    inline const std::string indent() { _indentation = std::string((_width+=OPTIONS.tab_size),OPTIONS.tab_char); return ""; }
-    inline const std::string dedent() { _indentation = std::string((_width-=OPTIONS.tab_size),OPTIONS.tab_char); return ""; }
+    inline const stream_void indent() { _indentation = std::string((_width+=OPTIONS.tab_size),OPTIONS.tab_char); return S_VOID; }
+    inline const stream_void dedent() { _indentation = std::string((_width-=OPTIONS.tab_size),OPTIONS.tab_char); return S_VOID; }
     inline const std::string indentation() { return _indentation; }
     template <typename T>
     inline ostream_p& operator << (const T val);  
@@ -239,10 +251,8 @@ namespace romp {
     inline ostream_p& ostream_p::operator << (const T val) { out << val; return *this; }  
     template <>
     inline ostream_p& ostream_p::operator << <std::_Setw>(const std::_Setw val) { _width = val._M_n; return *this; } 
-
-
-  typedef ojstream<std::ofstream> json_file_t;
-  typedef ojstream<std::stringstream> json_str_t;
+    template <>
+    inline ostream_p& ostream_p::operator << <stream_void>(const stream_void val) { return *this; } 
 
   // template<> char* json_str_t::str() { return out.str(); }
 
@@ -271,8 +281,13 @@ namespace romp {
             << '}'); 
   }
   std::ostream& operator << (std::ostream& out, const location& loc) { 
-    out << ((__model__filename_contains_space) ? "\"" __model__filename "\":" : __model__filename ":") 
-        << loc.start << '-' << loc.end;
+    out << ((__model__filename_contains_space) ? "\"" __model__filename "\":" : __model__filename ":");
+    if (loc.start.row == loc.end.row)
+      out << loc.start.row << ',' << loc.start.col;
+      if (loc.start.col != loc.end.col)
+        out << '-' << loc.end.col;
+    else
+      out << loc.start << '-' << loc.end;
     // if (loc.model_obj != "")
     //   out << " in ``" << loc.model_obj << "``";
     return out; 
@@ -280,6 +295,7 @@ namespace romp {
 
   struct IModelError : public std::logic_error {
     IModelError() : std::logic_error("this is a model error (you should never see this)") {}
+    void* id = nullptr;
     // const char* what() const noexcept {
     const char* what() const noexcept {
       std::stringstream out;
@@ -289,6 +305,7 @@ namespace romp {
     virtual void what(std::ostream& out) const noexcept = 0;
     virtual void to_json(json_file_t& json) const noexcept = 0;
     virtual void to_json(json_str_t& json) const noexcept = 0;
+    bool operator == (const IModelError& val) { return id == val.id; }
   };
   template<class O>
   ojstream<O>& ojstream<O>::operator << (const IModelError& me) noexcept { 
@@ -590,15 +607,14 @@ namespace romp {
     } catch(...) {}
   }
 
-
-  // struct PrettyPrinter {
-  //   std::string
-  // }
-
-  // std::ostream& operator << (std::ostream& out, const State_t& state) {
-
-  // }
-
+  struct Result {
+    id_t id;
+    bool error;
+    bool valid;
+    IModelError* tripped;
+    IModelError* inside;
+    ~Result() { if (tripped) delete tripped; if (inside) delete inside; }
+  };
 
   class IRandWalker {
     /**
@@ -651,9 +667,9 @@ namespace romp {
 
 namespace __type__ {
   typedef bool boolean; // builtin type mask for Murphi's boolean
-  template<class O> const std::string boolean_to_json(::romp::ojstream<O>& json, const ::__type__::boolean val) { 
+  template<class O> const ::romp::stream_void boolean_to_json(::romp::ojstream<O>& json, const ::__type__::boolean val) { 
     json << "{\"$type\":\"boolean-value\",\"value\":" << ((bool)val) << "}"; 
-    return ""; 
+    return ::romp::S_VOID; 
   }
-  const std::string boolean_to_str(::romp::ostream_p& out, const ::__type__::boolean val) { out << (((bool)val) ? "true" : "false" ); return ""; }
+  const ::romp::stream_void boolean_to_str(::romp::ostream_p& out, const ::__type__::boolean val) { out << (((bool)val) ? "true" : "false" ); return ::romp::S_VOID; }
 }
