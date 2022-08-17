@@ -124,7 +124,7 @@ class TraceData:
         with open(_trace_dir+'/'+_file_name,'r') as tf:
             json = j_load(tf)
         try :
-            if json['$type'] != "romp-trace":
+            if json['$type'] not in ["romp-trace", "romp-simple-trace"]:
                 raise Exception("Not a romp trace file")
             self.id = TraceID(_trace_dir,_file_name,json['metadata']['seed'])
             self.romp_id = RompID(json['$version'],
