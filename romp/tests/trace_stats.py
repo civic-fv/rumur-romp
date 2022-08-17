@@ -106,6 +106,8 @@ class TraceData:
     unique_states: FSet[str]
     property_violated: Un[None,str,dict]
     property_violated_inside: Un[None,str,dict]
+    active_time: Un[int,None]
+    total_time: Un[int,None]
     def __init__(self,_trace_dir:str,_file_name:str) -> None:
         self.id: TraceID = None
         self.romp_id: RompID = None
@@ -118,6 +120,8 @@ class TraceData:
         self.unique_states: FSet[str] = None
         self.property_violated: Un[None,str,dict] = None
         self.property_violated_inside: Un[None,str,dict] = None
+        self.active_time: Un[int,None] = None
+        self.total_time: Un[int,None] = None
         self.__process_trace_file(_trace_dir,_file_name)
     #? END def __init__()
     def __process_trace_file(self,_trace_dir:str,_file_name:str) -> None:
@@ -151,6 +155,8 @@ class TraceData:
             self.is_error = bool(results['is-error'])
             self.property_violated = results['property-violated']
             self.property_violated_inside = results['tripped-inside']
+            self.active_time = results['active-time']
+            self.total_time = results['total-time']
             self.unique_states = frozenset(unique_states)
             self.attempts = attempts
         except Exception as ex:
@@ -210,6 +216,8 @@ class ModelResult:
     state_miss_rate: StatRange
     abs_state_hit_rate: StatRange
     abs_state_miss_rate: StatRange
+    active_time: StatRange
+    total_time: StatRange
     unique_state_count: StatRange
     unique_states: StateSet
     properties_violated: Set[Un[None,str]]
@@ -229,6 +237,8 @@ class ModelResult:
         self.abs_state_hit_rate: StatRange = StatRange()
         self.abs_state_miss_rate: StatRange = StatRange()
         self.unique_state_count: StatRange = StatRange()
+        self.active_time: Un[StatRange,None] = StatRange()
+        self.total_time: Un[StatRange,None] = StatRange()
         self.unique_states: StateSet = StateSet()
         self.properties_violated: Set[Un[None,str]] = set()
         self.errors_found: int = 0
@@ -251,6 +261,11 @@ class ModelResult:
         self.abs_state_hit_rate.add(trace.abs_state_hit_rate) 
         self.abs_state_miss_rate.add(trace.abs_state_miss_rate) 
         self.tries.add(trace.tries)
+        if trace.total_time is not None:
+            self.active_time.add(trace.active_time)
+            self.total_time.add(trace.total_time)
+        else:
+            self.total_time, self.active_time = None, None
         self.unique_state_count.add(trace.unique_state_count)
         self.unique_states |= trace.unique_states
         if trace.property_violated is not None:
@@ -280,10 +295,20 @@ class ModelResult:
     #     return not self == other
     # #? END def __ne__(self) -> int:
     def __str__(self) -> str:
+        if self.total_time is not None:
+            t_time = f"{self.total_time.min:>16g} {self.total_time.avg:>16.2g} {self.total_time.min:>16g}"
+            a_time = f"{self.active_time.min:>16g} {self.active_time.avg:>16.2g} {self.active_time.min:>16g}"
+        else:
+            t_time = f"{'n/a':>16s} {'n/a':>16s} {'n/a':>16s}"
+            a_time = t_time
         return (f"{'='*80}\n"
                 f"  {self.id!s:^76s}  \n"
                 f"  {'-'*76}  \n"
                 f"      walks: {len(self.traces)!s:<67s}\n"
+                f"    TIME:\n"
+                f"       (sec) {'min:':>16s} {'avg:':>16s} {'max:':>16s}\n"
+                f"     active: {a_time!s:<67s}\n"
+                f"      total: {t_time!s:<67s}\n"
                 f"  ERRORS:\n"
                 f"     #-disc: {self.errors_found:<67g}\n"
                 f"       rate: {self.error_detection_rate:<67g}\n"

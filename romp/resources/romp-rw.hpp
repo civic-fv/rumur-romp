@@ -360,7 +360,7 @@ private:
 
   void trace_result_out() {
     *json << "]"; // close trace
-    if (_valid && tripped != nullptr) // if it didn't end in an error we need to: 
+    if (_valid && tripped == nullptr) // if it didn't end in an error we need to: 
       *json << ",\"error-trace\":[]"; // output empty error-trace
     *json << ",\"results\":{\"depth\":"<< OPTIONS.depth-_fuel <<",\"valid\":" << _valid << ",\"is-error\":"<< _is_error
 #ifdef __ROMP__DO_MEASURE
@@ -421,7 +421,7 @@ private:
 #ifdef __ROMP__DO_MEASURE
     out << "\nTIME REPORT:" //  states discovered (TODO)
         << "\n  Active Time: " << rw.active_time //  runtime info sub-header
-        << "\n   Total Time: " << rw.total_time //      active time
+        << "\n   Total Time: " << rw.total_time; //      active time
         // << "TODO" // metrics header
         // << "TODO" //      total time
 #endif
@@ -624,6 +624,7 @@ void launch_threads(unsigned int rand_seed) {
         if (OPTIONS.result)
           std::cout << *rw << std::endl;
         // todo get the results
+        rw->get_result();
         delete rw;
       }
     }
