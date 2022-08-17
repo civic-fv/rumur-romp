@@ -23,6 +23,7 @@
 #include "../../common/isa.h"
 #include "nested_escape.hpp"
 #include "type_traverse.hpp"
+#include "CodeGenerator.hpp"
 #include "options.h"
 #include <cassert>
 #include <cstddef>

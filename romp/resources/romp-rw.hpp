@@ -136,14 +136,21 @@ public:
     if (OPTIONS.do_trace) {
       json = new json_file_t(OPTIONS.trace_dir + std::to_string(init_rand_seed) + ".json");
       // sim1Step = std::function<void()>([this]() {sim1Step_trace();});
-      *json << "{\"$type\":\"romp-trace\",\"$version\":\"0.0.1\"";
+      *json << "{\"$type\":\""
+#ifdef __ROMP__SIMPLE_TRACE
+      "romp-simple-trace"
+#else
+      "romp-trace"
+#endif 
+      "\",\"$version\":\"0.0.1\"";
       trace_metadata_out();
       *json << ",\"trace\":[";
     } else {
       // sim1Step = std::function<void()>([this]() {sim1Step_no_trace();});
     }
+#ifdef __romp__ENABLE_symmetry
     for (int i=0; i<_ROMP_RULESETS_LEN; ++i) next_rule[i] = 0;
-    
+#endif
   } 
 
   ~RandWalker() { 
@@ -167,9 +174,9 @@ public:
   }
 
   Result get_result() noexcept {
-    if (OPTIONS.do_trace && rw.json != nullptr) {
+    if (OPTIONS.do_trace && json != nullptr) {
       trace_result_out();
-      delete json;
+      // delete json;
     }
     Result result{id,_is_error,_valid,tripped,tripped_inside};
     tripped = nullptr;
@@ -342,25 +349,30 @@ private:
 #else
                   "\"do-measure\":false,"
 #endif
+#ifdef __ROMP__SIMPLE_TRACE
+                  "\"simple-trace\":true,"
+#else
+                  "\"simple-trace\":false,"
+#endif
                   "\"start-id\":" << start_id << ""
                   "}";
   }
 
   void trace_result_out() {
-    *rw.json << "]"; // close trace
-    if (rw._valid && rw.tripped != nullptr) // if it didn't end in an error we need to: 
-      *rw.json << ",\"error-trace\":[]"; // output empty error-trace
-    *rw.json << ",\"results\":{\"depth\":"<< OPTIONS.depth-rw._fuel <<",\"valid\":" << rw._valid << ",\"is-error\":"<< rw._is_error
+    *json << "]"; // close trace
+    if (_valid && tripped != nullptr) // if it didn't end in an error we need to: 
+      *json << ",\"error-trace\":[]"; // output empty error-trace
+    *json << ",\"results\":{\"depth\":"<< OPTIONS.depth-_fuel <<",\"valid\":" << _valid << ",\"is-error\":"<< _is_error
 #ifdef __ROMP__DO_MEASURE
-                                << ",\"active-time\":" << rw.active_time << ",\"total-time\":" << total_time
+                                << ",\"active-time\":" << active_time << ",\"total-time\":" << total_time
 #else
                                 << ",\"active-time\":null,\"total-time\":null" 
 #endif
-            << ",\"property-violated\":" << rw.tripped
-            << ",\"tripped-inside\":" << rw.tripped_inside
+            << ",\"property-violated\":" << tripped
+            << ",\"tripped-inside\":" << tripped_inside
                               << "}" // closes results object
               << "}"; // closes top level trace object
-    rw.json->out.flush();
+    json->out.flush();
   }
 
   // called when trying to print the results of the random walker when it finishes (will finish up trace file if nessasary too)
@@ -671,7 +683,14 @@ void launch_single(unsigned int rand_seed) {
   while( not rw->is_done() )
     rw->sim1Step();
   rw->finalize();
-  std::cout << "Single ROMP RESULT:\n" << *rw << std::endl;  // example of writing one RW's results to cout
+  std::cout << *rw << std::endl;  // example of writing one RW's results to cout
+  std::cout << "Single ROMP RESULT:\n\t" 
+            << ((rw->is_error()) 
+                ? "A property was violated (see report above for details)"
+                : "-- no errors found --")
+            << std::endl;
+  rw->get_result();
+  delete rw;
 }
 
 

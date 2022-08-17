@@ -50,7 +50,7 @@ add_custom_command(# file with CLI config options
 set(ROMP_CMAKE_CXX_FLAGS "-Wmissing-declarations -Wunknown-pragmas")
 set(CMAKE_CXX_FLAGS "${OLD_CMAKE_CXX_FLAGS} -std=c++17 ${RUMUR_CMAKE_CXX_FALGS} ${ROMP_CMAKE_CXX_FLAGS}")
 set(ROMP_CMAKE_CXX_FLAGS_DEBUG "-DDEBUG -D_ROMP_DEV_DEBUG_INCLUDE_DIR='\"${CMAKE_CURRENT_SOURCE_DIR}/resources\"'")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${OMP_CMAKE_CXX_FLAGS_DEBUG}")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${ROMP_CMAKE_CXX_FLAGS_DEBUG}")
 
 add_executable(romp
   ${CMAKE_CURRENT_BINARY_DIR}/resources_c_prefix.cpp

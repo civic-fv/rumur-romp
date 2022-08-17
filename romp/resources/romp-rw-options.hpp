@@ -537,6 +537,7 @@ void parse_args(int argc, char **argv) {
         OPTIONS.lcount = default_opts.lcount;
         std::cerr << "\nWARNING : --no-deadlock/-nd overrides/disables the --liveness-check/-lc flag !!\n" << std::flush;
       }
+#endif
 #ifdef __romp__ENABLE_assume_property
       if (OPTIONS.r_assume && not OPTIONS.result) {
         std::cerr << "\nINFO : --report-assume/--r-assume/-ra does nothing unless the --report-error/-re flag is set !!\n" << std::flush;

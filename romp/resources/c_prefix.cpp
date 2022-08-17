@@ -171,11 +171,17 @@ namespace romp {
 
   std::string escape_str(const std::string &s) {
     std::string out;
-    for (const char &c : s) {
-      if (iscntrl(c) || c == '\\' || c == '\"') {
-        out += "\\" + octal(c);
+    for (size_t i=0; i<s.size(); ++i) {
+      if (s[i] == '\\') {
+        out += '\\';
+        out += '\\';
+      } else if (s[i] == '\"') {
+        out += '\\';
+        out += '"';
+      // } else if (iscntrl(s[i])) {
+      //   out += _octal_esc(s[i]);
       } else {
-        out += c;
+        out += s[i];
       }
     }
     return out;
@@ -187,6 +193,7 @@ namespace romp {
 
   class stream_void { nullptr_t none = nullptr; };
   const stream_void S_VOID;
+  std::ostream& operator << (std::ostream& out, const stream_void& val) { return out; }
 
   template <class O>
   struct ojstream {
@@ -347,8 +354,15 @@ namespace romp {
     IModelError* make_error() const;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const PropertyInfo& pi) noexcept { return (json << pi.json_h << '}'); }
   std::ostream& operator << (std::ostream& out, const PropertyInfo& pi) noexcept { return (out << pi.type << " \"" << pi.label << "\" " << pi.expr << " @(" << pi.loc << ")"); }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const PropertyInfo& pi) noexcept {
+// #ifdef __ROMP__SIMPLE_TRACE
+//     json.out << "\"" << pi.type << " \\\"" << pi.label << "\\\" " << pi.expr << " @(" << pi.loc << ")\"";
+// #else
+    json << pi.json_h << '}';
+// #endif
+    return json;
+  }
 
    struct Property {
     bool (*check)(const State_t&) ;
@@ -358,12 +372,23 @@ namespace romp {
     IModelError* make_error() const;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Property& p) noexcept { return (json << p.info.json_h << ",\"quantifiers\":" << p.quant_json << '}'); }
   std::ostream& operator << (std::ostream& out, const Property& p) noexcept { 
     out << p.info.type << " \"" << p.info.label << "\" ";
     if (p.quant_str.size() > 0)
       out << " Quantifiers(" << p.quant_str << ") ";
     return (out << "@(" << p.info.loc << ')'); 
+  }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Property& p) noexcept {
+// #ifdef __ROMP__SIMPLE_TRACE
+//     json.out << '"' << p.info.type << " \\\"" << p.info.label << "\\\" ";
+//     if (p.quant_str.size() > 0)
+//       json.out << " Quantifiers(" << p.quant_str << ") ";
+//     // json.out << "@(" << p.info.loc << "(\"";
+//     json.out << '"';
+// #else
+    json << p.info.json_h << ",\"quantifiers\":" << p.quant_json << '}';
+// #endif
+    return json;
   }
 
   struct ModelPropertyError : public IModelError {
@@ -398,7 +423,16 @@ namespace romp {
     IModelError* make_error() const;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const RuleInfo& ri) noexcept { return (json << ri.json_h << '}'); }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const RuleInfo& ri) noexcept {
+#ifdef __ROMP__SIMPLE_TRACE
+    json.out << "\"rule \\\""<< ri.label << "\\\"" 
+                // " @(" << ri.loc << ")\"";
+             << '"';
+#else
+    json << ri.json_h << '}';
+#endif
+    return json;
+  }
   std::ostream& operator << (std::ostream& out, const RuleInfo& ri) noexcept { return (out << "rule \""<< ri.label << "\" @(" << ri.loc << ")"); }
 
   struct Rule {
@@ -410,7 +444,18 @@ namespace romp {
     IModelError* make_error() const;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Rule& r) noexcept { return (json << r.info.json_h << ",\"quantifiers\":" << r.quant_json << '}'); }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const Rule& r) noexcept {
+#ifdef __ROMP__SIMPLE_TRACE
+    json.out << "\"rule \\\"" << r.info.label << "\\\" ";
+    if (r.quant_str.size() > 0)
+      json.out << " Quantifiers(" << r.quant_str << ") ";
+    // json.out << "@(" << r.info.loc << ")\"";
+    json.out << '"';
+#else
+    json << r.info.json_h << ",\"quantifiers\":" << r.quant_json << '}';
+#endif
+    return json;
+  }
   std::ostream& operator << (std::ostream& out, const Rule& r) noexcept { 
     out << "rule \"" << r.info.label << "\" ";
     if (r.quant_str.size() > 0)
@@ -463,7 +508,16 @@ namespace romp {
     IModelError* make_error() const;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartStateInfo& si) noexcept { return (json << si.json_h << '}'); }
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartStateInfo& si) noexcept {
+// #ifdef __ROMP__SIMPLE_TRACE
+//     json.out << "\"startstate \\\""<< si.label << "\\\""
+//                 // " @(" << si.loc << ")\"";
+//              << '"';
+// #else
+    json << si.json_h << '}';
+// #endif
+    return json;
+  }
   std::ostream& operator << (std::ostream& out, const StartStateInfo& si) noexcept { return (out << "startstate \""<< si.label << "\" @(" << si.loc << ")"); }
 
   struct StartState {
@@ -475,10 +529,20 @@ namespace romp {
     IModelError* make_error() const;
   };
 
-  template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartState& s) noexcept { 
-    return (json << s.info.json_h 
-                 << ",\"id\":" << s.id
-                 << ",\"quantifiers\":" << s.quant_json << '}'); 
+  template<class O> ojstream<O>& operator << (ojstream<O>& json, const StartState& s) noexcept {
+// #ifdef __ROMP__SIMPLE_TRACE
+//     json.out << "\"startstate \\\"" << s.info.label << "\\\" ";
+//     if (s.quant_str.size() > 0)
+//       json.out << " id: " << s.id 
+//                << " Quantifiers(" << s.quant_str << ") ";
+//     // json.out << "@(" << s.info.loc << ')';
+//     json.out << '"';
+// #else
+    json << s.info.json_h 
+         << ",\"id\":" << s.id
+         << ",\"quantifiers\":" << s.quant_json << '}';
+// #endif
+    return json;
   }
   std::ostream& operator << (std::ostream& out, const StartState& s) noexcept {
     out << "startstate \"" << s.info.label << "\" ";
@@ -668,7 +732,11 @@ namespace romp {
 namespace __type__ {
   typedef bool boolean; // builtin type mask for Murphi's boolean
   template<class O> const ::romp::stream_void boolean_to_json(::romp::ojstream<O>& json, const ::__type__::boolean val) { 
+#ifdef __ROMP__SIMPLE_TRACE
+    json << ((bool)val);
+#else
     json << "{\"$type\":\"boolean-value\",\"value\":" << ((bool)val) << "}"; 
+#endif
     return ::romp::S_VOID; 
   }
   const ::romp::stream_void boolean_to_str(::romp::ostream_p& out, const ::__type__::boolean val) { out << (((bool)val) ? "true" : "false" ); return ::romp::S_VOID; }

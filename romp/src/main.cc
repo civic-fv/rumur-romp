@@ -56,6 +56,7 @@ static void parse_args(int argc, char **argv) {
         { "value-type",       required_argument,  0,  130 },
         { "version",          no_argument,        0,  131 },
         { "do-measure",       no_argument,        0,  132 },
+        { "simple-trace-rep", no_argument,        0,  133 },
         { 0, 0, 0, 0 },
         // clang-format on
     };
@@ -105,6 +106,10 @@ static void parse_args(int argc, char **argv) {
 
     case 132: // --do-measure
       romp::CodeGenerator::enable_preprocessor_option(ROMP_MEASURE_PREPROCESSOR_VAR);
+      break;
+
+    case 133: // --simple-trace-rep
+      romp::CodeGenerator::enable_preprocessor_option(ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR);
       break;
 
     // case 128: // --header
@@ -226,7 +231,7 @@ int main(int argc, char **argv) {
     // std::cerr << e.loc << ":" << e.what() << "\n";
     return EXIT_FAILURE;
   } catch (const std::exception& ex) {
-    std::cerr << "[[DEV ERROR : BEGIN]]\n"
+    std::cerr << "\n[[DEV ERROR : BEGIN]]\n"
               << ex << "\n"
               << "[[DEV ERROR : END]]\n";
     return EXIT_FAILURE;

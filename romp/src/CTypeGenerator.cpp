@@ -103,6 +103,19 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
   if (auto _tid = dynamic_cast<const TypeExprID*>(te.element_type.get()))
     el_type = _tid->referent->name;
   else throw Error("Was not made anonymous before export \t[dev-error]", te.element_type->loc);
+
+  *this << "#ifdef " ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR "\n"
+        << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " {"
+        << "json << \"[\"; " // double escape time
+            "std::string sep; "
+            "for (size_t i=(0ul); i<val.size(); ++i) { "
+              "json << sep << " ROMP_MAKE_JSON_CONVERTER_CALL(el_type,"val.data[i]") "; "
+              "sep = \",\"; } "
+            "json << ']'; "
+            "return ::romp::S_VOID;"
+            "}\n"
+            "#else\n";
+
   if (auto _e = dynamic_cast<const Enum *>(te.index_type->resolve().get())) { 
     *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { ";
     *this << "json << \"" // double escape time
@@ -121,7 +134,8 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
     *this << "]}\"; "
              // "return json; "
              "return ::romp::S_VOID;"
-             "}\n";
+             "}\n"
+             "#endif\n";
 
     *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
     *this << "out << \"[\\n\" "
@@ -135,6 +149,7 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
             // "return out; "
             "return ::romp::S_VOID;"
               "}\n";
+
   } else { // range/scalarset based array indexes 
     *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " {";
     *this << "json << \"" // double escape time
@@ -153,18 +168,18 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
             "json << \"]}\"; "
             // "return json; "
             "return ::romp::S_VOID;"
-            "}\n";
-    
-  *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
-  *this << "out << \"[\\n\" "
-                "<< out.indent(); "
-                "for (size_t i=0; i<val.size(); ++i) { "
-                  "out << out.indentation() << \"[\" << (i + (" << te.index_type->lower_bound() << ")) << \"]: \""
-                      "<< " ROMP_MAKE_STREAM_CONVERTER_CALL(el_type,"val.data[i]") " << '\\n'; } ";
-  *this << "out << out.dedent() << out.indentation() << ']'; "
-           // "return out; "
-           "return ::romp::S_VOID;"
-            "}\n";
+            "}\n"
+            "#endif\n";
+    *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
+    *this << "out << \"[\\n\" "
+                  "<< out.indent(); "
+                  "for (size_t i=0; i<val.size(); ++i) { "
+                    "out << out.indentation() << \"[\" << (i + (" << te.index_type->lower_bound() << ")) << \"]: \""
+                        "<< " ROMP_MAKE_STREAM_CONVERTER_CALL(el_type,"val.data[i]") " << '\\n'; } ";
+    *this << "out << out.dedent() << out.indentation() << ']'; "
+            // "return out; "
+            "return ::romp::S_VOID;"
+              "}\n";
   }
   // *this << indentation() << "void to_json(" ROMP_JSON_TYPE "& j, const " << name << "& data) { "
   //          "if (" << ROMP_SHOW_TYPE_OPTION_EXPR << ") {" 
@@ -194,19 +209,25 @@ void CTypeGenerator::emit_stream_operators__enum(const std::string &name, const 
     *this << "case " << val.first << ": return \"" << val.first << "\"; ";
   *this << "default: break; } return \"" << name << "::__UNKNOWN_ENUM_VALUE__\"; }\n";
 
+  *this << "#ifdef " ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR "\n"
+        << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { "
+           "json << '\"' << to_string(val) << '\"'; "
+           "return ::romp::S_VOID; }\n"
+        << "#else\n";
   *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { ";
   *this << "json << \"{\\\"$type\\\":\\\"enum-value\\\","
                       "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
                       "\\\"value\\\":\\\"\" << to_string(val) <<\"\\\"}\"; "
            // "return json; "
-           "return ::romp::S_VOID;"
-           "}\n";
+           "return ::romp::S_VOID; "
+           "}\n"
+           "#endif\n";
 
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
   // *this << "out << \": " << type_str << " := \" << to_string(val); "
   *this << "out << to_string(val); "
            // "return out; "
-           "return ::romp::S_VOID;"
+           "return ::romp::S_VOID; "
            "}\n";
 
   // *this << ROMP_MAKE_JSON_CONVERTER_FOOTER "\n";
@@ -225,6 +246,13 @@ void CTypeGenerator::visit_range(const Range &) { *this << "range_t"; }
 
 void CTypeGenerator::emit_stream_operators__range(const std::string &name, const Range &te) {
   std::string type_str = nEscape(ModelSplitter::get_pretty_rep(te));
+
+  *this << "#ifdef " ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR "\n"
+        << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { "
+           "json << val; "
+           "return ::romp::S_VOID; }\n"
+        << "#else\n";
+
   *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { ";
   *this << "json << \"{\\\"$type\\\":\\\"range-value\\\","
                       "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
@@ -233,7 +261,8 @@ void CTypeGenerator::emit_stream_operators__range(const std::string &name, const
                       "\\\"value\\\":\" << ((range_t)val) << \"}\"; "
             // "return json; "
             "return ::romp::S_VOID;"
-            "}\n";
+            "}\n"
+            "#endif\n";
 
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
   // *this << "out << \": " << type_str << " := \" << ((range_t)val); "
@@ -272,11 +301,30 @@ void CTypeGenerator::visit_record(const Record &n) {
 void CTypeGenerator::emit_stream_operators__record(const std::string &name, const Record &te) {
   std::string type_str = nEscape(ModelSplitter::get_pretty_rep(te));
   std::string m_type;
+  std::string sep;
+
+  *this << "#ifdef " ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR "\n"
+        << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { using namespace ::" ROMP_TYPE_NAMESPACE "; "
+           "json << \"{\" ";
+  sep = " << \"\\\"";
+  for (const auto& m : te.fields) {
+    if (m==nullptr) continue; // (TMP-FIX) Figure out why vector's keep init-ing w/ nullptr's 
+    if (const auto _tid = dynamic_cast<const TypeExprID*>(m->type.get()))
+      m_type = _tid->referent->name;
+    else throw Error("type wan not anonymized durring intermediary processing \t[dev-error]",m->type->loc);
+    *this << sep 
+          << m->name << "\\\":\" << " ROMP_MAKE_JSON_CONVERTER_CALL(m_type,"val." + m->name);
+    sep = " << \",\\\"";
+  }
+  *this << " << '}'; "
+           "return ::romp::S_VOID; }\n"
+           "#else\n";
+
   *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { using namespace ::" ROMP_TYPE_NAMESPACE "; ";
   *this << "json << \"{\\\"$type\\\":\\\"record-value\\\","
                       "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
                       "\\\"fields\\\":[\" ";
-  std::string sep;
+  sep = "";
   for (const auto& m : te.fields) {
     if (m==nullptr) continue; // (TMP-FIX) Figure out why vector's keep init-ing w/ nullptr's 
     if (const auto _tid = dynamic_cast<const TypeExprID*>(m->type.get()))
@@ -291,7 +339,8 @@ void CTypeGenerator::emit_stream_operators__record(const std::string &name, cons
   *this << "<< \"}]}\"; "
             // "return json; "
             "return ::romp::S_VOID;"
-            "}\n";
+            "}\n"
+            "#endif\n";
 
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { using namespace ::" ROMP_TYPE_NAMESPACE "; ";
   *this << "out << \"{\\n\" "
@@ -329,6 +378,13 @@ void CTypeGenerator::visit_scalarset(const Scalarset &) { *this << "scalarset_t"
 
 void CTypeGenerator::emit_stream_operators__scalarset(const std::string &name, const Scalarset &te) {
   std::string type_str = nEscape(ModelSplitter::get_pretty_rep(te));
+
+  *this << "#ifdef " ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR "\n"
+        << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { "
+           "json << val; "
+           "return ::romp::S_VOID; }\n"
+        << "#else\n";
+
   *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { ";
   *this << "json << \"{\\\"$type\\\":\\\"scalarset-value\\\","
                       "\\\"type\\\":\\\"" << nEscape(type_str) << "\\\","
@@ -336,7 +392,8 @@ void CTypeGenerator::emit_stream_operators__scalarset(const std::string &name, c
                       "\\\"value\\\":\" << ((scalarset_t)val) << \"}\"; "
             // "return json; "
             "return ::romp::S_VOID;"
-            "}\n";
+            "}\n"
+            "#endif\n";
 
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
   // *this << "out << \": " << type_str << " := \" << ((scalarset_t)val); "
