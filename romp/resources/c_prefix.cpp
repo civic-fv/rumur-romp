@@ -54,6 +54,10 @@
 #define _ROMP_FLUSH_FREQ (64ul)
 #endif
 
+#ifdef __clang__
+using nullptr_t=std::nullptr_t;
+#endif
+
 // various printf wrappers to deal with the user having passed --value-type
 // static __attribute__((unused)) void print_int     (int v)      { printf("%d",          v); }
 // static __attribute__((unused)) void print_unsigned(unsigned v) { printf("%u",          v); }
@@ -135,7 +139,7 @@ namespace romp {
       bool do_single = false;
       size_t attempt_limit = UINT64_MAX; // disabled if UINT64_MAX
       std::string trace_dir = "./traces/"; // path for the trace file to be created during each walk
-      bool deadlock = false; // separate bool for each property or consider having a valid bool
+      bool deadlock = true; // separate bool for each property or consider having a valid bool
       bool result = false; // print results for each walker in addition to the summery
       bool result_all = false;
       bool result_show_type = false;
@@ -147,7 +151,7 @@ namespace romp {
 #endif
 #ifdef __romp__ENABLE_cover_property
       bool complete_on_cover = false;
-      size_t cover_count = INT16_MAX; 
+      id_t cover_count = INT16_MAX; 
 #endif
 #ifdef __romp__ENABLE_liveness_property
       bool liveness = false;
@@ -160,7 +164,6 @@ namespace romp {
   }
   options::Options OPTIONS;
   
-
   typedef _ROMP_STATE_TYPE State_t;
 
   static std::string octal(char c) {

@@ -56,6 +56,7 @@ namespace romp {
 
     static std::vector<std::string> ENABLED_PREPROCESSOR_OPTIONS;
     static const std::unordered_set<std::string> RESERVED_NAMES;
+    static bool do_ignore_romp_props;
     static bool is_assume_enabled;
     static bool is_cover_enabled;
     static bool is_liveness_enabled;
@@ -72,6 +73,7 @@ namespace romp {
 
   public:
     static void enable_preprocessor_option(std::string dir);
+    static void disable_romp_prop_errors();
     static void enable_assume_property();
     static void enable_cover_property();
     static void enable_liveness_property();

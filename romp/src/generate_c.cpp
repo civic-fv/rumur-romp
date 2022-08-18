@@ -202,19 +202,27 @@ public:
     id_t _id = 0;
     switch (n.property.category) {
     case Property::ASSERTION:
+      // if (not CodeGenerator::is_prop_enabled(Property::ASSERTION)) // not needed always enabled
+      //   throw Error("`assert`/`invariant` properties are not enabled !!", n.loc);
       *this << ROMP_INVARIANT_HANDLER(n,prop_id);
       break;
 
     case Property::ASSUMPTION:
+      if (not CodeGenerator::is_prop_enabled(Property::ASSUMPTION))
+        throw Error("`assume` properties are not enabled !!", n.loc);
       *this  << ROMP_ASSUMPTION_HANDLER(n,prop_id);
       break;
 
     case Property::COVER:
+    if (not CodeGenerator::is_prop_enabled(Property::COVER))
+        throw Error("`cover` properties are not enabled !!", n.loc);
       _id = next_cover_id++;
       *this  << ROMP_COVER_HANDLER(n,prop_id,_id);
       break;
 
     case Property::LIVENESS:
+    if (not CodeGenerator::is_prop_enabled(Property::LIVENESS))
+        throw Error("`liveness` properties are not enabled !!", n.loc);
       _id = next_liveness_id++;
       *this << ROMP_LIVENESS_HANDLER(n,prop_id,_id);
       break;
@@ -594,8 +602,8 @@ public:
              "#ifdef " ROMP_COVER_PREPROCESSOR_VAR "\n"
              "#define ___propRule_cover_count___ (" << count_cover << "ul)\n"
              "#else\n"
-             "#endif\n"
              "#define ___propRule_cover_count___ (0ul)\n"
+             "#endif\n"
              "#ifdef " ROMP_LIVENESS_PREPROCESSOR_VAR "\n"
              "#define ___propRule_liveness_count___ (" << count_liveness << "ul)\n"
              "#else\n"
@@ -651,12 +659,16 @@ public:
 
     switch (n.property.category) {
     case Property::ASSERTION:
+    // if (not CodeGenerator::is_prop_enabled(Property::ASSUMPTION))  // not needed always enabled
+    //     throw Error("`assert`/`invariant` properties are not enabled !!", n.loc);
       *this << indentation() << "if (" << ROMP_ASSERTION_HANDLER(n,id) << ") "
             /* << indentation() */ << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n";
       prop_info_list << ROMP_MAKE_PROPERTY_INFO_STRUCT(n,id,n.message,ROMP_PROPERTY_TYPE_ASSERT, to_json(n,"assert")) ",";
       break;
 
     case Property::ASSUMPTION:
+    if (not CodeGenerator::is_prop_enabled(Property::ASSUMPTION))
+        throw Error("`assume` properties are not enabled !!", n.loc);
       *this << "#ifdef " ROMP_ASSUME_PREPROCESSOR_VAR "\n"
             << indentation() << "if (" << ROMP_ASSUMPTION_HANDLER(n,id) << ") "
             /* << indentation() */ << "throw " ROMP_MAKE_MODEL_ERROR_PROPERTY(n,id) ";\n"
@@ -666,6 +678,8 @@ public:
       break;
 
     case Property::COVER:
+      if (not CodeGenerator::is_prop_enabled(Property::COVER))
+        throw Error("`cover` properties are not enabled !!", n.loc);
       _id = next_cover_id++;
       *this << "#ifdef " ROMP_COVER_PREPROCESSOR_VAR "\n"
             << indentation() << "if (" << ROMP_COVER_HANDLER(n,id,_id) << ")"
@@ -822,6 +836,10 @@ public:
           << "/* the number of property statements & rules in the model */\n"
              "#define " ROMP_PROPERTY_INFOS_LEN " (" << next_property_id <<  "ul)\n"
           // << "#define " ROMP_PROPERTY_RULES_LEN " (" << property_rules.size() <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"
+          << "/* the number of cover property statements & rules in the model */\n"
+          << "#define " ROMP_COVER_PROP_COUNT " (" << next_cover_id <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"
+          << "/* the number of liveness property rules in the model */\n"
+          << "#define " ROMP_LIVENESS_PROP_COUNT " (" << next_liveness_id <<  "ul) // the number of property rules (after ruleset expansion) in the model\n"
           << indentation() << "/* the info/metadata about the murphi properties in the model */\n"
           << indentation() << sorter.prop_info_list.str() << prop_info_list.str() << "};\n"
           << "/* the number of start state rules (before ruleset expansions) in the model */\n"

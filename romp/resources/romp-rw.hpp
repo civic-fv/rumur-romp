@@ -113,8 +113,11 @@ public:
   size_t attempt_limit() { return _attempt_limit; }
   bool is_valid() { return _valid; }
   size_t is_error() { return _is_error; }
+#ifdef __romp__ENABLE_cover_property
+  bool is_done() { return (not (_valid && _fuel > 0 && _attempt_limit > 0)) || complete_cover(); }
+#else
   bool is_done() { return not (_valid && _fuel > 0 && _attempt_limit > 0); }
-  
+#endif
 
   RandWalker(unsigned int rand_seed_) 
     : rand_seed(rand_seed_),
@@ -150,6 +153,12 @@ public:
     }
 #ifdef __romp__ENABLE_symmetry
     for (int i=0; i<_ROMP_RULESETS_LEN; ++i) next_rule[i] = 0;
+#endif
+#ifdef __romp__ENABLE_cover_property
+    for (int i=0; i<_ROMP_COVER_PROP_COUNT; ++i) cover_counts[i] = 0;
+#endif
+#ifdef __romp__ENABLE_liveness_property
+    for (int i=0; i<_ROMP_LIVENESS_PROP_COUNT; ++i) lcounts[i] = init_lcount;
 #endif
   } 
 
@@ -338,7 +347,7 @@ private:
 #ifdef __romp__ENABLE_liveness_property
                   "\"enable-liveness\":" << OPTIONS.liveness << ","
                   "\"liveness-limit\":" << ((OPTIONS.liveness) 
-                                            ? std::to_string(OPTIONS.l_count) 
+                                            ? std::to_string(OPTIONS.lcount) 
                                             : "null") << ","
 #else
                   "\"enable-liveness\":false,"
@@ -378,13 +387,13 @@ private:
   // called when trying to print the results of the random walker when it finishes (will finish up trace file if nessasary too)
   //  the calling context should ensure that the RandWalker is not being used else where & safe output to the ostream 
   friend std::ostream& operator << (std::ostream& out, const RandWalker& rw) {
-    if (not rw._is_error && not OPTIONS.result_all) return out; // don't output non-error state unless --report-all
+    if (not rw._is_error && not (OPTIONS.result_all)) return out; // don't output non-error state unless --report-all
 #ifdef __romp__ENABLE_assume_property
     if (not rw._is_error && rw.tripped != nullptr && not OPTIONS.r_assume) return out; // don't output assumption violations unless --report-assume
 #endif
-#ifdef __romp__ENABLE_liveness_property
-    if (OPTIONS.r_assume) return out; // don't output attempt guard violations when --no-deadlock enabled
-#endif
+// #ifdef __romp__ENABLE_liveness_property
+//     if (OPTIONS.r_assume) // don't output attempt guard violations when --no-deadlock enabled
+// #endif
     if ((OPTIONS.deadlock == false || OPTIONS.result_all == false) && rw._attempt_limit == 0) 
       return out; // don't output attempt guard violations when --no-deadlock enabled
     // ostream_p out(out_,0);
@@ -457,7 +466,8 @@ private:
     if (expr) return false;
     tripped = new ModelPropertyError(prop_id);
     _valid = false;
-    _is_error = false; // this is what makes an assumption different from an assertion
+    // // this is what makes an assumption different from an assertion
+    // _is_error = false; // no need to actually set this value
     return true;
   }
 #else
@@ -466,31 +476,49 @@ private:
   }
 #endif
 #ifdef __romp__ENABLE_cover_property
+  const bool enable_cover = OPTIONS.complete_on_cover;
+  const id_t goal_cover_count = OPTIONS.cover_count;
+  size_t cover_counts[_ROMP_COVER_PROP_COUNT];
   bool cover_handler(bool expr, id_t cover_id, id_t prop_id) {
-    return false;  // TODO actually handle this as described in the help page
+    if (expr) cover_counts[cover_id]++;
+    return false; // cover never throws an error
+  }
+#ifdef __GNUC__
+  __attribute__((optimize("unroll-loops")))
+#endif
+  bool complete_cover() {
+    if (not enable_cover) return false;
+    bool res = true;
+    for (int i=0; i<_ROMP_COVER_PROP_COUNT; ++i) 
+      res &= (cover_counts[i] >= goal_cover_count);
+    return res;
   }
 #else
   bool cover_handler(bool expr, id_t cover_id, id_t prop_id) {
-    return false;  // don't throw anything if cover is not enabled
+    return false;  // never throw anything if cover is not enabled by romp generator
   }
 #endif
 #ifdef __romp__ENABLE_liveness_property
 private:
   const bool enable_liveness = OPTIONS.liveness;
   const size_t init_lcount = OPTIONS.lcount;
-  size_t lcounts[___propRule_liveness_count___];
+  size_t lcounts[_ROMP_LIVENESS_PROP_COUNT];
 public:
-  inline void init_liveness_handler() {
-    for (int i=0; i<___propRule_liveness_count___; ++i)
-      lcounts[i] = 0ul;
-  }
   bool liveness_handler(bool expr, id_t liveness_id, id_t prop_id) {
-    return false;  // TODO actually handle this as described in the help page
+    if (not enable_liveness) return false;
+    if (expr) {
+      lcounts[liveness_id] = init_lcount;
+      return false;
+    }
+    if (--lcounts[liveness_id] > 0) return false; 
+    _valid = false;
+    _is_error = true;
+    tripped = new ModelPropertyError(prop_id);
+    return true;  // TODO actually handle this as described in the help page
   }
 #else
   bool liveness_handler(bool expr, id_t liveness_id, id_t prop_id) {
-    // no need to store exception in tripped if a property rule the catch will give us a better error dump
-    return false;  // don't throw anything if liveness is not enabled
+    return false;  // never throw anything if cover is not enabled by romp generator
   }
 #endif
 }; //? END class RandomWalker

@@ -65,16 +65,24 @@ void CodeGenerator::enable_measurements() {
 }
 
 bool CodeGenerator::is_prop_enabled(rumur::Property::Category prop) {
+  if (CodeGenerator::do_ignore_romp_props) return true;
   switch (prop) {
   case rumur::Property::ASSERTION:
     return true;
   case rumur::Property::ASSUMPTION:
-    return is_assume_enabled;
+    return CodeGenerator::is_assume_enabled;
   case rumur::Property::COVER:
-    return is_cover_enabled;
+    return CodeGenerator::is_cover_enabled;
   case rumur::Property::LIVENESS:
-    return is_liveness_enabled;
+    return CodeGenerator::is_liveness_enabled;
+  default:
+    return false;
   }
+}
+
+bool CodeGenerator::do_ignore_romp_props = false;
+void CodeGenerator::disable_romp_prop_errors() {
+  CodeGenerator::do_ignore_romp_props = true;
 }
 
 CodeGenerator::~CodeGenerator() {}

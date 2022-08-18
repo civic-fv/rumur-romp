@@ -307,7 +307,7 @@ void parse_args(int argc, char **argv) {
         exit(EXIT_FAILURE);
       }
     } else if ("-nd" == std::string(argv[i]) || "--no-deadlock" == std::string(argv[i])) {
-      OPTIONS.deadlock = true;
+      OPTIONS.deadlock = false;
 #ifdef __romp__ENABLE_liveness_property
     } else if ("-lc" == std::string(argv[i]) || "--liveness-check" == std::string(argv[i])) {
       OPTIONS.liveness = true;
@@ -400,6 +400,9 @@ void parse_args(int argc, char **argv) {
     } else if ("-a" == std::string(argv[i]) || "--all" == std::string(argv[i]) || "--report-all" == std::string(argv[i]) || "-all" == std::string(argv[i])) {
       OPTIONS.result = true;
       OPTIONS.result_all = true;
+#ifdef __romp__ENABLE_assume_property
+      OPTIONS.r_assume = true;
+#endif
     } else if ("-rst" == std::string(argv[i]) || "--show-type" == std::string(argv[i]) || "--r-show-type" == std::string(argv[i])) {
       OPTIONS.result_show_type = true;
     } else if ("-ros" == std::string(argv[i]) || "--omit-state" == std::string(argv[i]) || "--r-omit-state" == std::string(argv[i])) {
@@ -534,16 +537,17 @@ void parse_args(int argc, char **argv) {
                        "        |-> (aka the --attempt-limit/-al/--loop-limit/-ll/--attempt-guard/-ag flags)\n" << std::flush;
 #ifdef __romp__ENABLE_liveness_property
       if (OPTIONS.liveness) {
+        OPTIONS.liveness = false;
         OPTIONS.lcount = default_opts.lcount;
         std::cerr << "\nWARNING : --no-deadlock/-nd overrides/disables the --liveness-check/-lc flag !!\n" << std::flush;
       }
 #endif
-#ifdef __romp__ENABLE_assume_property
-      if (OPTIONS.r_assume && not OPTIONS.result) {
-        std::cerr << "\nINFO : --report-assume/--r-assume/-ra does nothing unless the --report-error/-re flag is set !!\n" << std::flush;
-      }
-#endif
     }
+#ifdef __romp__ENABLE_assume_property
+    if (OPTIONS.r_assume && not OPTIONS.result) {
+      std::cerr << "\nINFO : --report-assume/--r-assume/-ra does nothing unless the --report-error/-re flag is set !!\n" << std::flush;
+    }
+#endif
 }
 
 

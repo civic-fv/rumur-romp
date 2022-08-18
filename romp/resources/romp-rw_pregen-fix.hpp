@@ -20,7 +20,8 @@
 #define __romp__ENABLE_assume_property
 #define __romp__ENABLE_cover_property
 #define __romp__ENABLE_liveness_property
-#define ___propRule_liveness_count___ (0ul)
+#define _ROMP_COVER_PROP_COUNT (2ul)
+#define _ROMP_LIVENESS_PROP_COUNT (2ul)
 
 #ifndef _ROMP_STATE_HISTORY_LEN
 #define _ROMP_STATE_HISTORY_LEN (16ul)

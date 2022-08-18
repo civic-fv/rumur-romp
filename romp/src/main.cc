@@ -45,18 +45,19 @@ static void parse_args(int argc, char **argv) {
   for (;;) {
     static struct option options[] = {
         // clang-format off
-        { "help",             no_argument,        0,  'h' },
-        { "output",           required_argument,  0,  'o' },
-        { "no-symmetry",      no_argument,        0,  's' },
-        { "enable-assume",    no_argument,        0,  'a' },
-        { "enable-cover",     no_argument,        0,  'c' },
-        { "enable-liveness",  no_argument,        0,  'l' },
-        // { "header",                  no_argument,       0, 128 },
-        // { "source",          no_argument,       0, 129 },
-        { "value-type",       required_argument,  0,  130 },
-        { "version",          no_argument,        0,  131 },
-        { "do-measure",       no_argument,        0,  132 },
-        { "simple-trace-rep", no_argument,        0,  133 },
+        { "help",               no_argument,        0,  'h' },
+        { "output",             required_argument,  0,  'o' },
+        { "no-symmetry",        no_argument,        0,  's' },
+        { "enable-assume",      no_argument,        0,  'a' },
+        { "enable-cover",       no_argument,        0,  'c' },
+        { "enable-liveness",    no_argument,        0,  'l' },
+        { "ignore-rumur-props", no_argument,        0,  'i' },
+        // { "header",             no_argument,       0, 128 },
+        // { "source",             no_argument,       0, 129 },
+        { "value-type",         required_argument,  0,  130 },
+        { "version",            no_argument,        0,  131 },
+        { "do-measure",         no_argument,        0,  132 },
+        { "simple-trace-rep",   no_argument,        0,  133 },
         { 0, 0, 0, 0 },
         // clang-format on
     };
@@ -102,6 +103,10 @@ static void parse_args(int argc, char **argv) {
 
     case 'l': // --enable-liveness
       romp::CodeGenerator::enable_liveness_property();
+      break;
+
+    case 'i': // --enable-liveness
+      romp::CodeGenerator::disable_romp_prop_errors();
       break;
 
     case 132: // --do-measure

@@ -185,10 +185,14 @@ std::string to_json(const Rule& rule, const std::string rule_type) {
         buf << "liveness"; break;
     }
     buf << "\",\"expr\":\"" << nEscape(_prop->property.expr->to_string()) << "\",";
-  } else if (auto _r = dynamic_cast<const rumur::SimpleRule*>(&rule))
-    buf << "\"expr\":\"" << nEscape(_r->guard->to_string()) << "\",";
+  } else if (auto _r = dynamic_cast<const rumur::SimpleRule*>(&rule)) {
+    buf << "\"expr\":\"";
+    if (_r->guard != nullptr)
+      buf << nEscape(_r->guard->to_string());
+    buf << "\",";
+  }
   buf << "\"label\":\"" << nEscape(rule.name) << "\","
-          "\"loc\":{\"$type\":\"location\","
+         "\"loc\":{\"$type\":\"location\","
                     "\"file\":\"" << nEscape(CodeGenerator::input_file_path.string()) <<  "\","
                     // "\"inside\":\"global\","
                     "\"start\":["<< rule.loc.begin.line << "," << rule.loc.begin.column << "],"  
@@ -551,6 +555,9 @@ void ModelSplitter::visit_simplerule(SimpleRule &n) {
     //     insert_to_global_decls(decl);
     //     q.type = Ptr<TypeExprID>(new TypeExprID(name, decl, q.type->loc));
     // }
+  
+  if (n.guard == nullptr)
+    n.guard = rumur::True;
 
   std::vector<Ptr<Decl>> _decls(n.decls.size());
   for (Ptr<Decl> &d : n.decls)
