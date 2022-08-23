@@ -2,6 +2,7 @@
 bin/**
 build/**
 CMakeFiles/**
+**/__pycache__/**
 
 #ignore romp model-checker gnerated trace files
 **/traces/**

@@ -22,12 +22,12 @@
         // ^^^ all this needs to be written by the end of the constructor ^^^
         // \/ \/ all of this will be written in the trace function (up until results) \/ \/
         { // START of your part of the output
-            "$type": "rule-fail", // i.e. when a guard return false record it was tried
+            "$type": "rule-miss", // i.e. when a guard return false record it was tried
             "rule": // END of your part of the output
             {} // <- this would be the rule object that you get from the rand_ruleset -> rand_rule methods (locally called `r`) in the code
         },
         { // START of your part of the output
-            "$type": "rule-applied", // i.e. when a guard return false record it was tried
+            "$type": "rule-hit", // i.e. when a guard return false record it was tried
             "rule": // END of your part of the output
             {}, // <- this would be the rule object that you get from the rand_ruleset -> rand_rule methods (locally called `r`) in the code
             "state": // <- you would need to insert this

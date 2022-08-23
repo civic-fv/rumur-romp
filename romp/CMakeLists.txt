@@ -77,6 +77,7 @@ add_executable(romp
   src/NestedError.cpp
   src/SigPerm.cpp
   src/nested_escape.cpp
+  src/StateSpaceCalc.cpp
   )
 
 target_include_directories(romp

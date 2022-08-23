@@ -106,12 +106,12 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
 
   *this << "#ifdef " ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR "\n"
         << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " {"
-        << "json << \"[\"; " // double escape time
+        << "json << " // "\"[\"; " // double escape time
             "std::string sep; "
             "for (size_t i=(0ul); i<val.size(); ++i) { "
               "json << sep << " ROMP_MAKE_JSON_CONVERTER_CALL(el_type,"val.data[i]") "; "
               "sep = \",\"; } "
-            "json << ']'; "
+            // "json << ']'; "
             "return ::romp::S_VOID;"
             "}\n"
             "#else\n";
@@ -305,18 +305,21 @@ void CTypeGenerator::emit_stream_operators__record(const std::string &name, cons
 
   *this << "#ifdef " ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR "\n"
         << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { using namespace ::" ROMP_TYPE_NAMESPACE "; "
-           "json << \"{\" ";
-  sep = " << \"\\\"";
+           "json << "; // "\"{\" ";
+  sep = "";
+  // sep = " << \"\\\"";
   for (const auto& m : te.fields) {
     if (m==nullptr) continue; // (TMP-FIX) Figure out why vector's keep init-ing w/ nullptr's 
     if (const auto _tid = dynamic_cast<const TypeExprID*>(m->type.get()))
       m_type = _tid->referent->name;
     else throw Error("type wan not anonymized durring intermediary processing \t[dev-error]",m->type->loc);
-    *this << sep 
-          << m->name << "\\\":\" << " ROMP_MAKE_JSON_CONVERTER_CALL(m_type,"val." + m->name);
-    sep = " << \",\\\"";
+    *this << sep <<
+            //  m->name << "\\\":\""
+            " << " ROMP_MAKE_JSON_CONVERTER_CALL(m_type,"val." + m->name);
+    sep = " << ','";
+    // sep = " << \",\\\"";
   }
-  *this << " << '}'; "
+  *this << // " << '}'; "
            "return ::romp::S_VOID; }\n"
            "#else\n";
 

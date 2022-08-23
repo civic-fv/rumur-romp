@@ -128,10 +128,10 @@ public:
       id(RandWalker::next_id++) 
   { 
     if (OPTIONS.start_id != ~0u) {
-      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
+      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand operation for consistency
       start_id = OPTIONS.start_id;
     } else if (OPTIONS.do_even_start) {
-      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand option for consistency
+      rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN); // burn one rand operation for consistency
       start_id = id % _ROMP_STARTSTATES_LEN;
     } else
       start_id = rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN);
@@ -238,11 +238,11 @@ private:
         --_fuel;
         _attempt_limit = init_attempt_limit;
         add_to_history(r);
-        *json << ",{\"$type\":\"rule-applied\",\"rule\":" << r << ","
+        *json << ",{\"$type\":\"rule-hit\",\"rule\":" << r << ","
                  "\"state\":" << state
               << "}";
       } else {
-        *json << ",{\"$type\":\"rule-tried\",\"rule\":" << r << "}";
+        *json << ",{\"$type\":\"rule-miss\",\"rule\":" << r << "}";
         --_attempt_limit;
       }      
     } catch(IModelError& me) {
@@ -319,6 +319,7 @@ private:
     *json << ",\"metadata\":{"
                   "\"model\":\"" __model__filepath "\","
                   "\"romp-id\":" << ROMP_ID << ","
+                  "\"trace-id\":" << id << ","
                   "\"root-seed\":\"" << OPTIONS.seed_str << "\","
                   "\"seed\":" << init_rand_seed << ","
                   "\"max-depth\":" << OPTIONS.depth << ","
@@ -363,7 +364,9 @@ private:
 #else
                   "\"simple-trace\":false,"
 #endif
-                  "\"start-id\":" << start_id << ""
+                  "\"start-id\":" << start_id << ","
+                  "\"total-rule-count\":" << std::to_string(_ROMP_RULE_COUNT) << ","
+                  "\"possible-state-count\":" _ROMP_STATESPACE_COUNT_str ""
                   "}";
   }
 

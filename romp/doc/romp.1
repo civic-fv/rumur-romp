@@ -194,7 +194,17 @@ To use them you must use the appropriate flag when generating your model checker
 using the \fB romp \fR tool.
 See the \fB OPTIONS \fR section above for more info on each supported property.
 .RE
-
+.PP
+\fB Function Side-Effect Protection\fR
+.RS
+We do not allow you to build a model checker that calls a Murphi Function with 
+side effects (\fIi.e.\fR modifies a value in the state) inside a Rule's guard expr,
+or a Property Rule's conditional expr.
+This is for consistancy and safty in your model.
+However, this is enfourced by C++ and your compiler so you will not recive an error about this 
+from the \fB romp\fR tool, but rather your C/C++ compiler, if supported.
+.RE
+.PP
 .SH SEE ALSO
 rumur(1)
 .SH AUTHOR

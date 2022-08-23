@@ -56,6 +56,7 @@
 #define ROMP_COVER_PREPROCESSOR_VAR "__romp__ENABLE_cover_property"
 #define ROMP_LIVENESS_PREPROCESSOR_VAR "__romp__ENABLE_liveness_property"
 
+#define ROMP_STATESPACE_LEN "_ROMP_STATESPACE_COUNT_str"
 // #define ROMP_CALLER_RULE_DECL "const ::romp::Rule ";
 #define ROMP_RULESETS_LEN "_ROMP_RULESETS_LEN"
 #define ROMP_RULES_LEN "_ROMP_RULE_COUNT"

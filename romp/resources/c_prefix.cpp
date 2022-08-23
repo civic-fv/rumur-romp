@@ -132,7 +132,7 @@ namespace romp {
       size_t history_length = 4;
       bool do_trace = false;
       unsigned int threads =  get_default_thread_count(); 
-      size_t depth = INT16_MAX;      
+      size_t depth = 1024ul; // INT16_MAX;      
       unsigned int random_walkers = threads*_ROMP_THREAD_TO_RW_RATIO; 
       unsigned int rand_seed = ROMP_ID; 
       std::string seed_str = std::to_string(ROMP_ID); 

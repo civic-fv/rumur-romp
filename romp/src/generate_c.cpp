@@ -5,6 +5,7 @@
 #include "CTypeGenerator.hpp"
 #include "ModelSplitter.hpp"
 #include "SigPerm.hpp"
+#include "StateSpaceCalc.hpp"
 #include "options.h"
 #include "resources.h"
 #include <cstddef>
@@ -463,10 +464,16 @@ public:
 
 
   void gen_state_to_json(std::vector<Ptr<VarDecl>> &children) {    
-    *this << "\n" << indentation() 
+    *this << "\n" << "#ifdef " ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR "\n"
+                  << indentation() 
+                  << "template<class O> " ROMP_JSON_STREAM_TYPE "& operator << (" ROMP_JSON_STREAM_TYPE "& json, const " ROMP_STATE_TYPE "& s) { "
+                       "json << '[' << ::" ROMP_MODEL_NAMESPACE_NAME "::" ROMP_MAKE_JSON_CONVERTER_CALL(ROMP_STATE_CLASS_NAME,"s") " << ']'; return json; }\n"
+                  << "#else\n"
+                  << indentation() 
                   << "template<class O> " ROMP_JSON_STREAM_TYPE "& operator << (" ROMP_JSON_STREAM_TYPE "& json, const " ROMP_STATE_TYPE "& s) { "
                        "(void) ::" ROMP_MODEL_NAMESPACE_NAME "::" ROMP_MAKE_JSON_CONVERTER_CALL(ROMP_STATE_CLASS_NAME,"s") "; return json; }\n"
                       //  "(void) ::" ROMP_TYPE_NAMESPACE "::" ROMP_MAKE_JSON_CONVERTER_CALL(ROMP_STATE_CLASS_NAME,"s") "; return json; }\n"
+                  << "#endif\n"
                   << indentation() 
                   << ROMP_OUT_STREAM_TYPE "& operator << (" ROMP_OUT_STREAM_TYPE "& out, const " ROMP_STATE_TYPE "& s) { "
                        "(void) ::" ROMP_MODEL_NAMESPACE_NAME "::" ROMP_MAKE_STREAM_CONVERTER_CALL(ROMP_STATE_CLASS_NAME,"s") "; return out; }\n"
@@ -825,7 +832,9 @@ public:
     *this << "\n\n" << indentation() << "/* ======= Murphi Model Infos & MetaData ====== */\n"; // << std::flush;
     *this << indentation() << "namespace " ROMP_INFO_NAMESPACE_NAME " {\n\n";
     indent();
-    *this << "/* the number of functions & procedures in the model */\n"
+    *this << "/* the number possible variations in the state (# of permutations of the state-space) */\n"
+             "#define " ROMP_STATESPACE_LEN " \"" << statespace_count(state).get_str() << "\"\n"
+          << "/* the number of functions & procedures in the model */\n"
              "#define " ROMP_FUNCTS_LEN " (" << sorter.funct_decls.size() << "ul)\n"
           << indentation() << "/* the info/metadata about the functions/procedures in the model */\n"
           << indentation() << sorter.funct_info_list.str() << "};\n"

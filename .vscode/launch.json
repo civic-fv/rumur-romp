@@ -321,7 +321,14 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-sw", "-s", "1234567890", "-a", "-d", "256", "-ll", "64"
+                "-sw",
+                "-s",
+                "1234567890",
+                "-a",
+                "-d",
+                "256",
+                "-ll",
+                "64"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -348,7 +355,15 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-sw", "-s", "1234567890", "-t", "-a", "-d", "256", "-ll", "64"
+                "-sw",
+                "-s",
+                "1234567890",
+                "-t",
+                "-a",
+                "-d",
+                "256",
+                "-ll",
+                "64"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -375,7 +390,16 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-w", "16", "-s", "1234567890", "-a", "-d", "256", "-ll", "128", "-ros"
+                "-w",
+                "16",
+                "-s",
+                "1234567890",
+                "-a",
+                "-d",
+                "256",
+                "-ll",
+                "128",
+                "-ros"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -402,7 +426,17 @@
             "request": "launch",
             "program": "${workspaceFolder}/romp/tests/german.m.test",
             "args": [
-                "-w", "16", "-s", "1234567890", "-t", "-a", "-d", "256", "-ll", "64", "-ros"
+                "-w",
+                "16",
+                "-s",
+                "1234567890",
+                "-t",
+                "-a",
+                "-d",
+                "256",
+                "-ll",
+                "64",
+                "-ros"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -429,7 +463,14 @@
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [
-                "-sw", "-s", "1234567890", "-a", "-d", "256", "-ll", "64"
+                "-sw",
+                "-s",
+                "1234567890",
+                "-a",
+                "-d",
+                "256",
+                "-ll",
+                "64"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -457,7 +498,16 @@
             "request": "launch",
             "program": "${file}.test",
             "args": [
-                "-sw", "-s", "1234567890", "-a", "-d", "256", "-ll", "64", "-rhl", "8"
+                "-sw",
+                "-s",
+                "1234567890",
+                "-a",
+                "-d",
+                "256",
+                "-ll",
+                "64",
+                "-rhl",
+                "8"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -485,7 +535,16 @@
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [
-                "-w", "16", "-s", "1234567890", "-a", "-d", "256", "-ll", "64", "-ros"
+                "-w",
+                "16",
+                "-s",
+                "1234567890",
+                "-a",
+                "-d",
+                "256",
+                "-ll",
+                "64",
+                "-ros"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -513,7 +572,18 @@
             "request": "launch",
             "program": "${file}.test",
             "args": [
-                "-w", "16", "-s", "1234567890", "-a", "-d", "256", "-ll", "64", "-ros", "-rhl", "8"
+                "-w",
+                "16",
+                "-s",
+                "1234567890",
+                "-a",
+                "-d",
+                "256",
+                "-ll",
+                "64",
+                "-ros",
+                "-rhl",
+                "8"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -541,8 +611,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/build/romp/romp",
             "args": [
-                "-acl", 
-                "--output", "${workspaceFolder}/romp/tests/${fileBasename}.m.test.cpp",
+                "-acl",
+                "--output",
+                "${workspaceFolder}/romp/tests/${fileBasename}.m.test.cpp",
                 "${file}"
             ],
             "stopAtEntry": false,
@@ -564,6 +635,27 @@
             ],
             "preLaunchTask": "CMake: build romp",
             "miDebuggerPath": "/bin/gdb"
+        },
+        {
+            "name": "Python: Trace Stats",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/romp/tests/trace_stats.py",
+            "args": ["${workspaceFolder}/traces"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Python: symmetry comparison active file",
+            "type": "python",
+            "request": "launch",
+            "program": "romp/tests/symmetry_test.py",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "${relativeFile}"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": true
         },
     ]
 }

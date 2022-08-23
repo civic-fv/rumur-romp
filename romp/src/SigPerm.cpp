@@ -17,6 +17,7 @@
 
 #include "SigPerm.hpp"
 #include "ModelSplitter.hpp"
+#include "type_traverse.hpp"
 // #include "../../common/escape.h"
 #include "nested_escape.hpp"
 
