@@ -19,6 +19,9 @@ CMakeFiles/**
 !**/tests/*.md
 !**/tests/*.rst
 !**/tests/*.ipynb
+!**/README
+!tests/config/**
+!tests/murphi-comment-ls/*.cc
 
 # debug files
 **/german-rw-test.cpp
