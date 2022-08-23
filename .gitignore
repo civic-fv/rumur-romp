@@ -8,6 +8,18 @@ CMakeFiles/**
 **/traces/**
 **/traces/*.json
 
+# ignore generated test files
+**/tests/**
+# but don't ignore test models, scripts, docs, or test build config data
+!**/tests/*.m
+!**/tests/*.py
+!**/tests/*.sh
+!**/tests/*.zsh
+!**/tests/*.txt
+!**/tests/*.md
+!**/tests/*.rst
+!**/tests/*.ipynb
+
 # debug files
 **/german-rw-test.cpp
 *.test.cpp

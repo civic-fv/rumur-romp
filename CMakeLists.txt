@@ -66,3 +66,10 @@ add_custom_target(format
   COMMAND git ls-files -z '**/*.cc' '**/*.h' |
     xargs -0 -- clang-format -i --style=file
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
+# custom clean
+# add_custom_target(clean-tests-global
+#   OUTPUT none.txt
+#   COMMAND rm *.test ; rm *.test.cpp ; rm -R traces ; rm -R ../traces
+#   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/tests
+# )
