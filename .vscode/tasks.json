@@ -55,6 +55,8 @@
             "group": "build",
             "command": "${workspaceFolder}/build/romp/romp",
             "args": [
+                "--do-measure",
+                "--simple-trace",
                 "--output",
                 "${workspaceFolder}/romp/tests/german.m.test.cpp",
                 "${workspaceFolder}/romp/tests/german.m"
@@ -87,6 +89,8 @@
             "group": "build",
             "command": "${workspaceFolder}/build/romp/romp",
             "args": [
+                "--do-measure",
+                "--simple-trace",
                 "--output",
                 "${workspaceFolder}/romp/tests/german.m.test.cpp",
                 "${workspaceFolder}/romp/tests/german.m"
@@ -115,6 +119,7 @@
             "args": [
                 "-lca",
                 "--do-measure",
+                "--simple-trace",
                 "--output",
                 "${file}.test.cpp",
                 "${file}"

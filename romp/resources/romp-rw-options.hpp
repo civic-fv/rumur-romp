@@ -93,10 +93,10 @@ void print_help() {
                "    | -ag {int}             selected rule can be applied to a State\n"
                "                            after {int} many rules in a row.\n"
                "                            {int} - an optional arg (see above).\n"
-               "                              (default: #-of-rules in the model)\n"
+               "                              (default: 2x #-of-rules in the model)\n"
                "  --loop-limit {int}      Same thing as --attempt-guard/-ag. \n"
                "    | -ll {int}             {int} - an optional arg (see above).\n"
-               "                              (default: #-of-rules in the model)\n"
+               "                              (default: 2x #-of-rules in the model)\n"
                "\n"
                "Trace Options\t\n"
                "  --trace {dir-path}    Enable detailed traces to be made for every\n"
@@ -354,7 +354,7 @@ void parse_args(int argc, char **argv) {
                 || "--attempt-guard" == std::string(argv[i]) || "--loop-limit" == std::string(argv[i]) || "--attempt-limit" == std::string(argv[i])) {
       // OPTIONS.do_attempt_guard = true;  // just check to make sure this value is not 0
       guard_provided = true;
-      OPTIONS.attempt_limit = _ROMP_RULE_COUNT;
+      OPTIONS.attempt_limit = _ROMP_RULE_COUNT * 2;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
         try {

@@ -49,7 +49,7 @@ def run_tests(model_path:str,
               cc:str="g++") -> None:
     root_seed = f"{int(time()):x}"
     if test_args is None:
-        test_args = "-s '{}' -d 2000 -w 64 -ll"
+        test_args = "-s '{}' -d 2000 -w 64"
     test_args = test_args.format(root_seed)
     trace_dir = path.join(trace_dir,root_seed)
     # generate model checker

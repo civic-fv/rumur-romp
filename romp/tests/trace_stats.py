@@ -20,7 +20,7 @@ from concurrent.futures import process
 from sys import argv
 import os
 from json import load as j_load, dumps as j_dump
-from typing import Any, List, Tuple, Type, Union as Un, MutableSet as Set, FrozenSet as FSet, NamedTuple, Callable
+from typing import Any, Dict, List, Tuple, Type, Union as Un, MutableSet as Set, FrozenSet as FSet, NamedTuple, Callable
 from dataclasses import dataclass, field
 from math import inf, nan as NaN
 from io import StringIO
@@ -28,7 +28,7 @@ import datetime
 import traceback
 import statistics as stats
 
-DEBUG: bool = False
+DEBUG: bool = True
 
 Num: Type = Un[int,float]
 
@@ -197,6 +197,79 @@ class StatRange(list):
 SR_PERCENT_FMT: dict = {'summary_fmt_str': "{:>11.3g}% {:^12.4%} {:>11.3g}% {:>11.2g}% {:>11.2g}%",
                         'summary_label_str': f"{'mean%:':->12s}-{'stdev%:':-^12s}-{'median%:':->12s}-{'min%:':->12s}-{'max%:':->12s}",
                         'summary_factory': (lambda x: tuple([x.mean*100, x.stdev, x.median*100, x.min*100,x.max*100]))}
+SR_PERCENT_FMT2: dict = {'summary_fmt_str': "{:>11.3g}% {:^11.4g}% {:>11.3g}% {:>11.2g}% {:>11.2g}%",
+                         'summary_label_str': f"{'mean%:':->12s}-{'stdev%:':-^12s}-{'median%:':->12s}-{'min%:':->12s}-{'max%:':->12s}",
+                         'summary_factory': (lambda x: tuple([x.mean*100, x.stdev*100, x.median*100, x.min*100,x.max*100]))}
+SR_PPM_FMT: dict = {'summary_fmt_str': "{:>12.3g} {:^12.4g} {:>12.3g} {:>12.2g} {:>12.2g}",
+                    'summary_label_str': f"{'mean:':->12s}-{'stdev:':-^12s}-{'median:':->12s}-{'min:':->12s}-{'max:':->12s}",
+                    'summary_factory': (lambda x: tuple([x.mean*10**6, x.stdev*10**6, x.median*10**6, x.min*10**6,x.max*10**6]))}
+
+JSON_t: Type = Un[list,dict,str,Num,None,bool]
+JSON_OBJ_t: Type = Dict[str,JSON_t]
+STATE_t: Type = Un[tuple,str]
+NormState: Type = Callable[[JSON_t],STATE_t]
+
+
+def get_state_not_simple(json:JSON_t) -> STATE_t:
+    """Handler for producing a hashable state object to work with,
+    when trace is not set to simple.
+    i.e. it flattens the state to the same tuple that 
+    a simple trace would have."""
+    def check_json_obj_type(j:JSON_t,type_str:str) -> None:
+        "raises Exception if json type does not match conv"
+        if not isinstance(json,JSON_OBJ_t) or (
+                '$type' in j
+                    and j['$type'] != type_str):
+            raise Exception("State was not represented as expected !!")
+    state:list = list()
+    class StateParse:
+        "class is just to avoid python func def needs"
+        @staticmethod
+        def recur_record(rec:JSON_OBJ_t) -> None:
+            for val in rec['fields']:
+                check_json_obj_type(val,'kv-pair')
+                StateParse.proc_val(val['value'])
+        @staticmethod
+        def recur_enum_array(arr:JSON_OBJ_t) -> None:
+            for val in arr['elements']:
+                check_json_obj_type(val,'kv-pair')
+                StateParse.proc_val(val['value'])
+        @staticmethod
+        def recur_array(arr:JSON_OBJ_t) -> None:
+            for val in arr['elements']:
+                StateParse.proc_val(val['value'])
+        @staticmethod
+        def proc_val(val:JSON_OBJ_t) -> None:
+            if '$type' not in val:
+                raise Exception("State json struct is broken (for NOT-simple trace) !!")
+            t_str:str = val['$type']
+            if t_str == "record-val":
+                StateParse.recur_record(val)
+            elif t_str == "enum-array-value":
+                StateParse.recur_enum_array(val)
+            elif t_str == "array-value":
+                StateParse.recur_array(val)
+            else:
+                state.append(val)
+    StateParse.proc_val(json)
+    return tuple(state)
+#? END def get_state_not_simple: NormState
+
+
+def get_state_simple(json:JSON_t) -> STATE_t:
+    """handler for producing a hashable state object to work with, 
+    when trace is set to simple.
+    i.e. turns the flat list into a immutable tuple.
+    NOTE: if DEBUG is true it will also raise error is `json`/the-state is not
+    a flat list in the json."""
+    if DEBUG:
+        if not isinstance(json,list):
+            raise Exception("state was not a simple state ``list'' !!")
+        for val in json:
+            if isinstance(val,dict) or isinstance(val,list):
+                raise Exception("simple state contained a mutable object (dict/obj or list/array)")
+    return tuple(json)
+#? END def get_state_simple: NormState
 
 @dataclass(init=False)
 class TraceData:
@@ -263,15 +336,16 @@ class TraceData:
                               int(metadata['seed']),
                               int(metadata['start-id'])
                               )
+            get_state: NormState = get_state_simple if bool(metadata['simple-trace']) else get_state_not_simple
             rule_misses, rule_hits = 0, 0
             state_misses, state_hits = 0, 0
             abs_state_misses, abs_state_hits = 0, 0
             unique_states: Set[str] = set()
             unique_rules_applied: Set[str] = set()
             unique_rules: Set[str] = set()
-            unique_states.add(j_dump(json['trace'][0]['state']))
-            self.depth += 1
-            self.tries += 1
+            unique_states.add(get_state(json['trace'][0]['state']))
+            # self.depth += 1
+            # self.tries += 1
             for elm in json['trace'][1:]:
                 self.tries += 1
                 rule = j_dump(elm['rule'])
@@ -288,12 +362,13 @@ class TraceData:
                         abs_state_hits = 0
                     continue
                 # CASE: rule hit
+                # self.depth += 1
                 rule_hits += 1
                 if rule_misses > 0:
                     self.rule_miss_streak.add_data(rule_misses)
                     rule_misses = 0
                 unique_rules_applied.add(rule)
-                state = j_dump(elm['state'])
+                state = get_state(elm['state'])
                 if state in unique_states: # CASE: state miss
                     state_misses += 1
                     if state_hits > 0:
@@ -406,7 +481,7 @@ class TraceData:
     @property
     def state_hit_rate(self) -> Num:
         if self.depth <= 0: return NaN
-        return self.unique_state_count / self.depth
+        return (self.unique_state_count-1) / (self.depth)
     #? END @property avg_miss_streak(self) -> Num:
     @property
     def abs_state_hit_rate(self) -> Num:
@@ -414,8 +489,7 @@ class TraceData:
     #? END @property avg_miss_streak(self) -> Num:
     @property
     def state_miss_rate(self) -> Num:
-        if self.depth <= 0: return NaN
-        return (self.depth - self.unique_state_count) / self.depth
+        return 1 - self.state_hit_rate
     #? END @property avg_miss_streak(self) -> Num:
     @property
     def abs_state_miss_rate(self) -> Num:
@@ -510,7 +584,7 @@ class ModelResult:
         self.avg_tried_but_never_applied_rule_coverage: StatRange = StatRange(**SR_PERCENT_FMT)
         self.avg_applied_rule_coverage: StatRange = StatRange(**SR_PERCENT_FMT)
         self.avg_never_tried_rule_coverage: StatRange = StatRange(**SR_PERCENT_FMT)
-        self.avg_state_coverage: StatRange = StatRange(**SR_PERCENT_FMT)
+        self.avg_state_coverage: StatRange = StatRange()
         self.properties_violated: Set[Un[None,str]] = set()
         self.errors_found: int = 0
     #? END __init__()
@@ -633,65 +707,65 @@ class ModelResult:
             time_label = StatRange.DEFAULT_SUMMARY_LABEL_STR
             t_time = f"{'n/a':>12s} {'n/a':^12s} {'n/a':>12s} {'n/a':>12s} {'n/a':>12s}"
             a_time = t_time
-        return (f"{'='*80}\n"+
-                f"  {self.id!s:^76s}  \n"+
-                f"  {'-'*76}  \n"+
-                f"      walks: {len(self.traces):<67d}\n"+
-                f"  max-depth: {self.metadata['max-depth']:<67d}\n"+
-                f"  symmetry?: {self.do_symmetry!s:<67s}\n"+
-                f"    {'TIME:':_^72}\n"+
-                f"       (sec) {time_label:-<66s}\n"+
-                f"     active: {a_time!s:<67s}\n"+
-                f"      total: {t_time!s:<67s}\n"+
-                f"    {'ERRORS:':_^72}\n"+
-                f"     #-disc: {self.errors_found:<67g}\n"+
-                f"       rate: {self.error_detection_rate:<67.2g}\n"+
-                f"    {'RULES:':_^72}\n"+
-                f"             {self.unique_rule_count.str_label:-<66s}\n"+
-                f"      tried: {self.unique_rule_count.summary_str:<67s}\n"+
-                f"    applied: {self.unique_applied_rule_count.summary_str:<67s}\n"+
-                f"    tr - ap: {self.avg_tried_but_never_applied_rule_count.summary_str:<67s}\n"+
-                f"      never: {self.avg_never_tried_rule_count.summary_str:<67s}\n"+
-                f"   possible: {self.id.rule_count:<67d}\n"+
-                f"    |tried|: {self.abs_unique_rule_count:<67d}\n"+
-                f"  |applied|: {self.abs_unique_applied_rule_count:<67d}\n"+
-                f"  |tr - ap|: {self.unique_tried_but_not_applied_rule_count:<67d}\n"+
-                f"    |never|: {self.abs_never_tried_rule_count:<67d}\n"+
-                f"   COVERAGE  {self.avg_applied_rule_coverage.str_label:-<66s}\n"+
-                f"      tried: {self.avg_tried_but_never_applied_rule_coverage.summary_str:<67s}\n"+
-                f"    applied: {self.avg_applied_rule_coverage.summary_str:<67s}\n"+
-                f"    tr + ap: {self.avg_tried_rule_coverage.summary_str:<67s}\n"+
-                f"      never: {self.avg_never_tried_rule_coverage.summary_str:<67s}\n"+
-                f" |coverage|: {self.abs_rule_coverage:<12.2%}\n"+
-                f"             {self.depth.str_label:-<66s}\n"+
-                f"       hits: {self.depth.summary_str:<67s}\n"+
-                f"     misses: {self.missed_rules.summary_str:<67s}\n"+
-                f"      total: {self.tries.summary_str:<67s}\n"+
-                f"             {self.rule_hit_rate.str_label:-<66s}\n"+
-                f"   hit-rate: {self.rule_hit_rate.summary_str:<67s}\n"+
-                f"  miss-rate: {self.rule_miss_rate.summary_str:<67s}\n"+
-                f"    STREAKS  {self.state_hit_streak.str_label:-<66s}\n"+
-                f"       hits: {self.rule_hit_streak.summary_str:<67s}\n"+
-                f"     misses: {self.rule_miss_streak.summary_str:<67s}\n"+
-                f"    {'STATES:':_^72}\n"+
-                f"             {self.unique_state_count.str_label:-<66s}\n"+
-                f"      found: {self.unique_state_count.summary_str:<67s}\n"+
-                f"   possible: {self.possible_state_count:<67d}\n"+
-                f"    |found|: {self.abs_unique_state_count:<67d}\n"+
-                f"             {self.avg_state_coverage.str_label:-<66s}\n"+
-                f"   coverage: {self.avg_state_coverage.summary_str:<67s}\n"+
-                f" |coverage|: {self.abs_state_coverage:<12.2%}\n"+
-                f"             {self.state_hit_rate.str_label:-<66s}\n"+
-                f"   hit-rate: {self.state_hit_rate.summary_str:<67s}\n"+
-                f"  miss-rate: {self.state_miss_rate.summary_str:<67s}\n"+
-                f"    |hit-r|: {self.abs_state_hit_rate.summary_str:<67s}\n"+
-                f"   |miss-r|: {self.abs_state_miss_rate.summary_str:<67s}\n"+
-                f"    STREAKS  {self.state_hit_streak.str_label:-<66s}\n"+
-                f"       hits: {self.state_hit_streak.summary_str:<67s}\n"+
-                f"     misses: {self.state_miss_streak.summary_str:<67s}\n"+
-                f"     |hits|: {self.abs_state_hit_streak.summary_str:<67s}\n"+
-                f"   |misses|: {self.abs_state_miss_streak.summary_str:<67s}\n"+
-                f"    {'PROPS:':_^72}\n"+
+        return (f"{'='*80}\n"
+                f"  {self.id!s:^76s}  \n"
+                f"  {'-'*76}  \n"
+                f"      walks: {len(self.traces):<67d}\n"
+                f"  max-depth: {self.metadata['max-depth']:<67d}\n"
+                f"  symmetry?: {self.do_symmetry!s:<67s}\n"
+                f"    {'TIME:':_^72}\n"
+                f"       (sec) {time_label:-<66s}\n"
+                f"     active: {a_time!s:<67s}\n"
+                f"      total: {t_time!s:<67s}\n"
+                f"    {'ERRORS:':_^72}\n"
+                f"     #-disc: {self.errors_found:<67g}\n"
+                f"       rate: {self.error_detection_rate:<67.2g}\n"
+                f"    {'RULES:':_^72}\n"
+                f"             {self.unique_rule_count.str_label:-<66s}\n"
+                f"      tried: {self.unique_rule_count.summary_str:<67s}\n"
+                f"    applied: {self.unique_applied_rule_count.summary_str:<67s}\n"
+                f"    tr - ap: {self.avg_tried_but_never_applied_rule_count.summary_str:<67s}\n"
+                f"      never: {self.avg_never_tried_rule_count.summary_str:<67s}\n"
+                f"   possible: {self.id.rule_count:<67,d}\n"
+                f"    |tried|: {self.abs_unique_rule_count:<67d}\n"
+                f"  |applied|: {self.abs_unique_applied_rule_count:<67d}\n"
+                f"  |tr - ap|: {self.unique_tried_but_not_applied_rule_count:<67d}\n"
+                f"    |never|: {self.abs_never_tried_rule_count:<67d}\n"
+                f"   COVERAGE  {self.avg_applied_rule_coverage.str_label:-<66s}\n"
+                f"      tried: {self.avg_tried_rule_coverage.summary_str:<67s}\n"
+                f"    applied: {self.avg_applied_rule_coverage.summary_str:<67s}\n"
+                f"    tr - ap: {self.avg_tried_but_never_applied_rule_coverage.summary_str:<67s}\n"
+                f"      never: {self.avg_never_tried_rule_coverage.summary_str:<67s}\n"
+                f" |coverage|: {self.abs_rule_coverage:<12.2%}\n"
+                f"             {self.depth.str_label:-<66s}\n"
+                f"       hits: {self.depth.summary_str:<67s}\n"
+                f"     misses: {self.missed_rules.summary_str:<67s}\n"
+                f"      tries: {self.tries.summary_str:<67s}\n"
+                f"             {self.rule_hit_rate.str_label:-<66s}\n"
+                f"   hit-rate: {self.rule_hit_rate.summary_str:<67s}\n"
+                f"  miss-rate: {self.rule_miss_rate.summary_str:<67s}\n"
+                f"    STREAKS  {self.state_hit_streak.str_label:-<66s}\n"
+                f"       hits: {self.rule_hit_streak.summary_str:<67s}\n"
+                f"     misses: {self.rule_miss_streak.summary_str:<67s}\n"
+                f"    {'STATES:':_^72}\n"
+                f"             {self.unique_state_count.str_label:-<66s}\n"
+                f"      found: {self.unique_state_count.summary_str:<67s}\n"
+                f"   possible: {self.possible_state_count:<67,d}\n"
+                f"    |found|: {self.abs_unique_state_count:<67d}\n"
+                f"             {self.avg_state_coverage.str_label:-<66s}\n"
+                f"   coverage: {self.avg_state_coverage.summary_str:<67s}\n"
+                f" |coverage|: {self.abs_state_coverage:<12.4g}\n"
+                f"             {self.state_hit_rate.str_label:-<66s}\n"
+                f"   hit-rate: {self.state_hit_rate.summary_str:<67s}\n"
+                f"  miss-rate: {self.state_miss_rate.summary_str:<67s}\n"
+                f"    |hit-r|: {self.abs_state_hit_rate.summary_str:<67s}\n"
+                f"   |miss-r|: {self.abs_state_miss_rate.summary_str:<67s}\n"
+                f"    STREAKS  {self.state_hit_streak.str_label:-<66s}\n"
+                f"       hits: {self.state_hit_streak.summary_str:<67s}\n"
+                f"     misses: {self.state_miss_streak.summary_str:<67s}\n"
+                f"     |hits|: {self.abs_state_hit_streak.summary_str:<67s}\n"
+                f"   |misses|: {self.abs_state_miss_streak.summary_str:<67s}\n"
+                f"    {'PROPS:':_^72}\n"
                 f" #-violated: {len(self.properties_violated):<67d}\n" 
             #     f"       list: " +
             #    [f"           "  for i in self.properties_violated].join('\n') +
@@ -699,7 +773,7 @@ class ModelResult:
     #? END def __str__(self) -> str:
 #? END @dataclass ModelResult
 
-class ModelResults(dict):
+class ModelResults(Dict[RompID,ModelResult]):
     """The holder class of multiple ModelResult objects.
     Keeping track and care to not add traces not belonging to
     the same model to any existing model."""
@@ -759,6 +833,15 @@ def process_data(trace_dir:str) -> ModelResults:
 def print_results(results:ModelResults) -> None:
     print()
     for key in results:
+        if DEBUG:
+            print(tuple(results[key].depth))
+            # states = list(results[key].unique_states)
+            # for i in range(0,len(states)):
+            #     for j in range(i+1,len(states)):
+            #         if len(states[i]) != len(states[j]):
+            #             print("state repr error!! (uneven lengths found)")
+            #         if all(i_val==j_val for i_val,j_val in zip(states[i],states[j])):
+            #             print("duplicate state found !!", states[i])
         print(results[key])
 #?END def print_results() -> None:
 

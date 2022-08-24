@@ -106,7 +106,7 @@ void CTypeGenerator::emit_stream_operators__array(const std::string &name, const
 
   *this << "#ifdef " ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR "\n"
         << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " {"
-        << "json << " // "\"[\"; " // double escape time
+        // << "json << \"[\"; " // double escape time
             "std::string sep; "
             "for (size_t i=(0ul); i<val.size(); ++i) { "
               "json << sep << " ROMP_MAKE_JSON_CONVERTER_CALL(el_type,"val.data[i]") "; "
@@ -305,7 +305,7 @@ void CTypeGenerator::emit_stream_operators__record(const std::string &name, cons
 
   *this << "#ifdef " ROMP_SIMPLE_TRACE_PREPROCESSOR_VAR "\n"
         << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) " { using namespace ::" ROMP_TYPE_NAMESPACE "; "
-           "json << "; // "\"{\" ";
+           "json "; // "<< \"{\" ";
   sep = "";
   // sep = " << \"\\\"";
   for (const auto& m : te.fields) {
@@ -319,7 +319,8 @@ void CTypeGenerator::emit_stream_operators__record(const std::string &name, cons
     sep = " << ','";
     // sep = " << \",\\\"";
   }
-  *this << // " << '}'; "
+  *this << // " << '}'"
+           "; "
            "return ::romp::S_VOID; }\n"
            "#else\n";
 
