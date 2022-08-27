@@ -33,6 +33,7 @@
 #include <functional>
 #include <type_traits>
 #include <thread>
+#include <unordered_map>
 #ifdef _WIN32
 #include <Windows.h>
 #else
@@ -128,6 +129,7 @@ namespace romp {
       }
     }
 
+#define _ROMP_ATTEMPT_LIMIT_DEFAULT UINT16_MAX
     struct Options {
       size_t history_length = 4;
       bool do_trace = false;
@@ -137,9 +139,9 @@ namespace romp {
       unsigned int rand_seed = ROMP_ID; 
       std::string seed_str = std::to_string(ROMP_ID); 
       bool do_single = false;
-      size_t attempt_limit = UINT64_MAX; // disabled if UINT64_MAX
+      size_t attempt_limit = _ROMP_ATTEMPT_LIMIT_DEFAULT; // disabled if _ROMP_ATTEMPT_LIMIT_DEFAULT
       std::string trace_dir = "./traces/"; // path for the trace file to be created during each walk
-      bool deadlock = true; // separate bool for each property or consider having a valid bool
+      bool deadlock = true; // do deadlock protections
       bool result = false; // print results for each walker in addition to the summery
       bool result_all = false;
       bool result_show_type = false;
@@ -252,15 +254,17 @@ namespace romp {
       { _indentation = std::string(_width,OPTIONS.tab_char); }
     inline int width() { return _width; }
     inline const stream_void indent() { _indentation = std::string((_width+=OPTIONS.tab_size),OPTIONS.tab_char); return S_VOID; }
+    inline const std::string _indent() { indent(); return indentation(); }
     inline const stream_void dedent() { _indentation = std::string((_width-=OPTIONS.tab_size),OPTIONS.tab_char); return S_VOID; }
+    inline const std::string _dedent() { dedent(); return indentation(); }
     inline const std::string indentation() { return _indentation; }
     template <typename T>
     inline ostream_p& operator << (const T val);  
   };
     template <typename T>
     inline ostream_p& ostream_p::operator << (const T val) { out << val; return *this; }  
-    template <>
-    inline ostream_p& ostream_p::operator << <std::_Setw>(const std::_Setw val) { _width = val._M_n; return *this; } 
+    // template <>
+    // inline ostream_p& ostream_p::operator << <std::_Setw>(const std::_Setw val) { _width = val._M_n; return *this; } 
     template <>
     inline ostream_p& ostream_p::operator << <stream_void>(const stream_void val) { return *this; } 
 
@@ -303,9 +307,23 @@ namespace romp {
     return out; 
   }
 
-  struct IModelError : public std::logic_error {
-    IModelError() : std::logic_error("this is a model error (you should never see this)") {}
-    void* id = nullptr;
+  const std::exception_ptr __get_root_except(const std::exception_ptr& ex) {
+    try { std::rethrow_if_nested(ex) 
+    } catch (const std::nested_exception& ne){
+      if (ne.nested_ptr() == nullptr)
+        return std::current_exception();
+      return __get_root_except(ne.nested_ptr());
+    } catch (...) {
+      return std::current_exception();
+    }
+    return ex;
+  }
+
+  struct IModelError :  /* public std::logic_error, */ public std::nested_exception {
+    IModelError() 
+      : std::nested_exception() 
+        // ,std::logic_error("IModelError :: THIS SHOULD NEVER BE SEEN") 
+    {}
     // const char* what() const noexcept {
     const char* what() const noexcept {
       std::stringstream out;
@@ -315,7 +333,21 @@ namespace romp {
     virtual void what(std::ostream& out) const noexcept = 0;
     virtual void to_json(json_file_t& json) const noexcept = 0;
     virtual void to_json(json_str_t& json) const noexcept = 0;
-    bool operator == (const IModelError& val) { return id == val.id; }
+    virtual size_t hash() const noexcept = 0;
+    virtual const std::string& label() const noexcept = 0;
+    virtual const std::string& quants() const noexcept = 0;
+    bool is_flat() const { return (quants() == ""); }
+    const std::exception_ptr get_root_excpt() const { 
+      if (this->nested_ptr() == nullptr) 
+        try { throw this;
+        } catch (...) { return std::current_exception(); }
+      return __get_root_except(this->nested_ptr()); 
+    }
+    void write_root_excpt_what(std::ostream& out) const { 
+      try { throw this->get_root_except();
+      } catch (const std::exception& ex) { out << ex.what(); } 
+    }
+    friend bool operator == (const IModelError& l, const IModelError& r) { return (l.hash() == r.hash()); }
   };
   template<class O>
   ojstream<O>& ojstream<O>::operator << (const IModelError& me) noexcept { 
@@ -357,7 +389,7 @@ namespace romp {
     IModelError* make_error() const;
   };
 
-  std::ostream& operator << (std::ostream& out, const PropertyInfo& pi) noexcept { return (out << pi.type << " \"" << pi.label << "\" " << pi.expr << " @(" << pi.loc << ")"); }
+  std::ostream& operator << (std::ostream& out, const PropertyInfo& pi) noexcept { return (out << pi.type << " \"" << pi.label << "\" " /* << pi.expr */ << " @(" << pi.loc << ")"); }
   template<class O> ojstream<O>& operator << (ojstream<O>& json, const PropertyInfo& pi) noexcept {
 // #ifdef __ROMP__SIMPLE_TRACE
 //     json.out << "\"" << pi.type << " \\\"" << pi.label << "\\\" " << pi.expr << " @(" << pi.loc << ")\"";
@@ -412,7 +444,10 @@ namespace romp {
                "\"inside\":";
       if (isProp) json << *data.prop; else json << *data.info;
       json << '}';
-    } 
+    }
+    size_t hash() const noexcept { return (size_t)((isProp) ? &(data.prop->info) : data.info); }
+    const std::string& label() const { return ((PropertyInfo*)hash())->label; }
+    const std::string& quants() const noexcept { return ((isProp) ? data.prop->quant_str : ""); }
   };
 
   IModelError* PropertyInfo::make_error() const { return new ModelPropertyError(*this); }
@@ -497,7 +532,10 @@ namespace romp {
                "\"inside\":";
       if (isRule) json << *data.rule; else json << *data.info;
       json << '}'; 
-    } 
+    }
+    size_t hash() const noexcept { return (size_t)((isRule) ? &(data.rule->info) : data.info); }
+    const std::string& label() const { return ((RuleInfo*)hash())->label; }
+    const std::string& quants() const noexcept { return ((isRule) ? data.rule->quant_str : ""); }
   };
 
   IModelError* RuleInfo::make_error() const { return new ModelRuleError(*this); }
@@ -573,7 +611,10 @@ namespace romp {
                "\"inside\":";
       if (isStartState) json << *data.rule; else json << *data.info;
       json << '}'; 
-    } 
+    }
+    size_t hash() const noexcept { return (size_t)((isStartState) ? &(data.rule->info) : data.info); }
+    const std::string& label() const { return ((StartStateInfo*)hash())->label; }
+    const std::string& quants() const noexcept { return ((isStartState) ? data.rule->quant_str : ""); }
   };
 
   IModelError* StartStateInfo::make_error() const { return new ModelStartStateError(*this); }
@@ -603,7 +644,10 @@ namespace romp {
                "\"type\":\"error-statement\","
               //  "\"what\":\"" << escape_str(what()) << "\","
                "\"inside\":" << info << '}'; 
-    } 
+    }
+    size_t hash() const noexcept { return (size_t) &info; }
+    const std::string& label() const { return info.label; }
+    const std::string& quants() const noexcept { return ""; }
   };
 
   struct FunctInfo {
@@ -630,7 +674,10 @@ namespace romp {
                "\"type\":\"function\","
               //  "\"what\":\"" << escape_str(what()) << "\","
                "\"inside\":" << info << '}';
-    } 
+    }
+    size_t hash() const noexcept { return (size_t) &info; }
+    const std::string& label() const { return info.label; }
+    const std::string& quants() const noexcept { return ""; }
   };
 
 
@@ -642,7 +689,8 @@ namespace romp {
     } catch(const std::exception& ex) {
       json << ',' << ex;
     } catch(...) {
-      json << ",{\"$type\":\"trace-error\",\"what\":\"unknown non-exception type thrown !!\"}";
+      if (std::current_exception() != nullptr)
+        json << ",{\"$type\":\"trace-error\",\"what\":\"unknown non-exception type thrown !!\"}";
     }
   }
  
@@ -671,17 +719,11 @@ namespace romp {
       out << __romp__nested_exception__print_prefix << mod_ex;
     } catch(const std::exception& ex) {
       out << __romp__nested_exception__print_prefix << ex;
-    } catch(...) {}
+    } catch(...) {
+      if (std::current_exception() != nullptr)
+        out << __romp__nested_exception__print_prefix << "unknown non-exception type thrown !!";
+    }
   }
-
-  struct Result {
-    id_t id;
-    bool error;
-    bool valid;
-    IModelError* tripped;
-    IModelError* inside;
-    ~Result() { if (tripped) delete tripped; if (inside) delete inside; }
-  };
 
   class IRandWalker {
     /**
@@ -730,6 +772,39 @@ namespace romp {
     friend State_t;
   };
 
+  struct Result {
+    enum Cause {
+        NO_CAUSE=0,
+        RUNNING=0,
+        UNKNOWN_CAUSE,
+        ATTEMPT_LIMIT_REACHED,
+        MAX_DEPTH_REACHED,
+        PROPERTY_VIOLATED,
+#ifdef __romp__ENABLE_cover_property
+        COVER_COMPLETE,
+#endif
+#ifdef __romp__ENABLE_assume_property
+        ASSUMPTION_VIOLATED,
+#endif
+        MERROR_REACHED
+    };
+    id_t id; // RandWalker id
+    id_t root_seed; // the root seed of the RW
+    id_t start_id; // id of start state
+    Cause cause;  // the kind of cause that stoped the Rand Walker
+    size_t depth; // depth reached 
+    const IModelError* tripped;  // what was tripped (promised not nested)
+    const IModelError* inside;  // where it was tripped (could be nested w/ root cause)
+    ~Result() { if (tripped) delete tripped; if (inside) delete inside; }
+  };
+
+}
+namespace std {
+  template<>
+  class hash<romp::IModelError> {
+    public: size_t operator () (const romp::IModelError& me) { return me.hash(); }
+    public: size_t operator () (const romp::IModelError* me) { return me->hash(); }
+  };
 }
 
 namespace __type__ {

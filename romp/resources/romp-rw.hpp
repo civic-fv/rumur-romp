@@ -44,8 +44,9 @@ private:
   unsigned int rand_seed;
   State_t state;
   size_t _fuel = OPTIONS.depth;
-  bool _valid = true;
-  bool _is_error = false;
+  bool _valid = true;  // legacy 
+  bool _is_error = false; // legacy
+  Result::Cause status = Result::RUNNING;
   json_file_t* json;
   // tripped thing
   IModelError* tripped = nullptr;
@@ -87,11 +88,16 @@ private:
       if (OPTIONS.do_trace)
         *json << "{\"$type\":\"init\",\"startstate\":" << startstate << ",\"state\":" << state <<"}";
     } catch (const IModelError& me) {
-       __handle_exception<StartState,IModelError>(startstate,me); return;
+       __handle_exception/*<StartState,IModelError>*/(startstate,me);
     } catch (const std::exception& ex) {
-      __handle_exception<StartState,std::exception>(startstate,ex); return;
+      status = Result::UNKNOWN_CAUSE;
+      __handle_exception/*<StartState,std::exception>*/(startstate,ex); 
     } catch (...) {
-      std::cerr << "unknown non std::exception was thrown while initializing a Random Walker (id:"<<id<<")!\t[dev-error]\n" << std::flush;
+#ifdef DEBUG
+      std::cerr << "ERROR: (rw:"<< id <<") encountered an unknown exception ending this romp !! [dev-error]\n" 
+                << std::flush;
+#endif
+      status = Result::UKNOWN_CAUSE;
     }
     // if (json != nullptr) delete json;
 #ifdef __ROMP__DO_MEASURE
@@ -103,7 +109,7 @@ private:
   void __handle_exception(const R& r, const E& er) noexcept {
     if (OPTIONS.do_trace) {
        *json << "],\"error-trace\":[" << er; // << "]";
-    } 
+    }
     tripped_inside = r.make_error();
   }
 
@@ -111,12 +117,14 @@ public:
   const std::function<void()> sim1Step;
   size_t fuel() { return _fuel; }
   size_t attempt_limit() { return _attempt_limit; }
-  bool is_valid() { return _valid; }
-  size_t is_error() { return _is_error; }
+  // bool is_valid() { return _valid; }
+  // bool is_error() { return _is_error; }
 #ifdef __romp__ENABLE_cover_property
-  bool is_done() { return (not (_valid && _fuel > 0 && _attempt_limit > 0)) || complete_cover(); }
+  // bool is_done() const { return (_is_error || (not _valid) || _fuel <= 0 || _attempt_limit <= 0 || complete_cover()); }
+  bool is_done() const { return ((status != Result::RUNNING) ||  _fuel <= 0 || _attempt_limit <= 0 || complete_cover()); }
 #else
-  bool is_done() { return not (_valid && _fuel > 0 && _attempt_limit > 0); }
+  // bool is_done() const { return (_is_error || (not _valid) || _fuel <= 0 || _attempt_limit <= 0); }
+  bool is_done() const { return not (_valid && _fuel > 0 && _attempt_limit > 0); }
 #endif
 
   RandWalker(unsigned int rand_seed_) 
@@ -180,6 +188,18 @@ public:
 #ifdef __ROMP__DO_MEASURE
     total_time = (time(NULL)-init_time);
 #endif
+    if (status == Result::UNKNOWN_CAUSE) {
+    } else if (_attempt_limit <= 0) {
+      status = Result::ATTEMPT_LIMIT_REACHED;
+      tripped_inside = new ModelRuleError(*history[(history_level-1)%history_size].rule);
+    } else if (_fuel <= 0) {
+      status = Result::MAX_DEPTH_REACHED;
+#ifdef __romp__ENABLE_cover_property
+    } else if (complete_cover()) { 
+      status = Result::COVER_COMPLETE;
+      tripped_inside = new ModelRuleError(*history[(history_level-1)%history_size].rule);
+#endif
+    }
   }
 
   Result get_result() noexcept {
@@ -187,7 +207,10 @@ public:
       trace_result_out();
       // delete json;
     }
-    Result result{id,_is_error,_valid,tripped,tripped_inside};
+    Result result{id,init_rand_seed,start_id,
+                  status,
+                  OPTIONS.depth - _fuel,
+                  tripped,tripped_inside};
     tripped = nullptr;
     tripped_inside = nullptr;
     return result;
@@ -246,26 +269,40 @@ private:
         --_attempt_limit;
       }      
     } catch(IModelError& me) {
-      __handle_exception<Rule,IModelError>(r,me); return;
+      __handle_exception/*<Rule,IModelError>*/(r,me);
+      pass = false;
     } catch (std::exception& ex) {
-      __handle_exception<Rule,std::exception>(r,ex); return;
+      __handle_exception/*<Rule,std::exception>*/(r,ex);
+      pass = false;
+      status = Result::UNKNOWN_CAUSE;
     } catch (...) {
-      std::cerr << "unexpected UNKNOWN exception inside of model (rule) \t[dev-error]\n";
+#ifdef DEBUG
+      std::cerr << "ERROR: (rw:"<< id <<") encountered an unknown exception ending this romp !! [dev-error]\n" 
+                << std::flush;
+#endif
+      pass = false;
+      status = Result::UNKNOWN_CAUSE;
     }
     if (pass)
       for (const auto& prop : ::__caller__::PROPERTIES)
         try {
           if (prop.check(state)) { // if tripped
             tripped = new ModelPropertyError(prop);
+            tripped_inside = new ModelRuleError(r);
             *json << "],\"error-trace\":[" << *tripped; // << "]";
             break;
           }
         } catch(IModelError& me) {
-          __handle_exception<Property,IModelError>(prop,me); return;
+          __handle_exception/*<Property,IModelError>*/(prop,me);
         } catch (std::exception& ex) {
-          __handle_exception<Property,std::exception>(prop,ex); return;
+          __handle_exception/*<Property,std::exception>*/(prop,ex);
+          status = Result::UNKNOWN_CAUSE;
         } catch (...) {
-          std::cerr << "unexpected UNKNOWN exception inside of model (property-rule) \t[dev-error]\n";
+#ifdef DEBUG
+      std::cerr << "ERROR: (rw:"<< id <<") encountered an unknown exception ending this romp !! [dev-error]\n" 
+                << std::flush;
+#endif
+          status = Result::UNKNOWN_CAUSE;
         }
 #ifdef __ROMP__DO_MEASURE
     active_time += time(NULL)-start_time;
@@ -290,25 +327,39 @@ private:
         add_to_history(r);
       } else { --_attempt_limit; }
     } catch(IModelError& me) {
-      __handle_exception<Rule,IModelError>(r,me); return;
+      __handle_exception/*<Rule,IModelError>*/(r,me);
+      pass = false;
     } catch (std::exception& ex) {
-      __handle_exception<Rule,std::exception>(r,ex); return;
+      __handle_exception/*<Rule,std::exception>*/(r,ex);
+      pass = false;
+      status = Result::UNKNOWN_CAUSE;
     } catch (...) {
-      std::cerr << "unexpected UNKNOWN exception inside of model (rule) \t[dev-error]\n";
+#ifdef DEBUG
+      std::cerr << "ERROR: (rw:"<< id <<") encountered an unknown exception ending this romp !! [dev-error]\n" 
+                << std::flush;
+#endif
+      pass = false;
+      status = Result::UNKNOWN_CAUSE;
     }
     if (pass)
       for (const auto& prop : ::__caller__::PROPERTIES)
         try {
           if (prop.check(state)) { // if tripped
             tripped = new ModelPropertyError(prop);
+            tripped_inside = new ModelRuleError(r);
             break;
           }
         } catch(IModelError& me) {
-          __handle_exception<Property,IModelError>(prop,me); return;
+          __handle_exception/*<Property,IModelError>*/(prop,me);
         } catch (std::exception& ex) {
-          __handle_exception<Property,std::exception>(prop,ex); return;
+          __handle_exception/*<Property,std::exception>*/(prop,ex);
+          status = Result::UNKNOWN_CAUSE;
         } catch (...) {
-          std::cerr << "unexpected UNKNOWN exception inside of model (property-rule) \t[dev-error]\n";
+#ifdef DEBUG
+      std::cerr << "ERROR: (rw:"<< id <<") encountered an unknown exception ending this romp !! [dev-error]\n" 
+                << std::flush;
+#endif
+          status = Result::UNKNOWN_CAUSE;
         }
 #ifdef __ROMP__DO_MEASURE
     active_time += time(NULL)-start_time;
@@ -323,7 +374,9 @@ private:
                   "\"root-seed\":\"" << OPTIONS.seed_str << "\","
                   "\"seed\":" << init_rand_seed << ","
                   "\"max-depth\":" << OPTIONS.depth << ","
-                  "\"attempt-limit\":" << ((OPTIONS.attempt_limit != UINT64_MAX) 
+                  "\"abs-attempt-limit\":" << std::to_string(_ROMP_ATTEMPT_LIMIT_DEFAULT) << ","
+                  "\"attempt-limit\":" << ((OPTIONS.attempt_limit != _ROMP_ATTEMPT_LIMIT_DEFAULT
+                                              && OPTIONS.deadlock) 
                                             ? std::to_string(OPTIONS.attempt_limit) 
                                             : "null") << ","
 #ifdef __romp__ENABLE_symmetry
@@ -372,7 +425,8 @@ private:
 
   void trace_result_out() {
     *json << "]"; // close trace
-    if (_valid && tripped == nullptr) // if it didn't end in an error we need to: 
+    // if (_valid && tripped == nullptr) // if it didn't end in an error we need to: 
+    if (tripped_inside == nullptr) // if it didn't end in an error we need to: 
       *json << ",\"error-trace\":[]"; // output empty error-trace
     *json << ",\"results\":{\"depth\":"<< OPTIONS.depth-_fuel <<",\"valid\":" << _valid << ",\"is-error\":"<< _is_error
 #ifdef __ROMP__DO_MEASURE
@@ -391,14 +445,17 @@ private:
   // called when trying to print the results of the random walker when it finishes (will finish up trace file if nessasary too)
   //  the calling context should ensure that the RandWalker is not being used else where & safe output to the ostream 
   friend std::ostream& operator << (std::ostream& out, const RandWalker& rw) {
-    if (not rw._is_error && not (OPTIONS.result_all)) return out; // don't output non-error state unless --report-all
+    if ((rw.status == Result::UNKNOWN_CAUSE // don't output non-error state unless --report-all
+          || rw.status == Result::PROPERTY_VIOLATED
+          || rw.status == Result::MERROR_REACHED) 
+        && not (OPTIONS.result_all)) return out; 
 #ifdef __romp__ENABLE_assume_property
-    if (not rw._is_error && rw.tripped != nullptr && not OPTIONS.r_assume) return out; // don't output assumption violations unless --report-assume
+    if (rw.status == Result::ASSUMPTION_VIOLATED && not OPTIONS.r_assume) return out; // don't output assumption violations unless --report-assume
 #endif
 // #ifdef __romp__ENABLE_liveness_property
 //     if (OPTIONS.r_assume) // don't output attempt guard violations when --no-deadlock enabled
 // #endif
-    if ((OPTIONS.deadlock == false || OPTIONS.result_all == false) && rw._attempt_limit == 0) 
+    if ((OPTIONS.deadlock == false || OPTIONS.result_all == false) && rw._attempt_limit <= 0) 
       return out; // don't output attempt guard violations when --no-deadlock enabled
     // ostream_p out(out_,0);
     out << "\n====== BEGIN :: Report of Walk #" << rw.id << " ======"
@@ -421,8 +478,8 @@ private:
     if (OPTIONS.result_emit_state)
       out << "\n          State: " << rw.state << "\n";
     out << "\nPROPERTY/ERROR REPORT:"
-        << "\n  Still a ``valid'' State?: " << (rw._valid ? "true" : "false") //    is it a valid state
-        << "\n    In an ``Error State''?: " << (rw._is_error ? "true" : "false"); //    is it a valid state
+        << "\n  Still a ``valid'' State?: " << (rw._valid ? "true" : "false") // is it a valid state
+        << "\n    In an ``Error State''?: " << (rw._is_error ? "true" : "false"); // did the state trigger an error?
     if (rw.tripped != nullptr) {
         out << "\n         Property Violated: " << *rw.tripped;
       if (rw.tripped_inside != nullptr)
@@ -445,33 +502,37 @@ private:
 
   bool error_handler(id_t error_id) {
     tripped = new ModelMErrorError(error_id);
-    _valid = false;
-    _is_error = true;
+    _valid = false; // legacy
+    _is_error = true; // legacy
+    status = Result::MERROR_REACHED;
     return true;
   }
 
   bool assertion_handler(bool expr, id_t prop_id) {
     if (expr) return false;
     tripped = new ModelPropertyError(prop_id);
-    _valid = false;
-    _is_error = true;
+    _valid = false;  // legacy
+    _is_error = true;  // legacy
+    status = Result::MERROR_REACHED;
     return true;
   }
   bool invariant_handler(bool expr, id_t prop_id) {
     if (expr) return false;
     // no need to store exception in tripped if a property rule the catch will give us a better error dump
     // invar_handler is only called from a property rule
-    _valid = false;
-    _is_error = true;
+    _valid = false;  // legacy
+    _is_error = true; // legacy
+    status = Result::PROPERTY_VIOLATED;
     return true;
   }
 #ifdef __romp__ENABLE_assume_property
   bool assumption_handler(bool expr, id_t prop_id) {
     if (expr) return false;
     tripped = new ModelPropertyError(prop_id);
-    _valid = false;
-    // // this is what makes an assumption different from an assertion
-    // _is_error = false; // no need to actually set this value
+    _valid = false;  // legacy
+    // this is what makes an assumption different from an assertion
+    _is_error = false; // legacy
+    status = Result::ASSUMPTION_VIOLATED;
     return true;
   }
 #else
@@ -490,7 +551,7 @@ private:
 #ifdef __GNUC__
   __attribute__((optimize("unroll-loops")))
 #endif
-  bool complete_cover() {
+  bool complete_cover() const {
     if (not enable_cover) return false;
     bool res = true;
     for (int i=0; i<_ROMP_COVER_PROP_COUNT; ++i) 
@@ -528,6 +589,263 @@ public:
 }; //? END class RandomWalker
 
 id_t RandWalker::next_id = 0u;
+
+
+/**
+ * @brief A class that indexes and groups the various results a RandWalker can produce,
+ *        and provides a helpful operator for writing a nice summary of the results 
+ *        to a \c std::ostream as well.
+ */
+class ResultTree {
+  time_t start_time = time(NULL);
+  time_t end_time = 0;
+  size_t rules_fired = 0;
+  size_t size = 0;
+  std::vector<Result> unknown_causes;
+  std::vector<Result> attempt_limits_reached;
+  std::vector<Result> max_depths_reached;
+  std::unordered_map<IModelError,std::vector<Result>> properties_violated;
+  size_t n_properties_violated = 0;
+#ifdef __romp__ENABLE_cover_property
+  std::vector<Result> completed_covers;
+#endif
+#ifdef __romp__ENABLE_assume_property
+  std::unordered_map<IModelError,std::vector<Result>> assumptions_violated;
+  size_t n_assumptions_violated = 0;
+#endif
+  std::unordered_map<IModelError,std::vector<Result>> merrors_reached;
+  size_t n_merrors_reached = 0;
+  public:
+  ResultTree() {}
+  void insert(Result res) {
+    switch (res.cause) {
+      case Result::ATTEMPT_LIMIT_REACHED:
+        attempt_limits_reached.push_back(res);
+        break;
+      case Result::MAX_DEPTH_REACHED:
+        max_depths_reached.push_back(res);
+        break;
+      case Result::PROPERTY_VIOLATED:
+        if (properties_violated.find(*res.tripped) == properties_violated.end())
+          properties_violated[*res.tripped] = std::vector<Result>{res};
+        else
+          properties_violated[*res.tripped].push_back(res);
+        ++n_properties_violated;
+        break;
+      case Result::MERROR_REACHED:
+        if (merrors_reached.find(*res.tripped) == merrors_reached.end())
+          merrors_reached[*res.tripped] = std::vector<Result>{res};
+        else
+          merrors_reached[*res.tripped].push_back(res);
+        ++n_merrors_reached;
+        break;
+#ifdef __romp__ENABLE_assume_property
+      case Result::ASSUMPTION_VIOLATED:
+        if (assumptions_violated.find(*res.tripped) == assumptions_violated.end())
+          assumptions_violated[*res.tripped] = std::vector<Result>{res};
+        else
+          assumptions_violated[*res.tripped].push_back(res);
+        ++n_assumptions_violated;
+        break;
+#endif
+#ifdef __romp__ENABLE_cover_property
+      case Result::COVER_COMPLETE:
+        completed_covers.push_back(res);
+        break;
+#endif
+      case Result::UNKNOWN_CAUSE:
+      default:
+        unknown_causes.push_back(res);
+        break;
+    }
+    ++size;
+    rules_fired += res.depth;
+  }
+  void end_time() { end_time = time(NULL); }
+  friend std::ostream& operator << (std::ostream& out, const ResultTree& results) {
+    ostream_p _out(out);
+    _out << results;
+    return out;
+  }
+  friend ostream_p& operator << (ostream_p& out, const ResultTree& r) {
+    int i = 1; // int j = 1;
+    size_t issues = 0; size_t abs_issues = 0;
+#ifdef __romp__ENABLE_assume_property
+    if (OPTIONS.r_assume && r.n_assumptions_violated > 0) {
+      issues += r.assumptions_violated.size();
+      abs_issues += r.n_assumptions_violated;
+      out << out.indentation() << "ASSUMPTIONS VIOLATED (n="<< r.assumptions_violated.size() 
+          << " |n|=" << r.n_assumptions_violated << "):\n";
+      out.indent(); i = 1;
+      for (const auto& _a : r.assumptions_violated) {  
+        out << out.indentation()
+            << '-(' << (i++) << ") assume \"" << _a.first.label() << "\":\n";
+        out.indent();
+        for (const auto& a : _a.second) {
+          out << out.indentation()
+              << "-[w#" << a.id << "] seed=" << a.root_seed << " start-id=" << a.start_id <<" depth=" << a.depth << "\n";
+          if (not a.tripped->is_flat())
+            out << out.indentation() 
+                << "        quantifiers(" << a.tripped->quants() << ")\n"
+                << out.indentation()
+                << "        last-rule";
+            else out << out.indentation() << "        IN-RULE";
+            out << "={rule \"" << a.inside->label() << "\"";
+          if (not a.inside->is_flat())
+              out << " quantifiers(" << a.inside->quants() << ")";
+          out << "}\n";
+        }
+        out.dedent();
+        ++i;
+      }
+      out.out << out._dedent() << std::endl;
+    }
+#endif
+    if ((OPTIONS.attempt_limit != _ROMP_ATTEMPT_LIMIT_DEFAULT && OPTIONS.deadlock) 
+          && r.attempt_limits_reached.size() > 0) {
+        out << out.indentation() << "ATTEMPT LIMITS REACHED (n=" 
+                << r.attempt_limits_reached.size() << "): \n";
+        out.indent();
+        i = 1;
+        for (const auto& _al : r.attempt_limits_reached) {
+          out << out.indentation()
+              << "-(" << i << ") [w#" << _al.id << "] seed=" << _al.root_seed << " start-id=" << _al.start_id <<" depth=" << _al.depth << "\n"
+              << out.indentation()
+              << "        last-rule={rule \"" << _al.inside->label() << "\"";
+              if (not _al.inside->is_flat())
+                out << " quantifiers=(" << _al.inside->quants() << ")";
+          out << "}\n";
+          ++i;
+        }
+      out.out << out._dedent() << std::endl;
+     }
+#ifdef __romp__ENABLE_cover_property
+     if (OPTIONS.result_all && r.completed_covers.size() > 0) {
+      out << out.indentation() << "COVERS COMPLETED (n=" 
+                << r.completed_covers.size() << "): \n";
+        out.indent();
+        i = 1;
+        for (const auto& _c : r.completed_covers) {
+          out << out.indentation()
+              << "-(" << i << ") [w#" << _c.id << "] seed=" << _c.root_seed << " start-id=" << _c.start_id <<" depth=" << _c.depth << "\n"
+              << out.indentation()
+              << "        last-rule={rule \"" << _c.inside->label() << "\"";
+              if (not _c.inside->is_flat())
+                out << " quantifiers=(" << _c.inside->quants() << ")";
+          out << "}\n";
+          ++i; 
+        }
+      out.out << out._dedent() << std::endl;
+     }
+#endif
+    if (OPTIONS.result_all && r.max_depths_reached.size() > 0) {
+      out << out.indentation() << "MAX DEPTHS REACHED (n=" 
+                << r.max_depths_reached.size() << "): \n";
+        out.indent();
+        i = 1;
+        for (const auto& _r : r.max_depths_reached)
+          out << out.indentation()
+              << "-(" << i++ << ") [w#" << _r.id << "] seed=" << _r.root_seed << " start-id=" << _r.start_id << "\n";
+      out.out << out._dedent() << std::endl;
+    }
+    if (r.n_merrors_reached > 0) {
+      issues += r.merrors_reached.size();
+      abs_issues += r.n_merrors_reached;
+      out << out.indentation() << "ERROR STATEMENTS REACHED (n="<< r.merrors_reached.size() 
+          << " |n|=" << r.n_merrors_reached << "):\n";
+      out.indent(); i = 1;
+      for (const auto& _a : r.merrors_reached) {  
+        out << out.indentation()
+            << '-(' << (i++) << ") error \"" << _a.first.label() << "\":\n";
+        out.indent();
+        for (const auto& a : _a.second) {
+          out << out.indentation()
+              << "-[w#" << a.id << "] seed=" << a.root_seed << " start-id=" << a.start_id <<" depth=" << a.depth << "\n"
+              << out.indentation()
+              << "        IN-RULE"
+              << "={rule \"" << a.inside->label() << "\"";
+          if (not a.inside->is_flat())
+              out << " quantifiers(" << a.inside->quants() << ")";
+          out << "}\n";
+        }
+        out.dedent();
+        ++i;
+      }
+      out.out << out._dedent() << std::endl;
+    }
+    if (r.n_properties_violated > 0) {
+      issues += r.properties_violated.size();
+      abs_issues += r.n_properties_violated;
+      out << out.indentation() << "PROPERTIES VIOLATED (n="<< r.properties_violated.size() 
+          << " |n|=" << r.n_properties_violated << "):\n";
+      out.indent(); i = 1;
+      for (const auto& _a : r.properties_violated) {
+        const PropertyInfo* _info = (PropertyInfo*)_a.first.hash();
+        out << out.indentation()
+            << '-(' << (i++) << ") " << _info->type << " \"" << _a.first.label() << "\":\n";
+        out.indent();
+        for (const auto& a : _a.second) {
+          out << out.indentation()
+              << "-[w#" << a.id << "] seed=" << a.root_seed << " start-id=" << a.start_id <<" depth=" << a.depth << "\n";
+          if (not a.tripped->is_flat())
+            out << out.indentation() 
+                << "        quantifiers(" << a.tripped->quants() << ")\n"
+                << out.indentation()
+                << "        last-rule";
+            else out << out.indentation() << "        IN-RULE";
+            out << "={rule \"" << a.inside->label() << "\"";
+          if (not a.inside->is_flat())
+              out << " quantifiers(" << a.inside->quants() << ")";
+          out << "}\n";
+        }
+        out.dedent();
+        ++i;
+      }
+      out.out << out._dedent() << std::endl;
+    }
+    if (OPTIONS.result_all && r.unknown_causes.size() > 0) {
+      issues += r.unknown_causes.size();
+      abs_issues += r.unknown_causes.size();
+      out << out.indentation() << "UNKNOWN ERRORS (n=" 
+                << r.unknown_causes.size() << "): \n";
+        out.indent();
+        i = 1;
+        for (const auto& _r : r.unknown_causes) {
+          out << out.indentation()
+              << "-(" << i++ << ") ``" << ({_r.inside->write_root_excpt_what(out.out); "''\n"})
+              << out._indent()
+              << "-[w#" << _r.id << "] seed=" << _r.root_seed << " start-id=" << _r.start_id << " depth=" << _r.depth << "\n"
+              << "        inside={";
+          if (const auto _pi = dynamic_cast<PropertyInfo*>((void*)_r.inside->hash())) {
+            out << _pi->type << " \"" << _pi->label << "\"";
+            if (_pi->quant_str != "")
+              out << " quantifiers(" << _pi->quants << ")";
+          } else if (const auto _ri = dynamic_cast<RuleInfo*>((void*)_r.inside->hash())) {
+            out << "rule \"" << _ri->label << "\"";
+            if (_ri->quant_str != "")
+              out << " quantifiers(" << _ri->quant_str << ")";
+          } else if (const auto _si = dynamic_cast<StartStateInfo*>((void*)_r.inside->hash())) {
+            out << "startstate \"" << _si->label << "\"";
+            if (_si->quant_str != "")
+              out << " quantifiers(" << _si->quant_str << ")";
+          } else out << " <<UNKNOWN>> ";
+          out << "}\n";
+          out.dedent();
+        }
+      out.out << out._dedent() << std::endl;
+    }
+    std::string color = ((issues>0) ? "\033[30;1;4m" : "\033[32;1m");
+    out << out.indentation() << '\n'
+        << out.indentation() << "SUMMARY:\n" << out.indent()
+        << out.indentation() << "       issues found: n=" << color << issues << "\033[0m"
+                                  << " |n|=" << color << abs_issues << "\033[0m\n"
+        << out.indentation() << "total rules applied: " << r.rules_fired << '\n'
+        << out.indentation() << "  avg rules applied: " << std::setprecision(1) << r.rules_fired/r.size << '\n'
+        << out.indentation() << "         time taken: " << r.end_time - r.start_time << '\n';
+    out.out << std::endl;
+    return out;
+  }
+};
 
 /**
  * @brief to generate random seeds for the no of random-walkers

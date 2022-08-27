@@ -50,16 +50,17 @@
 --------------------------------------------------------------------------
 
 Const
-  N: 4; -- the number of processes
-  BL: (N*2); /*N;*/ -- the length of the total bug sequence
-  MSL: 2; -- the minimum length of the bug sub sequence
+  N: 7;
+  S: 3; -- the length of the bug sub sequence
+  N_fact: (N*(N-1)*(N-2)*(N-3)*(N-4)*(N-4)*(N-5)*(N-6)); -- change this every time you change N
+  N_pow_N: (N*N*N*N*N*N*N); -- change this every time you change N
 
 Type
+  Seed: N_fact..N_pow_N -- a seed type (unsigned short)
   --  The scalarset is used for symmetry, which is implemented in Murphi 1.5
   --  and not upgraded to Murphi 2.0 yet
   pid: scalarset (N);
-  pid_r: 0..(N-1);  -- math workable range version of pid
-  b_ind_t: 0..(BL-1); -- index type for bug array
+  pid_r: 0..(N-1);
   -- pid: 1..N;
   priority: 0..N;
   label_t: Enum{L0, -- : non critical section; j := 1; while j<n do
@@ -75,13 +76,30 @@ Var
   localj: Array [ pid ] Of priority; -- maps each process to it's current priority
 
   -- locking history buffer
-  lock_hist: Array [ pid_r ] Of pid;
-  bug: Array [ b_ind_t ] Of pid; -- where we store first locking order to use as bug seq
+  lock_hist: Array [ pid_r ] Of pid_r;
+  bug: Array [ pid_r ] Of pid_r; -- where we store first locking order to use as bug seq
   lh_size: pid_r;  -- start and end of circ buffer
-  b_size: b_ind_t;
-  lh_is_full, bug_is_full: boolean;  -- if we circling yet (aka need to move start/lh_i forward)
+  lh_is_full: boolean;  -- if we circling yet (aka need to move start/lh_i forward)
 
-
+-- generate a random number 
+function getRand(var seed: Seed;): pid_r
+var r: Seed;
+Begin
+  r := seed % N;
+  seed := seed / N;
+  return r;
+End;
+-- function getRand(var seed: Seed): priority
+-- type temp_t: -2147483647..2147483647;
+-- var a,b,q: Seed;
+--     t1,t2,t3,t4: temp_t;
+-- Begin
+--   a := seed; b := (seed / 2);
+--   t1 := a | b; t3:= !a; t4 := !b; t2 := t3 | t4; 
+--   q := t1 & t2; -- calculate xor the long way
+--   seed := (((q) / 4) & 255) | ((seed & 127) * 8);
+--   return seed % N;
+-- End;
 
 
 Ruleset i: pid  Do
@@ -131,48 +149,40 @@ Ruleset i: pid  Do
     Q[i] := 1;
     P[i] := L0;
     -- we have fully reached the lock (update history)
-    If (bug_is_full)
+    lock_hist[lh_size] := i;
+    lh_size := (lh_size + 1) % N;
+    If lh_size = 0
     Then
-      lock_hist[lh_size] := i;
-      lh_size := (lh_size + 1) % N;
-      If (lh_size = 0)
-      Then
-        lh_is_full := True;
-      End;
-    Else
-      bug[b_size] := i;
-      b_size := (b_size + 1) % BL;
-      If (b_size = 0)
-      Then
-        bug_is_full := True;
-      End;
-    End;
+      lh_is_full := True;
+    End
   End; 
 
 End; --Ruleset
 
 
+RuleSet rand_seed: Seed Do
+  Startstate "init"
+  var seed: Seed;
+  Begin
+    For i:pid Do
+      P[i] := L0;
+      Q[i] := 0;
+    End; --For
 
-Startstate "init"
-Begin
-  For i:pid Do
-    P[i] := L0;
-    Q[i] := 0;
-  End; --For
+    For i: priority Do
+      Undefine turn[i];
+    End; --For
 
-  For i: priority Do
-    Undefine turn[i];
-  End; --For
+    Clear localj;
 
-  Clear localj;
-
-  -- hist bug stuff
-  lh_is_full := False;
-  bug_is_full := False;
-  lh_size := 0;
-  b_size := 0;
-  Clear lock_hist;
-  Clear bug;
+    -- hist bug stuff
+    seed := rand_seed;
+    lh_is_full := False;
+    Clear lock_hist;
+    For i: pid_r Do
+      bug[i] := getRand(seed);
+    End;
+  End;
 End;
 
 Invariant "only one P has lock"
@@ -186,17 +196,14 @@ Invariant "only one P has lock"
     End; --Exists
 
 
-Invariant "injected hist subseq bug"
-    (!(lh_is_full) | !(
-      Exists l: MSL..N Do -- length of substring
-        Exists b_i := 0 To (BL-l) Do -- look at all start loc in bug
-          Exists lh_i := 0 To (N-l) Do -- look at all start loc in lock_hist 
-              Forall j := 0 To (l-1) Do -- compare sub seq of len l
-                bug[b_i+j] = lock_hist[lh_i+j]
-              EndForall
-          EndExists
-        EndExists
-      EndExists));
+Invariant (!(lh_is_full) | (
+            Exists b_i: 0..(N-S) Do
+              Exists lh_i: 0..(N-S) Do
+                  Forall j: 0..(S-1) Do
+                    bug[b_i+j] = lock_hist[lh_i+j]
+                  EndForall
+              EndExists
+            EndExists));
 
 
 

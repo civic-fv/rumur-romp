@@ -526,7 +526,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "C/C++: g++ build active murphi file",
+            "preLaunchTask": "C/C++: g++ build active murphi file [romp]",
             "miDebuggerPath": "/bin/gdb"
         },
         {
@@ -563,7 +563,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "C/C++: g++ build active C++ file",
+            "preLaunchTask": "C/C++: g++ build active C++ file [romp]",
             "miDebuggerPath": "/bin/gdb"
         },
         {
@@ -572,15 +572,14 @@
             "request": "launch",
             "program": "${file}.test",
             "args": [
-                "-w",
-                "16",
+                // "-w",
+                // "16",
                 "-s",
                 "1234567890",
                 "-a",
                 "-d",
                 "256",
                 "-ll",
-                "64",
                 "-ros",
                 "-rhl",
                 "8"
@@ -602,7 +601,7 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "C/C++: g++ build active murphi file",
+            "preLaunchTask": "C/C++: g++ build active murphi file [romp]",
             "miDebuggerPath": "/bin/gdb"
         },
         {
@@ -634,6 +633,58 @@
                 }
             ],
             "preLaunchTask": "CMake: build romp",
+            "miDebuggerPath": "/bin/gdb"
+        },
+        {
+            "name": "rumur: rumur->gcc build and debug active murphi file [exhaustive]",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${file}.test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "C: gcc build active murphi file [rumur,exhaustive]",
+            "miDebuggerPath": "/bin/gdb"
+        },
+        {
+            "name": "rumur: rumur->gcc build and debug active murphi file",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${file}.test",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "C: gcc build active murphi file [rumur]",
             "miDebuggerPath": "/bin/gdb"
         },
         {

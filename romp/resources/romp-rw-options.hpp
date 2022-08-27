@@ -532,7 +532,7 @@ void parse_args(int argc, char **argv) {
                   << std::flush;
     // warnings and end with errors as appropriate
     if (OPTIONS.deadlock == false) {
-      if (guard_provided && OPTIONS.result_all)
+      if (guard_provided && OPTIONS.result)
         std::cerr << "\nWARNING : --no-deadlock/-nd suppresses the output of walks terminated for violating the rule attempt limit !!\n"
                        "        |-> (aka the --attempt-limit/-al/--loop-limit/-ll/--attempt-guard/-ag flags)\n" << std::flush;
 #ifdef __romp__ENABLE_liveness_property

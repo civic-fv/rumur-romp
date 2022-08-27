@@ -142,8 +142,10 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
-                          ROMP_MAKE_MODEL_ERROR_FUNCT(n,id) " ); }\n";
+    // *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
+    //                       ROMP_MAKE_MODEL_ERROR_FUNCT(n,id) " ); }\n";
+    *this << indentation() << "} catch (...) { throw " 
+                          ROMP_MAKE_MODEL_ERROR_FUNCT(n,id) "; }\n";
 
     dedent();
     *this << "}\n"; 
@@ -238,8 +240,10 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
-                          ROMP_MAKE_MODEL_ERROR_PROPERTY(n,prop_id) " ); }\n";
+    // *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
+    //                       ROMP_MAKE_MODEL_ERROR_PROPERTY(n,prop_id) " ); }\n";
+    *this << indentation() << "} catch (...) { throw " 
+                          ROMP_MAKE_MODEL_ERROR_PROPERTY(n,prop_id) "; }\n";
 
     dedent();
     *this << indentation() << "}\n";
@@ -303,8 +307,10 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (...) { ::std::throw_with_nested( "
-                                  ROMP_MAKE_MODEL_ERROR_RULE_GUARD(n,id) " ); }\n";
+    // *this << indentation() << "} catch (...) { ::std::throw_with_nested( "
+    //                               ROMP_MAKE_MODEL_ERROR_RULE_GUARD(n,id) " ); }\n";
+    *this << indentation() << "} catch (...) { throw "
+                                  ROMP_MAKE_MODEL_ERROR_RULE_GUARD(n,id) "; }\n";
 
     dedent();
     *this << indentation() << "}\n\n";
@@ -370,8 +376,10 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
-                          ROMP_MAKE_MODEL_ERROR_RULE_ACTION(n,id) " ); }\n";
+    // *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
+    //                       ROMP_MAKE_MODEL_ERROR_RULE_ACTION(n,id) " ); }\n";
+    *this << indentation() << "} catch (...) { throw " 
+                          ROMP_MAKE_MODEL_ERROR_RULE_ACTION(n,id) "; }\n";
 
     dedent();
     *this << indentation() << "}\n";
@@ -443,8 +451,10 @@ public:
     }
 
     dedent();
-    *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
-                          ROMP_MAKE_MODEL_ERROR_STARTSTATE(n, id) " ); }\n";
+    // *this << indentation() << "} catch (...) { ::std::throw_with_nested( " 
+    //                       ROMP_MAKE_MODEL_ERROR_STARTSTATE(n, id) " ); }\n";
+    *this << indentation() << "} catch (...) { throw " 
+                          ROMP_MAKE_MODEL_ERROR_STARTSTATE(n, id) "; }\n";
 
     dedent();
     *this << indentation() << "}\n\n";
