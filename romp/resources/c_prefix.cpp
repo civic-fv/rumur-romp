@@ -109,7 +109,7 @@ namespace __info__ { // LANGUAGE SERVER SUPPORT ONLY!!
 }
 
 namespace romp {
-
+  const std::string EMPTY_STR = "";
   const time_t ROMP_ID = time(NULL);
   namespace options {
 
@@ -195,6 +195,7 @@ namespace romp {
   struct IModelError;
   template <class O> struct ojstream;
   template<class O> void __jprint_exception(ojstream<O>& json, const std::exception& ex) noexcept;
+  template<class O> void __jprint_exception(ojstream<O>& json, const IModelError& ex) noexcept;
 
   class stream_void { nullptr_t none = nullptr; };
   const stream_void S_VOID;
@@ -249,7 +250,7 @@ namespace romp {
     std::string _indentation;
   public:
     std::ostream& out;
-    ostream_p(std::ostream& out_, unsigned int level_) 
+    ostream_p(std::ostream& out_, unsigned int level_=0) 
         : out(out_), _width(level_*OPTIONS.tab_size) 
       { _indentation = std::string(_width,OPTIONS.tab_char); }
     inline int width() { return _width; }
@@ -258,6 +259,8 @@ namespace romp {
     inline const stream_void dedent() { _indentation = std::string((_width-=OPTIONS.tab_size),OPTIONS.tab_char); return S_VOID; }
     inline const std::string _dedent() { dedent(); return indentation(); }
     inline const std::string indentation() { return _indentation; }
+    inline const stream_void new_line() { out << '\n' << indentation(); return S_VOID; }
+    inline const stream_void nl() { return new_line(); }
     template <typename T>
     inline ostream_p& operator << (const T val);  
   };
@@ -289,7 +292,7 @@ namespace romp {
   ojstream<O>& operator << (ojstream<O>& json, const location& loc) { 
     return (json << "{\"$type\":\"location\","
             << "\"file\":\"" __model__filename "\","
-            // << (loc.model_obj != "") ? "\"inside\":\""+loc.model_obj+"\"," : ""
+            // << (loc.model_obj != "") ? "\"inside\":\""+loc.model_obj+"\"," : EMPTY_STR
             << "start" << ':' << loc.start << ',' 
             << "\"end\":" << loc.end
             << '}'); 
@@ -308,7 +311,7 @@ namespace romp {
   }
 
   const std::exception_ptr __get_root_except(const std::exception_ptr& ex) {
-    try { std::rethrow_if_nested(ex) 
+    try { std::rethrow_if_nested(ex);
     } catch (const std::nested_exception& ne){
       if (ne.nested_ptr() == nullptr)
         return std::current_exception();
@@ -336,8 +339,10 @@ namespace romp {
     virtual size_t hash() const noexcept = 0;
     virtual const std::string& label() const noexcept = 0;
     virtual const std::string& quants() const noexcept = 0;
+    virtual bool is_generic() const noexcept = 0;
+    virtual std::string get_type() const noexcept = 0;
     bool is_flat() const { return (quants() == ""); }
-    const std::exception_ptr get_root_excpt() const { 
+    const std::exception_ptr get_root_except() const { 
       if (this->nested_ptr() == nullptr) 
         try { throw this;
         } catch (...) { return std::current_exception(); }
@@ -352,8 +357,9 @@ namespace romp {
   template<class O>
   ojstream<O>& ojstream<O>::operator << (const IModelError& me) noexcept { 
     // if (ex_level++ == 0) out << "],\"error-trace\":["
-    me.to_json(*this); 
-    __jprint_exception(*this,me);
+    me.to_json(*this);
+    if (me.nested_ptr() != nullptr)
+      __jprint_exception(*this,me);
     // if (--ex_level == 0) out << ']';
     return *this; 
   }
@@ -433,6 +439,7 @@ namespace romp {
     void what(std::ostream& out) const noexcept { if (isProp) out << *data.prop; else out << *data.info; }
     virtual void to_json(json_file_t& json) const noexcept { _to_json(json); }
     virtual void to_json(json_str_t& json) const noexcept { _to_json(json); }
+    const PropertyInfo& info() const noexcept { return ((isProp) ? data.prop->info : *data.info); }
   private:
     union {const Property* prop; const PropertyInfo* info;} data;
     const bool isProp;
@@ -445,9 +452,16 @@ namespace romp {
       if (isProp) json << *data.prop; else json << *data.info;
       json << '}';
     }
-    size_t hash() const noexcept { return (size_t)((isProp) ? &(data.prop->info) : data.info); }
-    const std::string& label() const { return ((PropertyInfo*)hash())->label; }
-    const std::string& quants() const noexcept { return ((isProp) ? data.prop->quant_str : ""); }
+  public:
+    size_t hash() const noexcept { return reinterpret_cast<size_t>((isProp) ? &(data.prop->info) : data.info); }
+    const std::string& label() const noexcept { return ((isProp) ? data.prop->info.label : data.info->label); }
+    const std::string& quants() const noexcept { return ((isProp) ? data.prop->quant_str : EMPTY_STR); }
+    bool is_generic() const noexcept { return not isProp; }
+    std::string get_type() const noexcept { 
+      std::stringstream tmp;
+      tmp << info().type;
+      return tmp.str();
+    }
   };
 
   IModelError* PropertyInfo::make_error() const { return new ModelPropertyError(*this); }
@@ -520,6 +534,7 @@ namespace romp {
     void what(std::ostream& out) const noexcept { if (isRule) out << *data.rule; else out << *data.info; }
     virtual void to_json(json_file_t& json) const noexcept { _to_json(json); }
     virtual void to_json(json_str_t& json) const noexcept { _to_json(json); }
+    const RuleInfo& info() const noexcept { return ((isRule) ? data.rule->info : *data.info); }
   private:
     union {const Rule* rule; const RuleInfo* info;} data;
     const bool isRule;
@@ -533,9 +548,12 @@ namespace romp {
       if (isRule) json << *data.rule; else json << *data.info;
       json << '}'; 
     }
-    size_t hash() const noexcept { return (size_t)((isRule) ? &(data.rule->info) : data.info); }
-    const std::string& label() const { return ((RuleInfo*)hash())->label; }
-    const std::string& quants() const noexcept { return ((isRule) ? data.rule->quant_str : ""); }
+  public:
+    size_t hash() const noexcept { return reinterpret_cast<size_t>(&(info())); }
+    const std::string& label() const noexcept { return info().label; }
+    const std::string& quants() const noexcept { return ((isRule) ? data.rule->quant_str : EMPTY_STR); }
+    bool is_generic() const noexcept { return not isRule; }
+    std::string get_type() const noexcept { return "rule"; }
   };
 
   IModelError* RuleInfo::make_error() const { return new ModelRuleError(*this); }
@@ -600,6 +618,7 @@ namespace romp {
     void what(std::ostream& out) const noexcept { if (isStartState) out << *data.rule; else out << *data.info; }
     virtual void to_json(json_file_t& json) const noexcept { _to_json(json); }
     virtual void to_json(json_str_t& json) const noexcept { _to_json(json); }
+    const StartStateInfo& info() const noexcept { return ((isStartState) ? data.rule->info : *data.info); }
   private:
     union {const StartState* rule; const StartStateInfo* info;} data;
     const bool isStartState;
@@ -612,9 +631,12 @@ namespace romp {
       if (isStartState) json << *data.rule; else json << *data.info;
       json << '}'; 
     }
-    size_t hash() const noexcept { return (size_t)((isStartState) ? &(data.rule->info) : data.info); }
-    const std::string& label() const { return ((StartStateInfo*)hash())->label; }
-    const std::string& quants() const noexcept { return ((isStartState) ? data.rule->quant_str : ""); }
+  public:
+    size_t hash() const noexcept { return reinterpret_cast<size_t>((isStartState) ? &(data.rule->info) : data.info); }
+    const std::string& label() const noexcept { return ((isStartState) ? data.rule->info.label : data.info->label); }
+    const std::string& quants() const noexcept { return ((isStartState) ? data.rule->quant_str : EMPTY_STR); }
+    bool is_generic() const noexcept { return not isStartState; }
+    std::string get_type() const noexcept { return "startstate"; }
   };
 
   IModelError* StartStateInfo::make_error() const { return new ModelStartStateError(*this); }
@@ -631,23 +653,27 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const MErrorInfo& ei) noexcept { return (out << "error \""<< ei.label << "\" @(" << ei.loc << ")"); }
   
   struct ModelMErrorError : public IModelError {
-    ModelMErrorError(const MErrorInfo& info_) : info(info_) {}
-    ModelMErrorError(id_t id) : info(::__info__::ERROR_INFOS[id]) {}
-    void what(std::ostream& out) const noexcept { out << info; }
+    ModelMErrorError(const MErrorInfo& info_) : _info(info_) {}
+    ModelMErrorError(id_t id) : _info(::__info__::ERROR_INFOS[id]) {}
+    void what(std::ostream& out) const noexcept { out << _info; }
     virtual void to_json(json_file_t& json) const noexcept { _to_json(json); }
     virtual void to_json(json_str_t& json) const noexcept { _to_json(json); }
+    const MErrorInfo& info() const noexcept { return _info; }
   private:
-    const MErrorInfo& info;
+    const MErrorInfo& _info;
     template<class O>
     void _to_json(ojstream<O>& json) const noexcept { 
       json << "{\"$type\":\"model-error\","
                "\"type\":\"error-statement\","
               //  "\"what\":\"" << escape_str(what()) << "\","
-               "\"inside\":" << info << '}'; 
+               "\"inside\":" << _info << '}'; 
     }
-    size_t hash() const noexcept { return (size_t) &info; }
-    const std::string& label() const { return info.label; }
-    const std::string& quants() const noexcept { return ""; }
+  public:
+    size_t hash() const noexcept { return reinterpret_cast<size_t>(&_info); }
+    const std::string& label() const noexcept { return _info.label; }
+    const std::string& quants() const noexcept { return EMPTY_STR; }
+    bool is_generic() const noexcept { return true; }
+    std::string get_type() const noexcept { return "error"; }
   };
 
   struct FunctInfo {
@@ -661,23 +687,27 @@ namespace romp {
   std::ostream& operator << (std::ostream& out, const FunctInfo& fi) noexcept { return (out << fi.signature << " @(" << fi.loc << ")"); }
   
   struct ModelFunctError : public IModelError {
-    ModelFunctError(const FunctInfo& info_) : info(info_) {}
-    ModelFunctError(id_t id) : info(::__info__::FUNCT_INFOS[id]) {}
-    void what(std::ostream& out) const noexcept { out << info; }
+    ModelFunctError(const FunctInfo& info_) : _info(info_) {}
+    ModelFunctError(id_t id) : _info(::__info__::FUNCT_INFOS[id]) {}
+    void what(std::ostream& out) const noexcept { out << _info; }
     virtual void to_json(json_file_t& json) const noexcept { _to_json(json); }
     virtual void to_json(json_str_t& json) const noexcept { _to_json(json); }
+    const FunctInfo& info() const noexcept { return _info; }
   private:
-    const FunctInfo& info;
+    const FunctInfo& _info;
     template<class O>
     void _to_json(ojstream<O>& json) const noexcept { 
       json << "{\"$type\":\"model-error\","
                "\"type\":\"function\","
               //  "\"what\":\"" << escape_str(what()) << "\","
-               "\"inside\":" << info << '}';
+               "\"inside\":" << _info << '}';
     }
-    size_t hash() const noexcept { return (size_t) &info; }
-    const std::string& label() const { return info.label; }
-    const std::string& quants() const noexcept { return ""; }
+  public:
+    size_t hash() const noexcept { return reinterpret_cast<size_t>(&_info); }
+    const std::string& label() const noexcept { return _info.label; }
+    const std::string& quants() const noexcept { return EMPTY_STR; }
+    bool is_generic() const noexcept { return true; }
+    std::string get_type() const noexcept { return "function"; }
   };
 
 
@@ -693,35 +723,67 @@ namespace romp {
         json << ",{\"$type\":\"trace-error\",\"what\":\"unknown non-exception type thrown !!\"}";
     }
   }
- 
-#define __romp__nested_exception__print_prefix '|'
-
-  void __fprint_exception(std::ostream& out, const std::exception& ex/* , const size_t level */) noexcept;
-
-  std::ostream& operator << (std::ostream& out, const IModelError& ex) noexcept {
-    ex.what(out);
-    out << '\n';
-    __fprint_exception(out, ex);
-    return out;
-  }
-
-  std::ostream& operator << (std::ostream& out, const std::exception& ex) noexcept {
-    out << ex.what() << '\n';
-    __fprint_exception(out, ex);
-    return out;
-  }
-
-  void __fprint_exception(std::ostream& out, const std::exception& ex/* , const size_t level */) noexcept {
-    // out << std::string(level, __romp__nested_exception__print_prefix);
+  template<class O> void __jprint_exception(ojstream<O>& json, const IModelError& ex) noexcept {
     try {
         std::rethrow_if_nested(ex);
     } catch(const IModelError& mod_ex) {
-      out << __romp__nested_exception__print_prefix << mod_ex;
+      json << ',' << mod_ex;
     } catch(const std::exception& ex) {
-      out << __romp__nested_exception__print_prefix << ex;
+      json << ',' << ex;
     } catch(...) {
       if (std::current_exception() != nullptr)
-        out << __romp__nested_exception__print_prefix << "unknown non-exception type thrown !!";
+        json << ",{\"$type\":\"trace-error\",\"what\":\"unknown non-exception type thrown !!\"}";
+    }
+  }
+
+  void __fprint_exception(ostream_p& out, const std::exception& ex) noexcept;
+  void __fprint_exception(ostream_p& out, const IModelError& ex) noexcept;
+
+  ostream_p& operator << (ostream_p& out, const IModelError& ex) noexcept {
+    out << '{';
+    ex.what(out.out);
+    // out << out.nl();
+    if (ex.nested_ptr() != nullptr)
+      __fprint_exception(out, ex);
+    out << '}';
+    return out;
+  }
+  std::ostream& operator << (std::ostream& out, const IModelError& ex) noexcept { ostream_p _out(out,0); _out << ex;  return out; }
+
+  ostream_p& operator << (ostream_p& out, const std::exception& ex) noexcept {
+    out << "{exception ``";
+    out << ex.what(); // << out.nl();
+    out << "``";
+    __fprint_exception(out, ex);
+    out << '}';
+    return out;
+  }
+  std::ostream& operator << (std::ostream& out, const std::exception& ex) noexcept { ostream_p _out(out,0); _out << ex;  return out; }
+
+  void __fprint_exception(ostream_p& out, const std::exception& ex) noexcept {
+    try {
+        std::rethrow_if_nested(ex);
+    } catch(const IModelError& mod_ex) {
+      out << out.indent() << out.nl() << "cause=" << mod_ex << out.dedent();
+    } catch(const std::exception& ex) {
+      out << out.indent() << out.nl() << "cause=" << ex << out.dedent();
+    } catch(...) {
+      if (std::current_exception() != nullptr)
+        out << out.indent() << out.nl() << "cause={!! UNKNOWN NON-EXCEPTION TYPE THROWN !!}"
+            << out.dedent();
+    }
+  }
+  void __fprint_exception(ostream_p& out, const IModelError& ex) noexcept {
+    try {
+        std::rethrow_if_nested(ex);
+    } catch(const IModelError& mod_ex) {
+      out << out.indent() << out.nl() << "cause=" << mod_ex << out.dedent();
+    } catch(const std::exception& ex) {
+      out << out.indent() << out.nl() << "cause=" << ex << out.dedent();
+    } catch(...) {
+      if (std::current_exception() != nullptr)
+        out << out.indent() << out.nl() << "cause={!! UNKNOWN NON-EXCEPTION TYPE THROWN !!}"
+            << out.dedent();
     }
   }
 
@@ -795,15 +857,86 @@ namespace romp {
     size_t depth; // depth reached 
     const IModelError* tripped;  // what was tripped (promised not nested)
     const IModelError* inside;  // where it was tripped (could be nested w/ root cause)
-    ~Result() { if (tripped) delete tripped; if (inside) delete inside; }
+    // Result(Result& old) 
+    //   : id(old.id), root_seed(old.root_seed), start_id(old.start_id),
+    //     cause(old.cause), depth(old.depth), 
+    //     tripped(old.tripped), inside(old.inside)
+    // { old.tripped = nullptr; old.inside = nullptr; }
+    ~Result() { if (tripped != nullptr) delete tripped; if (inside != nullptr) delete inside; }
   };
 
+  std::string get_color(Result::Cause val) {
+    switch (val) {
+      case romp::Result::UNKNOWN_CAUSE:
+        return "\033[43;32m";
+      case romp::Result::ATTEMPT_LIMIT_REACHED:
+      case romp::Result::MAX_DEPTH_REACHED:
+        return "\033[33m";
+#ifdef __romp__ENABLE_assume_property
+      case romp::Result::ASSUMPTION_VIOLATED:
+#endif
+      case romp::Result::MERROR_REACHED:
+      case romp::Result::PROPERTY_VIOLATED:
+        return "\033[31m";
+#ifdef __romp__ENABLE_cover_property
+      case romp::Result::COVER_COMPLETE:
+        return "\033[32m";
+#endif
+      case romp::Result::NO_CAUSE:
+      default:
+        return "\033[45;30m";
+    }
+  }
 }
 namespace std {
+  std::string to_string(::romp::Result::Cause val) {
+    switch (val) {
+      case romp::Result::UNKNOWN_CAUSE:
+        return "UNKNOWN ISSUE";
+      case romp::Result::ATTEMPT_LIMIT_REACHED:
+        return "ATTEMPT LIMIT REACHED (possible deadlock)";
+      case romp::Result::MAX_DEPTH_REACHED:
+        return "MAX_DEPTH_REACHED";
+      case romp::Result::PROPERTY_VIOLATED:
+        return "PROPERTY VIOLATED";
+#ifdef __romp__ENABLE_cover_property
+      case romp::Result::COVER_COMPLETE:
+        return "COVER COMPLETE";
+#endif
+#ifdef __romp__ENABLE_assume_property
+      case romp::Result::ASSUMPTION_VIOLATED:
+        return "ASSUMPTION VIOLATED";
+#endif
+      case romp::Result::MERROR_REACHED:
+        return "ERROR STATEMENT REACHED";
+      case romp::Result::NO_CAUSE:
+      default:
+        return "<!-- YOU SHOULD NEVER SEE THIS MESSAGE -->";
+    }
+  }
   template<>
   class hash<romp::IModelError> {
-    public: size_t operator () (const romp::IModelError& me) { return me.hash(); }
-    public: size_t operator () (const romp::IModelError* me) { return me->hash(); }
+    public: size_t operator () (const romp::IModelError& me) const { return me.hash(); }
+  };
+  template<>
+  class equal_to<romp::IModelError> {
+    public: size_t operator () (const romp::IModelError& l, const romp::IModelError& r) const { return l.hash() == r.hash(); }
+  };
+  template<>
+  class hash<romp::ModelPropertyError> {
+    public: size_t operator () (const romp::ModelPropertyError& me) const { return me.hash(); }
+  };
+  template<>
+  class equal_to<romp::ModelPropertyError> {
+    public: size_t operator () (const romp::ModelPropertyError& l, const romp::ModelPropertyError& r) const { return l.hash() == r.hash(); }
+  };
+  template<>
+  class hash<romp::ModelMErrorError> {
+    public: size_t operator () (const romp::ModelMErrorError& me) const { return me.hash(); }
+  };
+  template<>
+  class equal_to<romp::ModelMErrorError> {
+    public: size_t operator () (const romp::ModelMErrorError& l, const romp::ModelMErrorError& r) const { return l.hash() == r.hash(); }
   };
 }
 
