@@ -894,7 +894,7 @@ namespace std {
       case romp::Result::UNKNOWN_CAUSE:
         return "UNKNOWN ISSUE";
       case romp::Result::ATTEMPT_LIMIT_REACHED:
-        return "ATTEMPT LIMIT REACHED (possible deadlock)";
+        return "ATTEMPT LIMIT REACHED";
       case romp::Result::MAX_DEPTH_REACHED:
         return "MAX_DEPTH_REACHED";
       case romp::Result::PROPERTY_VIOLATED:

@@ -50,44 +50,24 @@
 --------------------------------------------------------------------------
 
 --------------------------------------------------------------------------
--- Contains injected bug:
---   This model contains a working and verified representation of a
---    N peterson algorithm, but with an injected "bug." 
---   That adds a buffer of length `BL` which records the order 
---    in which processes get the lock of a resource until it is full.
---   When full it will declare the order in the buffer as a sequence of
---    lock ownerships that if any subsequence of length `MSL` or more
---    occurs in any following `N` length sequences of locking orderings,
---    is declared to be a "bug."
---  To do this we also keep a buffer of length `N` that is filled with a 
---   new set before it is checked for said bug.
--- Concepts:
---  These two buffers and the accompanying variables in the statespace,
---   greatly increase the statespace to a point that no current Murphi 
---   model checker could ever efficiently hold them all in a set.
---  Therefore, it is known that unless a bug is encountered  
---   a traditional Murphi model checker must either end
---   due to state hash saturation, or a built in timeout condition is hit
---   in cases of nivea state sets that have undefined behavior 
---   when fully saturated.
---  The "bug" state is designed to be variably difficult to find, but
---   also defined that there is no possible progression that will never
---   meet the criteria... MAYBE
+-- Alternate bug inserted here:
+--   Bug checks if the order of locks ever contains a subsequence of 
+--    a predefined "buggy" ordering & if it does it breaks an invariant  
 --------------------------------------------------------------------------
 
 Const
   N: 7; -- the number of processes
   LHL: N; -- the size of the history buffer
-  BL: (N*2); /*N;*/ -- the length of the total bug sequence
-  MSL: 4; -- the minimum length of the bug sub sequence
+  BL: (LHL*2); -- the used size of the "bug array"
+  MSL: 4;  -- must be 2<=MSL<=LHL to be a valid test for subseq
 
 Type
   --  The scalarset is used for symmetry, which is implemented in Murphi 1.5
   --  and not upgraded to Murphi 2.0 yet
   pid: scalarset (N);
   pid_r: 0..(N-1);  -- math workable range version of pid
-  b_ind_t: 0..(BL-1); -- index type for bug array
-  lh_t: 0..(LHL-1); -- index type for bug array
+  lh_r: 0..(LHL-1);
+  bug_r: 0..(BL-1); -- math workable version of bug lengthl
   -- pid: 1..N;
   priority: 0..N;
   label_t: Enum{L0, -- : non critical section; j := 1; while j<n do
@@ -103,18 +83,11 @@ Var
   localj: Array [ pid ] Of priority; -- maps each process to it's current priority
 
   -- locking history buffer
-  lock_hist: Array [ lh_t ] Of pid;
-  bug: Array [ b_ind_t ] Of pid; -- where we store first locking order to use as bug seq
-  lh_size: lh_t;  -- start and end of circ buffer
-  b_size: b_ind_t;
-  lh_is_full, bug_is_full: boolean;  -- if we circling yet (aka need to move start/lh_i forward)
+  lock_hist: Array [ lh_r ] Of pid;
+  lh_size: lh_r;  -- start and end of circ buffer
+  lh_is_full: boolean;  -- if we circling yet (aka need to move start/lh_i forward)
 
-Procedure print_bug(tmp:boolean)
-Begin
-  put "Bug := [ ";
-  put bug;
-  put "\n\n"
-EndProcedure;
+
 
 
 Ruleset i: pid  Do
@@ -164,24 +137,39 @@ Ruleset i: pid  Do
     Q[i] := 1;
     P[i] := L0;
     -- we have fully reached the lock (update history)
-    If (bug_is_full)
-    Then
-      lock_hist[lh_size] := i;
-      lh_size := (lh_size + 1) % LHL;
-      lh_is_full:= (lh_size = 0)
-    Else
-      Assert (!bug_is_full) "Bug is full, but added to it anyway!";
-      bug[b_size] := i;
-      b_size := (b_size + 1) % BL;
-      If (b_size = 0)
-      Then
-        bug_is_full := True;
-        -- print_bug(True);
-      EndIf;
-    EndIf;
-  EndRule; 
+    lock_hist[lh_size] := i;
+    lh_size := (lh_size + 1) % LHL;
+    lh_is_full:= (lh_size = 0)
+  End; 
 
 End; --Ruleset
+
+
+Function bug(i:bug_r): pid
+type m_int: (-9223372036854775807)..(9223372036854775807);
+var pids: array [pid_r] of pid; 
+    fact, sum: m_int;
+Begin
+  -- build a hacky map from range to scalarset
+  For p: pid Do For tmp := p to p Do pids[tmp] := p EndFor EndFor;
+  -- factorial & sum
+  fact := i+3; 
+  For j := 2 to (i+2) Do fact := fact * j; EndFor;
+  sum := i+1;
+  For j := 1 to (i) Do  sum := sum + j; EndFor; 
+  return pids[((fact)-(sum))%N]
+End;
+
+Procedure print_bug(tmp:boolean)
+Begin
+  put "Bug := [ ";
+  For i: bug_r Do
+    put bug(i);
+    put " "
+  EndFor;
+    put "]\n\n"
+End;
+
 
 Startstate "init"
 Begin
@@ -198,17 +186,15 @@ Begin
 
   -- hist bug stuff
   lh_is_full := False;
-  bug_is_full := False;
   lh_size := 0;
-  b_size := 0;
   Clear lock_hist;
-  Clear bug;
   If (MSL<2) 
     Then Error "CONFIG ERROR: `MSL` needs to >= 2 to be a proper subseq !!";
   EndIf;
   If (MSL>LHL) 
     Then Error "CONFIG ERROR: `MSL` needs to <=`LHL` for a subsequence to be found !!";
   EndIf;
+  print_bug(True);
 End;
 
 Invariant "only one P has lock"
@@ -228,12 +214,11 @@ Invariant "injected hist subseq bug"
         Exists b_i := 0 To (BL-l) Do -- look at all start loc in bug
           Exists lh_i := 0 To (LHL-l) Do -- look at all start loc in lock_hist 
               Forall j := 0 To (l-1) Do -- compare sub seq of len l
-                bug[b_i+j] = lock_hist[lh_i+j]
+                bug(b_i+j) = lock_hist[lh_i+j]
               EndForall
           EndExists
         EndExists
       EndExists));
-
 
 
 

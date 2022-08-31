@@ -529,16 +529,20 @@ void CLikeGenerator::print(const std::string &suffix, const TypeExpr &t,
 }
 
 void CLikeGenerator::visit_put(const Put &n) {
-
+  *this << indentation() 
+        << "// INFO: put/print statements are disabled in romp; use trace files instead.\n"
+        << indentation() 
+        << "// put ";
   // is this a put of a literal string?
   if (n.expr == nullptr) {
-    *this << indentation() << "printf(\"%s\\n\", \"" << n.value << "\");";
-
+    *this << "\"" << escape(n.value) << "\"";
+    // *this << indentation() << "printf(\"%s\\n\", \"" << n.value << "\");";
   } else {
-    const Ptr<TypeExpr> type = n.expr->type();
-    print("", *type, *n.expr, 0);
-    *this << ";";
+    *this << "(" << n.expr->to_string() << ")";
+    // const Ptr<TypeExpr> type = n.expr->type();
+    // print("", *type, *n.expr, 0);
   }
+    *this << ";";
 
   emit_trailing_comments(n);
   *this << "\n";

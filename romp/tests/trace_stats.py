@@ -270,6 +270,7 @@ def get_state_simple(json:JSON_t) -> STATE_t:
                 raise Exception("simple state contained a mutable object (dict/obj or list/array)")
     return tuple(json)
 #? END def get_state_simple: NormState
+    
 
 @dataclass(init=False)
 class TraceData:
@@ -287,6 +288,7 @@ class TraceData:
     tries: int
     is_valid: bool
     is_error: bool
+    result: str
     unique_applied_rules: FSet[str]
     unique_rules: FSet[str]
     unique_states: FSet[str]
@@ -308,6 +310,7 @@ class TraceData:
         self.tries: int = 0
         self.is_valid: bool = None
         self.is_error: bool = None
+        self.result: str = None
         self.unique_applied_rules: FSet[str] = None
         self.unique_rules: FSet[str] = None
         self.unique_states: FSet[str] = None
@@ -405,8 +408,14 @@ class TraceData:
                 self.abs_state_miss_streak.add_data(abs_state_misses)
             results = json['results']
             self.depth = int(results['depth'])
-            self.is_valid = results['valid']
-            self.is_error = bool(results['is-error'])
+            if 'result' in results:
+                self.result = results['result']
+                self.is_valid = (self.result in ['COVER COMPLETE', 'MAX DEPTH REACHED', 'ATTEMPT LIMIT REACHED'])
+                self.is_error = (self.result in ['PROPERTY VIOLATED', 'ASSUMPTION VIOLATED', 'ERROR STATEMENT REACHED', 'UNKNOWN ISSUE'])
+            else:
+                self.result = self.__patch_old_results(results)
+                self.is_valid = bool(results['valid'])
+                self.is_error = bool(results['is-error'])
             if results['property-violated'] is not None:
                 if 'label' in results['property-violated'] :
                     self.property_violated = results['property-violated']['label']
@@ -426,6 +435,23 @@ class TraceData:
                 traceback.print_exc()
             raise RompTraceParseError(str(ex))
     #? END def __process_trace_file()
+    def __patch_old_results(self,res:JSON_OBJ_t) -> str:
+        if res['attempts-final'] <= 0:
+            return "ATTEMPT LIMIT REACHED"
+        if res['depth'] >= RompID.metadata['max-depth']:
+            return "MAX DEPTH REACHED"
+        if not res['valid'] and not res['is-error']:
+            return "ASSUMPTION VIOLATED"
+        if not res['valid'] and res['is-error']:
+            return "PROPERTY VIOLATED"
+        if res['valid'] and res['is-error']:
+            return "ERROR REACHED"
+        if ((res['valid'] and res['is-error']) and
+                (res['property-violated'] is None and
+                    res['tripped-inside'] is not None)):
+            return "COVER COMPLETE"
+        return "UNKNOWN ISSUE"
+    #? END def patch_old_results(self,res:JSON_OBJ_t) -> str:
     @property
     def missed_rules(self) -> int:
         return self.tries - self.depth
@@ -750,8 +776,8 @@ class ModelResult:
                 f"    {'STATES:':_^72}\n"
                 f"             {self.unique_state_count.str_label:-<66s}\n"
                 f"      found: {self.unique_state_count.summary_str:<67s}\n"
-                f"   possible: {self.possible_state_count:<67,d}\n"
-                f"    |found|: {self.abs_unique_state_count:<67d}\n"
+                f"   possible: {self.possible_state_count:<67.9g}\n"
+                f"    |found|: {self.abs_unique_state_count:<67,d}\n"
                 f"             {self.avg_state_coverage.str_label:-<66s}\n"
                 f"   coverage: {self.avg_state_coverage.summary_str:<67s}\n"
                 f" |coverage|: {self.abs_state_coverage:<12.4g}\n"

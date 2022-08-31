@@ -435,7 +435,7 @@ void ModelSplitter::visit_function(Function &n) {
   //     throw Error("Failed ot update func/proc parameter !! (still a non TypeExprID after processing) \t[dev-error]",p->loc);
 #endif
 
-  std::vector<Ptr<Decl>> _decls(n.decls.size());
+  std::vector<Ptr<Decl>> _decls/* (n.decls.size()) */;
   for (Ptr<Decl> &d : n.decls)
     if (auto vd = dynamic_cast<VarDecl *>(d.get())) {
       if (auto et_id = dynamic_cast<TypeExprID *>(vd->type.get())) {
@@ -447,13 +447,18 @@ void ModelSplitter::visit_function(Function &n) {
         insert_to_global_decls(decl);
         vd->type = Ptr<TypeExprID>(new TypeExprID(name, decl, vd->type->loc));
       }
-      _decls.push_back(d);
+      _decls.push_back(Ptr<VarDecl>(vd->clone()));
     } else if (auto td = dynamic_cast<TypeDecl *>(d.get())) {
       insert_to_global_decls(Ptr<TypeDecl>(td->clone()));
     } else if (auto cd = dynamic_cast<ConstDecl *>(d.get())) {
       insert_to_global_decls(Ptr<ConstDecl>(cd->clone()));
     }
   n.decls = _decls;
+#ifdef DEBUG
+  // for (Ptr<Decl> &d : n.decls)
+  //   if (d == nullptr)
+  //     throw Error("Function decls contains nullptr!! \t[dev-error]", n.loc);
+#endif
 }
 
 void ModelSplitter::_visit_quantifier(Quantifier& q) {

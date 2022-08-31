@@ -428,7 +428,8 @@ private:
     // if (_valid && tripped == nullptr) // if it didn't end in an error we need to: 
     if (tripped_inside == nullptr) // if it didn't end in an error we need to: 
       *json << ",\"error-trace\":[]"; // output empty error-trace
-    *json << ",\"results\":{\"depth\":"<< OPTIONS.depth-_fuel <<",\"valid\":" << _valid << ",\"is-error\":"<< _is_error
+    *json << ",\"results\":{\"depth\":"<< OPTIONS.depth-_fuel <<",\"valid\":null,\"is-error\":null"
+          << ",\"result\":\"" << std::to_string(status) << "\"" 
 #ifdef __ROMP__DO_MEASURE
                                 << ",\"active-time\":" << active_time << ",\"total-time\":" << total_time
 #else
@@ -486,7 +487,7 @@ private:
       out << out.dedent()                                                           << out.nl()
           << "ISSUE REPORT:"                                        << out.indent() << out.nl();
       if (rw.tripped != nullptr)
-        out << "Tripped: " << *rw.tripped                                           << out.nl();
+        out << "Tripped: \033[31m" << *rw.tripped << "\033[0m"                      << out.nl();
       if (rw.tripped_inside != nullptr)
         out << "  Trace: "                                          << out.indent() << out.nl()
             << *rw.tripped_inside                                   << out.dedent() << out.nl();
@@ -512,7 +513,7 @@ private:
 
   bool error_handler(id_t error_id) {
     tripped = new ModelMErrorError(error_id);
-    _valid = false; // legacy
+    _valid = true; // legacy
     _is_error = true; // legacy
     status = Result::MERROR_REACHED;
     return true;
