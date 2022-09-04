@@ -127,10 +127,10 @@ void print_help() {
                "                          (NOTE: only effective if --report-error\n"
                "                            is provided)\n"
 #endif
-               "  --r-history <int>     Specify how much of a history of rules\n"
-               "    | -rhl <int>          applied you want to see in a walks report\n"
-               "                          <int> - (required) size of history buffer\n"
-               "                            default: " << default_opts.history_length << "\n"
+              //  "  --r-history <int>     Specify how much of a history of rules\n"
+              //  "    | -rhl <int>          applied you want to see in a walks report\n"
+              //  "                          <int> - (required) size of history buffer\n"
+              //  "                            default: " << default_opts.history_length << "\n"
               //  "                          NOTE: larger the size == more RAM used.\n"
                "  --r-omit-state        Don't output the values in the model state\n"
                "    | -ros                in the results\n"
@@ -300,7 +300,7 @@ void parse_args(int argc, char **argv) {
                     << std::flush;
           exit(EXIT_FAILURE);
         }
-      } else { // OPTIONS.rand_seed = time(NULL); // no need
+      } else { // OPTIONS.rand_seed = std::time(NULL); // no need
         std::cerr << "invalid argument : -s/--seed requires you to provide a seed after the flag\n"
                      "                   else exclude it to use default value: (current_system_time)\n"
                   << std::flush;
@@ -377,24 +377,24 @@ void parse_args(int argc, char **argv) {
                      "        |-> default value will be used (default: " << _ROMP_RULE_COUNT << " (# of rules post ruleset expansion))\n"
                   << std::flush;
       }
-    } else if ("-rhl" == std::string(argv[i]) || "--r-history" == std::string(argv[i])) {
-      // OPTIONS.result_history = true;
-      if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
-        ++i;
-        try {
-          OPTIONS.history_length = std::stoul(argv[i], nullptr, 0);
-        } catch (std::invalid_argument &ia) {
-          std::cerr << "invalid argument : provided history length count was not a number (NaN) !! (for "
-                       "-rhl/--r-history flag)\n"
-                    << std::flush;
-          exit(EXIT_FAILURE);
-        } catch (std::out_of_range &oor) {
-          std::cerr << "invalid argument : provided history length count was out of range (for -rhl/--r-history flag) must "
-                       "be unsigned int (aka must be positive)\n"
-                    << std::flush;
-          exit(EXIT_FAILURE);
-        }
-      }
+    // } else if ("-rhl" == std::string(argv[i]) || "--r-history" == std::string(argv[i])) {
+    //   // OPTIONS.result_history = true;
+    //   if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
+    //     ++i;
+    //     try {
+    //       OPTIONS.history_length = std::stoul(argv[i], nullptr, 0);
+    //     } catch (std::invalid_argument &ia) {
+    //       std::cerr << "invalid argument : provided history length count was not a number (NaN) !! (for "
+    //                    "-rhl/--r-history flag)\n"
+    //                 << std::flush;
+    //       exit(EXIT_FAILURE);
+    //     } catch (std::out_of_range &oor) {
+    //       std::cerr << "invalid argument : provided history length count was out of range (for -rhl/--r-history flag) must "
+    //                    "be unsigned int (aka must be positive)\n"
+    //                 << std::flush;
+    //       exit(EXIT_FAILURE);
+    //     }
+    //   }
     } else if ("-e" == std::string(argv[i]) || "-re" == std::string(argv[i]) || "--report-error" == std::string(argv[i])) {
       OPTIONS.result = true;
     } else if ("-a" == std::string(argv[i]) || "--all" == std::string(argv[i]) || "--report-all" == std::string(argv[i]) || "-all" == std::string(argv[i])) {
@@ -463,10 +463,10 @@ void parse_args(int argc, char **argv) {
     
     // check for inconsistent or contradictory options here
     // TODO (OPTIONAL) check OPTIONS to make sure config is valid and output
-    if (OPTIONS.history_length == 0) {
-      std::cerr << "\nERROR : history size cannot be 0 (--r-history/-rhl)\n" << std::flush;
-      exit(EXIT_FAILURE);
-    }
+    // if (OPTIONS.history_length == 0) {
+    //   std::cerr << "\nERROR : history size cannot be 0 (--r-history/-rhl)\n" << std::flush;
+    //   exit(EXIT_FAILURE);
+    // }
     if (OPTIONS.attempt_limit == 0) {
       std::cerr << "\nERROR : attempt limit cannot be 0 (--attempt-limit/-al/--loop-limit/-ll/--attempt-guard/-ag)\n" << std::flush;
       exit(EXIT_FAILURE);
@@ -550,6 +550,16 @@ void parse_args(int argc, char **argv) {
 #endif
 }
 
+const stream_void Options::write_config(ostream_p& out) {
+  Options defaults;
+  out << out.indentation()
+      << "LAUNCH CONFIG:"                                           << out.indent() << out.nl()
+      << "threads: " << threads << ((threads==defaults.threads) ? " (default)" : "")<< out.nl()
+      << "  walks: " << walks << ((walks==defaults.walks) ? " (default)" : "")      << out.nl()
+      << "   seed: " << rand_seed << ((rand_seed==defaults.rand_seed) ? " (default:time)" : "")
+      << out.dedent()                                                               << out.nl()
+      << ""
+}
 
 } // namespace options
 } // namespace romp

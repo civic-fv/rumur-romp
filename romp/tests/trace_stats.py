@@ -20,7 +20,7 @@ from concurrent.futures import process
 from sys import argv
 import os
 from json import load as j_load, dumps as j_dump
-from typing import Any, Dict, List, Tuple, Type, Union as Un, MutableSet as Set, FrozenSet as FSet, NamedTuple, Callable
+from typing import Any, Dict, List, Sequence, Tuple, Type, Union as Un, MutableSet as Set, FrozenSet as FSet, NamedTuple, Callable
 from dataclasses import dataclass, field
 from math import inf, nan as NaN
 from io import StringIO
@@ -270,6 +270,22 @@ def get_state_simple(json:JSON_t) -> STATE_t:
                 raise Exception("simple state contained a mutable object (dict/obj or list/array)")
     return tuple(json)
 #? END def get_state_simple: NormState
+
+class Version(tuple):
+    "Simple multi part version handler"
+    def __init__(self, val:Un[str,Sequence]) -> None:
+        if isinstance(val,str):
+            tuple.__init__(self,Version.__parse_v_str(val))
+        elif isinstance(val, Sequence):
+            tuple.__init__(self,val)
+        elif isinstance(val,Num):
+            tuple.__init__(self,[val])
+        else:
+            raise Exception(f"`{type(val)!s}` is not a valid initializer for a Version")
+    @staticmethod
+    def __parse_v_str(val:str) -> Sequence:
+        return map(int,val.split('.'))
+#? END class Version
     
 
 @dataclass(init=False)
@@ -333,12 +349,20 @@ class TraceData:
                                 metadata['root-seed'],
                                 metadata
                                 )
-            self.id = TraceID(self.romp_id,
-                              _trace_dir,_file_name,
-                              int(metadata['trace-id']),
-                              int(metadata['seed']),
-                              int(metadata['start-id'])
-                              )
+            if Version(json['$version']) >= (0,0,2):
+                self.id = TraceID(self.romp_id,
+                                _trace_dir,_file_name,
+                                int(json['trace-id']),
+                                int(json['seed']),
+                                int(json['start-id'])
+                                )
+            else:
+                self.id = TraceID(self.romp_id,
+                                _trace_dir,_file_name,
+                                int(metadata['trace-id']),
+                                int(metadata['seed']),
+                                int(metadata['start-id'])
+                                )
             get_state: NormState = get_state_simple if bool(metadata['simple-trace']) else get_state_not_simple
             rule_misses, rule_hits = 0, 0
             state_misses, state_hits = 0, 0

@@ -60,6 +60,7 @@ CMakeFiles/**
 *.romp.H
 *.romp.hh
 *.romp.hpp
+*.romp
 
 /*.c
 /*.C

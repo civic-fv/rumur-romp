@@ -34,11 +34,8 @@
 #include <type_traits>
 #include <thread>
 #include <unordered_map>
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <unistd.h>
-#endif
+#include <chrono>
+#include <ctime>
 
 
 
@@ -49,6 +46,8 @@
 // #include "romp-json.hpp" // FOR PRE-CODEGEN LANGUAGE SUPPORT ONLY !! 
 #endif
 
+
+#define _ROMP_TRACE_JSON_VERSION "0.0.2"
 #ifdef DEBUG
 #define _ROMP_FLUSH_FREQ (32ul)
 #else
@@ -92,6 +91,11 @@ using nullptr_t=std::nullptr_t;
 namespace romp {
   struct RuleInfo; struct PropertyInfo; struct StartStateInfo; struct MErrorInfo; struct FunctInfo;
   struct RuleSet; struct StartState; struct Property;
+  class stream_void { nullptr_t none = nullptr; };
+  const stream_void S_VOID;
+  std::ostream& operator << (std::ostream& out, const stream_void& val) { return out; }
+  class ostream_p;
+  template <class O> class ojstream;
 }
 
 namespace __caller__ {
@@ -110,28 +114,30 @@ namespace __info__ { // LANGUAGE SERVER SUPPORT ONLY!!
 
 namespace romp {
   const std::string EMPTY_STR = "";
-  const time_t ROMP_ID = time(NULL);
+  const time_t ROMP_ID = std::time(nullptr);
+  const auto INIT_TIME = *std::localtime(&ROMP_ID);
+  const auto INIT_TIME_STAMP = std::put_time(&INIT_TIME, "%F_%T");
   namespace options {
 
     /**
      * @brief the number of concurrent threads a system supports \n
      *        \b NOTE: if \c 0 then number is unknown & user must provide with \c -ptn / \c --threads flags.
      */
-    const unsigned int __system_thread_count = ::std::thread::hardware_concurrency();
+    const unsigned int __SYSTEM_THREAD_COUNT = ::std::thread::hardware_concurrency();
     unsigned int get_default_thread_count() {
-      switch (__system_thread_count) {
+      switch (__SYSTEM_THREAD_COUNT) {
       case 0: return 0;
       case 1: 
       case 2:
         return 1;
       default:
-        return __system_thread_count - 2;
+        return __SYSTEM_THREAD_COUNT - 2;
       }
     }
 
 #define _ROMP_ATTEMPT_LIMIT_DEFAULT UINT16_MAX
     struct Options {
-      size_t history_length = 4;
+      // size_t history_length = 4;
       bool do_trace = false;
       unsigned int threads =  get_default_thread_count(); 
       size_t depth = 1024ul; // INT16_MAX;      
@@ -162,6 +168,20 @@ namespace romp {
       bool do_even_start = false;
       id_t start_id = ~0u;
       bool skip_launch_prompt = false;
+      const stream_void write_metadata_json(std::ostream& out) const;
+      const stream_void write_config(ostream_p& out) const noexcept;
+      const std::string get_trace_dir() const noexcept {
+        if (do_single) return trace_dir;
+        std::stringstream buf; buf << INIT_TIME_STAMP;
+        return trace_dir + "/" __model__filename "_" + buf.str();
+      }
+      const std::string get_trace_file_path(id_t rw_id) const noexcept {
+        if (not do_single)
+          return get_trace_dir() + "/" + std::to_string(rw_id) + ".trace.json";
+        std::stringstream buf; buf << INIT_TIME_STAMP;
+        return trace_dir + "/" + __model__filename + "_" + buf.str() + ".trace.json"; 
+      }
+      friend std::ostream& operator << (std::ostream&, const Options&);
     };
   }
   options::Options OPTIONS;
@@ -196,10 +216,6 @@ namespace romp {
   template <class O> struct ojstream;
   template<class O> void __jprint_exception(ojstream<O>& json, const std::exception& ex) noexcept;
   template<class O> void __jprint_exception(ojstream<O>& json, const IModelError& ex) noexcept;
-
-  class stream_void { nullptr_t none = nullptr; };
-  const stream_void S_VOID;
-  std::ostream& operator << (std::ostream& out, const stream_void& val) { return out; }
 
   template <class O>
   struct ojstream {
@@ -236,6 +252,8 @@ namespace romp {
       // if (--ex_level == 0) out << "],";
       return *this; 
     }
+    template<typename... Args>
+    static ojstream<O> make(Args &&...args) { return ojstream<O>(Args &&...args); }
     std::string str() { 
       if (std::is_base_of<std::stringstream, O>::value) return out.str(); 
       else return "Not Allowed for non stringstream base (json_str_t) !!\t[dev-error]";
@@ -264,12 +282,71 @@ namespace romp {
     template <typename T>
     inline ostream_p& operator << (const T val);  
   };
-    template <typename T>
-    inline ostream_p& ostream_p::operator << (const T val) { out << val; return *this; }  
-    // template <>
-    // inline ostream_p& ostream_p::operator << <std::_Setw>(const std::_Setw val) { _width = val._M_n; return *this; } 
-    template <>
-    inline ostream_p& ostream_p::operator << <stream_void>(const stream_void val) { return *this; } 
+  template <typename T>
+  inline ostream_p& ostream_p::operator << (const T val) { out << val; return *this; }  
+  // template <>
+  // inline ostream_p& ostream_p::operator << <std::_Setw>(const std::_Setw val) { _width = val._M_n; return *this; } 
+  template <>
+  inline ostream_p& ostream_p::operator << <stream_void>(const stream_void val) { return *this; }
+  inline std::ostream& operator << (std::ostream& out, const options::Options& opts) {
+    ostream_p _out(out,0); opts.write_config(_out); return out;
+  }
+
+  const stream_void options::Options::write_metadata_json(std::ostream& out) {
+    ojstream<std::ostream> json = ojstream<std::ostream>::make(out);
+    json << "{"
+                  "\"model\":\"" __model__filepath "\","
+                  "\"romp-id\":" << ROMP_ID << ","
+                  "\"root-seed\":\"" << seed_str << "\","
+                  "\"max-depth\":" << depth << ","
+                  "\"abs-attempt-limit\":" << std::to_string(_ROMP_ATTEMPT_LIMIT_DEFAULT) << ","
+                  "\"attempt-limit\":" << ((attempt_limit != _ROMP_ATTEMPT_LIMIT_DEFAULT
+                                              && deadlock) 
+                                            ? std::to_string(attempt_limit) 
+                                            : "null") << ","
+#ifdef __romp__ENABLE_symmetry
+                  "\"symmetry-reduction\":true,"
+#else
+                  "\"symmetry-reduction\":false,"
+#endif
+#ifdef __romp__ENABLE_assume_property
+                  "\"enable-assume\":true,"
+#else
+                  "\"enable-assume\":false,"
+#endif
+#ifdef __romp__ENABLE_cover_property
+                  "\"enable-cover\":" << complete_on_cover << ","
+                  "\"cover-count\":" << ((complete_on_cover) 
+                                          ? std::to_string(cover_count) 
+                                          : "null") << ","
+#else
+                  "\"enable-cover\":false,"
+                  "\"cover-count\":null,"
+#endif
+#ifdef __romp__ENABLE_liveness_property
+                  "\"enable-liveness\":" << liveness << ","
+                  "\"liveness-limit\":" << ((liveness) 
+                                            ? std::to_string(lcount) 
+                                            : "null") << ","
+#else
+                  "\"enable-liveness\":false,"
+                  "\"liveness-limit\":null,"
+#endif
+#ifdef __ROMP__DO_MEASURE
+                  "\"do-measure\":true,"
+#else
+                  "\"do-measure\":false,"
+#endif
+#ifdef __ROMP__SIMPLE_TRACE
+                  "\"simple-trace\":true,"
+#else
+                  "\"simple-trace\":false,"
+#endif
+                  "\"total-rule-count\":" << std::to_string(_ROMP_RULE_COUNT) << ","
+                  "\"possible-state-count\":" _ROMP_STATESPACE_COUNT_str ""
+                  "}";
+    return S_VOID;
+  }
 
   // template<> char* json_str_t::str() { return out.str(); }
 

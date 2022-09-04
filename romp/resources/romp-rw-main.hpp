@@ -20,22 +20,17 @@
 #include "romp-rw-options.hpp" // LANGUAGE SERVER SUPPORT ONLY !!
 #endif
 
-#include <unistd.h>
+// #include <unistd.h>
 namespace romp { 
   void init_trace_dir() {
-    std::string args = "mkdir -p \"" + OPTIONS.trace_dir + "\"";
-    system(args.c_str());
-  //   try {
-  //     std::ofstream test(OPTIONS.trace_dir + "/dir-test.tmp" );
-  //     if (test.fail()) {
-  //       std::string args = "mkdir -p " + OPTIONS.trace_dir;
-  //       system(args.c_str());
-  //     }
-  //   } catch (...) {
-  //     std::cerr << "\nERROR : Failed to verify trace dir exists: ``"<< OPTIONS.trace_dir << "`` \t[dev-error]\n";
-  //   }
-  // }
-}
+    std::string args = "mkdir -p \"" + OPTIONS.get_trace_dir() + "\"";
+    int err = system(args.c_str());
+    if (err) {
+      std::cerr << "\nERROR :: trace directory ``" << OPTIONS.get_trace_dir() << "`` does not exists and could not be created !!\n\n" 
+                << std::flush;
+      exit(EXIT_FAILURE);
+    }
+  }
 }
 
 int main(int argc, char **argv) {

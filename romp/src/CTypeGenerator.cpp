@@ -81,7 +81,7 @@ void CTypeGenerator::visit_array(const Array &n) {
         << *n.element_type 
         // << " data[" << *(n.index_type) << "];";
         << " data[" << count.get_str() << "]; "
-        << "size_t size() const {return (" << count.get_str() <<  "ul);}";
+        << "constexpr const size_t size() const {return (" << count.get_str() <<  "ul);}";
 
   // // The index for this array may be an enum declared inline:
   // //

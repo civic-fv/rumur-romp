@@ -42,11 +42,13 @@ std::filesystem::path make_path(std::string p) {
 
 static void parse_args(int argc, char **argv) {
   bool no_sym_provided = false;
+  unsigned int hist_len = ROMP_HISTORY_SIZE_PREPROCESSOR_VAR_DEFAULT_VALUE;
   for (;;) {
     static struct option options[] = {
         // clang-format off
         { "help",               no_argument,        0,  'h' },
         { "output",             required_argument,  0,  'o' },
+        { "rule-history-len",   required_argument,  0,  'r' },
         { "no-symmetry",        no_argument,        0,  's' },
         { "enable-assume",      no_argument,        0,  'a' },
         { "enable-cover",       no_argument,        0,  'c' },
@@ -85,9 +87,22 @@ static void parse_args(int argc, char **argv) {
         exit(EXIT_FAILURE);
       }
       out = o;
-      romp::CodeGenerator::output_file_path = make_path(optarg);
       break;
     }
+
+    case 'r': // --rule-history-length <size>
+      try {
+        hist_len = std::stoul(optarg, nullptr, 0);
+      } catch (std::invalid_argument &ia) {
+        std::cerr << "invalid argument : provided rule history length threads was not a number (NaN) !! (for -r/--rule-history-len flag)\n"
+                  << std::flush;
+        exit(EXIT_FAILURE);
+      } catch (std::out_of_range &oor) {
+        std::cerr << "invalid argument : provided rule history length threads was out of range !! (for -r/--rule-history-len flag)\n"
+                  << std::flush;
+        exit(EXIT_FAILURE);
+      }
+      break;
 
     case 's': // --no-symmetry
       no_sym_provided = true;
@@ -166,6 +181,18 @@ static void parse_args(int argc, char **argv) {
     in = dup_t(i, j);
     romp::CodeGenerator::input_file_path = make_path(in_filename);
   }
+  if (out == nullptr) {
+    auto o = std::make_shared<std::ofstream>(in_filename + ".romp.cpp");
+    if (!o->is_open()) {
+      std::cerr << "failed to open " << in_filename << ".romp.cpp\n";
+      exit(EXIT_FAILURE);
+    }
+    out = o;
+  }
+  romp::CodeGenerator::output_file_path = make_path(optarg);
+  romp::CodeGenerator::enable_preprocessor_option(
+      ROMP_HISTORY_SIZE_PREPROCESSOR_VAR " (" + std::to_string(hist_len) + "ul)"
+    );
   if (not no_sym_provided)
     romp::CodeGenerator::enable_preprocessor_option(ROMP_SYMMETRY_PREPROCESSOR_VAR);
 }

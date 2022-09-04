@@ -24,8 +24,8 @@
 #define _ROMP_LIVENESS_PROP_COUNT (2ul)
 #define _ROMP_STATESPACE_COUNT_str "null"
 
-#ifndef _ROMP_STATE_HISTORY_LEN
-#define _ROMP_STATE_HISTORY_LEN (16ul)
+#ifndef _ROMP_HIST_LEN
+#define _ROMP_HIST_LEN (4ul)
 #endif
 #ifndef _ROMP_RULESETS_LEN
 #define _ROMP_RULESETS_LEN (6ul)
@@ -56,6 +56,7 @@
 namespace __model__ {
   struct __State__;
 }
+#define __model__filepath "./<model-file>"
 #define __model__filename "<model-file>"
 #define __model__filename_contains_space false
 

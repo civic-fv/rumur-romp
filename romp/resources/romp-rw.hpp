@@ -57,8 +57,8 @@ private:
     const Rule* rule;
   };
   size_t history_level = 1;
-  size_t history_size = OPTIONS.history_length;
-  History* history = new History[OPTIONS.history_length];
+  constexpr size_t history_size() const {return _ROMP_HIST_LEN;}
+  History history[_ROMP_HIST_LEN];
   size_t history_start = 1;
   /**
    * @brief call if rule is applied to store what rule made the change in the
@@ -66,9 +66,9 @@ private:
    * @param r reference to the rule that was applied
    */
   void add_to_history(const Rule& r) {
-    history[history_level%history_size] = History{&r};
+    history[history_level%history_size()] = History{&r};
     ++history_level;
-    if (history_level >= history_size)
+    if (history_level >= history_size())
       ++history_start;
   }
 #ifdef __ROMP__DO_MEASURE
@@ -81,7 +81,7 @@ private:
   void init_state() noexcept {    
     const StartState& startstate = ::__caller__::STARTSTATES[start_id];
 #ifdef __ROMP__DO_MEASURE
-    start_time = time(NULL);
+    start_time = std::time(NULL);
 #endif
     try {
       startstate.initialize(state);
@@ -113,7 +113,7 @@ private:
       }
     // if (json != nullptr) delete json;
 #ifdef __ROMP__DO_MEASURE
-    active_time += time(NULL) - start_time;
+    active_time += std::time(NULL) - start_time;
 #endif
   }
 
@@ -157,20 +157,9 @@ public:
       start_id = rand_choice(rand_seed,0ul,_ROMP_STARTSTATES_LEN);
     state.__rw__ = this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ 
     if (OPTIONS.do_trace) {
-      json = new json_file_t(OPTIONS.trace_dir + std::to_string(init_rand_seed) + ".json");
-      // sim1Step = std::function<void()>([this]() {sim1Step_trace();});
-      *json << "{\"$type\":\""
-#ifdef __ROMP__SIMPLE_TRACE
-      "romp-simple-trace"
-#else
-      "romp-trace"
-#endif 
-      "\",\"$version\":\"0.0.1\"";
-      trace_metadata_out();
-      *json << ",\"trace\":[";
-    } else {
-      // sim1Step = std::function<void()>([this]() {sim1Step_no_trace();});
+      init_trace();
     }
+    for (int i=0; i<history_size(); ++i) history[i] = History{nullptr};
 #ifdef __romp__ENABLE_symmetry
     for (int i=0; i<_ROMP_RULESETS_LEN; ++i) next_rule[i] = 0;
 #endif
@@ -186,24 +175,24 @@ public:
     if (json != nullptr) delete json; 
     if (tripped != nullptr) delete tripped;
     if (tripped_inside != nullptr) delete tripped_inside; 
-    if (history != nullptr) delete[] history; 
+    // if (history != nullptr) delete[] history; 
   }
 
   inline void init() noexcept {
 #ifdef __ROMP__DO_MEASURE
-    init_time = time(NULL);
+    init_time = std::time(NULL);
 #endif
     init_state();
   }
 
   inline void finalize() noexcept {
 #ifdef __ROMP__DO_MEASURE
-    total_time = (time(NULL)-init_time);
+    total_time = (std::time(NULL)-init_time);
 #endif
     if (status == Result::UNKNOWN_CAUSE) {
     } else if (_attempt_limit <= 0) {
       status = Result::ATTEMPT_LIMIT_REACHED;
-      const Rule* _last = history[(history_level-1)%history_size].rule;
+      const Rule* _last = history[(history_level-1)%history_size()].rule;
       if (_last != nullptr)
         tripped_inside = new ModelRuleError(*_last);
       else tripped_inside = nullptr;
@@ -212,7 +201,7 @@ public:
 #ifdef __romp__ENABLE_cover_property
     } else if (complete_cover()) { 
       status = Result::COVER_COMPLETE;
-      tripped_inside = new ModelRuleError(*history[(history_level-1)%history_size].rule);
+      tripped_inside = new ModelRuleError(*history[(history_level-1)%history_size()].rule);
 #endif
     }
   }
@@ -265,7 +254,7 @@ private:
 
   void sim1Step_trace() noexcept {
 #ifdef __ROMP__DO_MEASURE
-    start_time = time(NULL);
+    start_time = std::time(NULL);
 #endif
     // const RuleSet& rs = rand_ruleset();
     // const Rule& r = rand_rule(rs);
@@ -313,7 +302,7 @@ private:
           status = Result::UNKNOWN_CAUSE;
         }
 #ifdef __ROMP__DO_MEASURE
-    active_time += time(NULL)-start_time;
+    active_time += std::time(NULL)-start_time;
 #endif
     if (_fuel % _ROMP_FLUSH_FREQ == 0)
       json->out.flush();
@@ -321,7 +310,7 @@ private:
 
   void sim1Step_no_trace() noexcept {
 #ifdef __ROMP__DO_MEASURE
-    start_time = time(NULL);
+    start_time = std::time(NULL);
 #endif
     // const RuleSet& rs= rand_ruleset();
     // const Rule& r= rand_rule(rs);
@@ -362,65 +351,24 @@ private:
           status = Result::UNKNOWN_CAUSE;
         }
 #ifdef __ROMP__DO_MEASURE
-    active_time += time(NULL)-start_time;
+    active_time += std::time(NULL)-start_time;
 #endif             
   }
 
-  void trace_metadata_out() const {
-    *json << ",\"metadata\":{"
-                  "\"model\":\"" __model__filepath "\","
-                  "\"romp-id\":" << ROMP_ID << ","
-                  "\"trace-id\":" << id << ","
-                  "\"root-seed\":\"" << OPTIONS.seed_str << "\","
-                  "\"seed\":" << init_rand_seed << ","
-                  "\"max-depth\":" << OPTIONS.depth << ","
-                  "\"abs-attempt-limit\":" << std::to_string(_ROMP_ATTEMPT_LIMIT_DEFAULT) << ","
-                  "\"attempt-limit\":" << ((OPTIONS.attempt_limit != _ROMP_ATTEMPT_LIMIT_DEFAULT
-                                              && OPTIONS.deadlock) 
-                                            ? std::to_string(OPTIONS.attempt_limit) 
-                                            : "null") << ","
-#ifdef __romp__ENABLE_symmetry
-                  "\"symmetry-reduction\":true,"
-#else
-                  "\"symmetry-reduction\":false,"
-#endif
-#ifdef __romp__ENABLE_assume_property
-                  "\"enable-assume\":true,"
-#else
-                  "\"enable-assume\":false,"
-#endif
-#ifdef __romp__ENABLE_cover_property
-                  "\"enable-cover\":" << OPTIONS.complete_on_cover << ","
-                  "\"cover-count\":" << ((OPTIONS.complete_on_cover) 
-                                          ? std::to_string(OPTIONS.cover_count) 
-                                          : "null") << ","
-#else
-                  "\"enable-cover\":false,"
-                  "\"cover-count\":null,"
-#endif
-#ifdef __romp__ENABLE_liveness_property
-                  "\"enable-liveness\":" << OPTIONS.liveness << ","
-                  "\"liveness-limit\":" << ((OPTIONS.liveness) 
-                                            ? std::to_string(OPTIONS.lcount) 
-                                            : "null") << ","
-#else
-                  "\"enable-liveness\":false,"
-                  "\"liveness-limit\":null,"
-#endif
-#ifdef __ROMP__DO_MEASURE
-                  "\"do-measure\":true,"
-#else
-                  "\"do-measure\":false,"
-#endif
+  void init_trace() const {
+    json = new json_file_t(OPTIONS.get_trace_file_path(id));
+    *json << "{\"$type\":\"";
 #ifdef __ROMP__SIMPLE_TRACE
-                  "\"simple-trace\":true,"
+    *json << "romp-simple-trace";
 #else
-                  "\"simple-trace\":false,"
-#endif
-                  "\"start-id\":" << start_id << ","
-                  "\"total-rule-count\":" << std::to_string(_ROMP_RULE_COUNT) << ","
-                  "\"possible-state-count\":" _ROMP_STATESPACE_COUNT_str ""
-                  "}";
+    *json << "romp-trace";
+#endif 
+    *json << "\",\"$version\":\"" _ROMP_TRACE_JSON_VERSION "\"";
+    *json << ",\"trace-id\":" << id 
+          << ",\"seed\":" << init_rand_seed
+          << ",\"start-id\":" << start_id
+          << ",\"metadata\":" << OPTIONS.write_metadata_json(json->out)
+          << ",\"trace\":[";
   }
 
   void trace_result_out() {
@@ -479,7 +427,7 @@ private:
     if (rw.history_start > 1)
       out << out.indentation() << "-(..) ... forgotten past ...\n";
     for (size_t i=rw.history_start; i<rw.history_level; ++i)
-      out << out.indentation() << "-(" << i <<") " << *(rw.history[i%rw.history_size].rule) << "\n";
+      out << out.indentation() << "-(" << i <<") " << *(rw.history[i%rw.history_size()].rule) << "\n";
     out << out.dedent() << "]"                                                      << out.nl();
     if (OPTIONS.result_emit_state)
       out << "  State: " <<  out.indent() << rw.state << out.dedent()               ;// << out.nl();
@@ -608,7 +556,7 @@ id_t RandWalker::next_id = 0u;
  *        to a \c std::ostream as well.
  */
 class ResultTree {
-  time_t start_time = time(NULL);
+  time_t start_time = std::time(NULL);
   time_t end_time = 0;
   size_t rules_fired = 0;
   size_t size = 0;
@@ -694,10 +642,10 @@ public:
     ++size;
     rules_fired += res->depth;
   }
-  void start_timer() { start_time = time(NULL); }
-  void reset_timer() { start_time = time(NULL); }
-  void stop_timer() { end_time = time(NULL); }
-  time_t get_time() { return ((end_time>0) ? end_time : time(NULL)) - start_time; }
+  void start_timer() { start_time = std::time(NULL); }
+  void reset_timer() { start_time = std::time(NULL); }
+  void stop_timer() { end_time = std::time(NULL); }
+  time_t get_time() { return ((end_time>0) ? end_time : std::time(NULL)) - start_time; }
   friend std::ostream& operator << (std::ostream& out, const ResultTree& results) {
     ostream_p _out(out);
     _out << results;
@@ -886,7 +834,7 @@ public:
                                   << "  (|n|=" << color << abs_issues << "\033[0m)\n"
         << out.indentation() << "total rules applied: " << r.rules_fired << '\n'
         << out.indentation() << "  avg rules applied: " << std::setprecision(1) << r.rules_fired/r.size << '\n'
-        << out.indentation() << "         time taken: " << (((r.end_time > 0) ? r.end_time : time(NULL)) - r.start_time) << "s\n";
+        << out.indentation() << "         time taken: " << (((r.end_time > 0) ? r.end_time : std::time(NULL)) - r.start_time) << "s\n";
     out.out << std::endl;
     return out;
   }
