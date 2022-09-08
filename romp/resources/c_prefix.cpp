@@ -393,11 +393,11 @@ namespace romp {
   }
   std::ostream& operator << (std::ostream& out, const location& loc) { 
     out << ((__model__filename_contains_space) ? "\"" __model__filename "\":" : __model__filename ":");
-    if (loc.start.row == loc.end.row)
+    if (loc.start.row == loc.end.row) {
       out << loc.start.row << ',' << loc.start.col;
       if (loc.start.col != loc.end.col)
         out << '-' << loc.end.col;
-    else
+    } else
       out << loc.start << '-' << loc.end;
     // if (loc.model_obj != "")
     //   out << " in ``" << loc.model_obj << "``";
