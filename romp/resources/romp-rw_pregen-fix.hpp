@@ -20,6 +20,7 @@
 #define __romp__ENABLE_assume_property
 #define __romp__ENABLE_cover_property
 #define __romp__ENABLE_liveness_property
+#define __ROMP__DO_MEASURE
 #define _ROMP_COVER_PROP_COUNT (2ul)
 #define _ROMP_LIVENESS_PROP_COUNT (2ul)
 #define _ROMP_STATESPACE_COUNT_str "null"

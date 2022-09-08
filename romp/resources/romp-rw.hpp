@@ -22,6 +22,12 @@
 // << =================================== Type Declarations ==================================== >>
 
 namespace romp {
+  using duration_ms_t = std::chrono::duration<long long,std::milli>;
+  using time_ms_t = std::chrono::time_point<std::chrono::high_resolution_clock,std::chrono::duration<long long,std::milli>>;
+
+  time_ms_t time_ms() {
+    return std::chrono::time_point_cast<duration_ms_t>(std::chrono::high_resolution_clock::now());
+  }
 
 /**
  * @brief helper function rand_choice 
@@ -39,7 +45,7 @@ class RandWalker : public ::romp::IRandWalker {
 private:
   static id_t next_id;
   const id_t id;
-  size_t start_id;
+  id_t start_id;
   const unsigned int init_rand_seed;
   unsigned int rand_seed;
   State_t state;
@@ -72,16 +78,16 @@ private:
       ++history_start;
   }
 #ifdef __ROMP__DO_MEASURE
-  time_t init_time;
-  time_t start_time;
-  time_t active_time = 0;
-  time_t total_time = 0;
+  time_ms_t init_time;
+  time_ms_t start_time;
+  duration_ms_t active_time = duration_ms_t(0l);
+  duration_ms_t total_time = duration_ms_t(0l);
 #endif
   
   void init_state() noexcept {    
     const StartState& startstate = ::__caller__::STARTSTATES[start_id];
 #ifdef __ROMP__DO_MEASURE
-    start_time = std::time(NULL);
+    start_time = time_ms();
 #endif
     try {
       startstate.initialize(state);
@@ -113,7 +119,7 @@ private:
       }
     // if (json != nullptr) delete json;
 #ifdef __ROMP__DO_MEASURE
-    active_time += std::time(NULL) - start_time;
+    active_time += time_ms() - start_time;
 #endif
   }
 
@@ -180,14 +186,14 @@ public:
 
   inline void init() noexcept {
 #ifdef __ROMP__DO_MEASURE
-    init_time = std::time(NULL);
+    init_time = time_ms();
 #endif
     init_state();
   }
 
   inline void finalize() noexcept {
 #ifdef __ROMP__DO_MEASURE
-    total_time = (std::time(NULL)-init_time);
+    total_time = (time_ms() - init_time);
 #endif
     if (status == Result::UNKNOWN_CAUSE) {
     } else if (_attempt_limit <= 0) {
@@ -215,7 +221,11 @@ public:
                   id,init_rand_seed,start_id,
                   status,
                   OPTIONS.depth - _fuel,
-                  tripped,tripped_inside};
+                  tripped,tripped_inside
+#ifdef __ROMP__DO_MEASURE
+                  ,active_time, total_time
+#endif
+                  };
     tripped = nullptr;
     tripped_inside = nullptr;
     return result;
@@ -254,7 +264,7 @@ private:
 
   void sim1Step_trace() noexcept {
 #ifdef __ROMP__DO_MEASURE
-    start_time = std::time(NULL);
+    start_time = time_ms();
 #endif
     // const RuleSet& rs = rand_ruleset();
     // const Rule& r = rand_rule(rs);
@@ -302,7 +312,7 @@ private:
           status = Result::UNKNOWN_CAUSE;
         }
 #ifdef __ROMP__DO_MEASURE
-    active_time += std::time(NULL)-start_time;
+    active_time += time_ms() - start_time;
 #endif
     if (_fuel % _ROMP_FLUSH_FREQ == 0)
       json->out.flush();
@@ -310,7 +320,7 @@ private:
 
   void sim1Step_no_trace() noexcept {
 #ifdef __ROMP__DO_MEASURE
-    start_time = std::time(NULL);
+    start_time = time_ms();
 #endif
     // const RuleSet& rs= rand_ruleset();
     // const Rule& r= rand_rule(rs);
@@ -351,11 +361,11 @@ private:
           status = Result::UNKNOWN_CAUSE;
         }
 #ifdef __ROMP__DO_MEASURE
-    active_time += std::time(NULL)-start_time;
+    active_time += time_ms() - start_time;
 #endif             
   }
 
-  void init_trace() const {
+  void init_trace() {
     json = new json_file_t(OPTIONS.get_trace_file_path(id));
     *json << "{\"$type\":\"";
 #ifdef __ROMP__SIMPLE_TRACE
@@ -367,11 +377,11 @@ private:
     *json << ",\"trace-id\":" << id 
           << ",\"seed\":" << init_rand_seed
           << ",\"start-id\":" << start_id
-          << ",\"metadata\":" << OPTIONS.write_metadata_json(json->out)
+          << ",\"metadata\":" << OPTIONS // .write_metadata_json(json->out)
           << ",\"trace\":[";
   }
 
-  void trace_result_out() {
+  void trace_result_out() const {
     *json << "]"; // close trace
     // if (_valid && tripped == nullptr) // if it didn't end in an error we need to: 
     if (tripped_inside == nullptr) // if it didn't end in an error we need to: 
@@ -379,7 +389,8 @@ private:
     *json << ",\"results\":{\"depth\":"<< OPTIONS.depth-_fuel <<",\"valid\":null,\"is-error\":null"
           << ",\"result\":\"" << std::to_string(status) << "\"" 
 #ifdef __ROMP__DO_MEASURE
-                                << ",\"active-time\":" << active_time << ",\"total-time\":" << total_time
+                                << ",\"active-time\":" << active_time.count() 
+                                << ",\"total-time\":" << total_time.count()
 #else
                                 << ",\"active-time\":null,\"total-time\":null" 
 #endif
@@ -391,24 +402,31 @@ private:
     json->out.flush();
   }
 
+public:
+  bool do_report() const {
+    if (OPTIONS.report_all) return true;
+    switch (status) {
+      case Result::UNKNOWN_CAUSE:
+        return true;
+      case Result::PROPERTY_VIOLATED:
+      case Result::MERROR_REACHED:
+        return OPTIONS.report_error;
+#ifdef __romp__ENABLE_assume_property
+      case Result::ASSUMPTION_VIOLATED:
+        return OPTIONS.r_assume;
+#endif
+#ifdef __romp__ENABLE_cover_property
+      case Result::COVER_COMPLETE:
+        return OPTIONS.r_cover;
+#endif
+      default: return false;
+    }
+  }
+
   // called when trying to print the results of the random walker when it finishes (will finish up trace file if necessary too)
   //  the calling context should ensure that the RandWalker is not being used else where & safe output to the ostream 
   friend ostream_p& operator << (ostream_p& out, const RandWalker& rw) {
     std::string res_color = get_color(rw.status);
-    if ((rw.status == Result::UNKNOWN_CAUSE // don't output non-error state unless --report-all
-          || rw.status == Result::PROPERTY_VIOLATED
-          || rw.status == Result::MERROR_REACHED)
-        && not (OPTIONS.result_all)) return out;
-#ifdef __romp__ENABLE_assume_property
-    if (rw.status == Result::ASSUMPTION_VIOLATED && not OPTIONS.r_assume) return out; // don't output assumption violations unless --report-assume
-#endif
-// #ifdef __romp__ENABLE_liveness_property
-//     if (OPTIONS.r_assume) // don't output attempt guard violations when --no-deadlock enabled
-// #endif
-    if ((OPTIONS.deadlock == false || OPTIONS.result_all == false) 
-        && rw.status == Result::ATTEMPT_LIMIT_REACHED) 
-      return out; // don't output attempt guard violations when --no-deadlock enabled
-    // ostream_p out(out_,0);
     out << out.nl()
         << "======== BEGIN :: Report of Walk #" << rw.id << " ========"             << out.nl()
         << "BASIC INFO: "                                           << out.indent() << out.nl()
@@ -446,7 +464,7 @@ private:
     out << out.dedent()                                                             << out.nl()
         << "TIME REPORT:"                                           << out.indent() << out.nl()
         << "Active Time: " << rw.active_time                                        << out.nl()           
-        << " Total Time: " << rw.total_time                                         << out.nl();
+        << " Total Time: " << rw.total_time                                         ;// << out.nl();
 #endif
     out << out.dedent()                                                             << out.nl()
         << "======== END :: Report of Walk #" << rw.id << " ========"               << out.nl();
@@ -556,10 +574,14 @@ id_t RandWalker::next_id = 0u;
  *        to a \c std::ostream as well.
  */
 class ResultTree {
-  time_t start_time = std::time(NULL);
-  time_t end_time = 0;
+  time_ms_t start_time = time_ms();
+  time_ms_t end_time;
   size_t rules_fired = 0;
   size_t size = 0;
+#ifdef __ROMP__DO_MEASURE
+  duration_ms_t total_walk_active_time = duration_ms_t(0);
+  duration_ms_t total_walk_time = duration_ms_t(0);
+#endif
   std::vector<const Result*> unknown_causes;
   std::vector<const Result*> attempt_limits_reached;
   std::vector<const Result*> max_depths_reached;
@@ -639,13 +661,17 @@ public:
         unknown_causes.push_back(res);
         break;
     }
+#ifdef __ROMP__DO_MEASURE
+    total_walk_active_time += res->active_time;
+    total_walk_time += res->total_time;
+#endif
     ++size;
     rules_fired += res->depth;
   }
-  void start_timer() { start_time = std::time(NULL); }
-  void reset_timer() { start_time = std::time(NULL); }
-  void stop_timer() { end_time = std::time(NULL); }
-  time_t get_time() { return ((end_time>0) ? end_time : std::time(NULL)) - start_time; }
+  void start_timer() { start_time = time_ms(); }
+  void reset_timer() { start_time = time_ms(); }
+  void stop_timer() { end_time = time_ms(); }
+  duration_ms_t get_time() const { return end_time - start_time; }
   friend std::ostream& operator << (std::ostream& out, const ResultTree& results) {
     ostream_p _out(out);
     _out << results;
@@ -667,9 +693,12 @@ public:
         out.indent();
         for (const auto& a : _a.second) {
           out << out.indentation()
-              << "-[w#" << a->id << "] seed=" << a->root_seed << " start-id=" << a->start_id <<" depth=" << a->depth << "\n";
+              << "-[w#" << a->id << "] seed=" << a->root_seed << " start-id=" << a->start_id <<" depth=" << a->depth;
+#ifdef __ROMP__DO_MEASURE
+          out << " t=" << a->active_time << " (|t|=" << a->total_time << ')';
+#endif
           if (not a->tripped->is_flat())
-            out << out.indentation()
+            out << out.nl()
                 << "        quantifiers(" << a->tripped->quants() << ")\n";
           out << out.indentation() 
               << ((a->tripped->is_generic())
@@ -696,8 +725,11 @@ public:
         i = 1;
         for (const auto& _al : r.attempt_limits_reached) {
           out << out.indentation()
-              << "-(" << i << ") [w#" << _al->id << "] seed=" << _al->root_seed << " start-id=" << _al->start_id <<" depth=" << _al->depth << "\n"
-              << out.indentation()
+              << "-(" << i << ") [w#" << _al->id << "] seed=" << _al->root_seed << " start-id=" << _al->start_id <<" depth=" << _al->depth;
+#ifdef __ROMP__DO_MEASURE
+          out << " t=" << _al->active_time << " (|t|=" << _al->total_time << ')';
+#endif
+          out << out.nl()
               << "        last-rule=";
           if (_al->inside != nullptr) {
             out << '{' << _al->inside->get_type() << " \"" << _al->inside->label() << "\"";
@@ -712,15 +744,18 @@ public:
       out.out << out._dedent() << std::endl;
      }
 #ifdef __romp__ENABLE_cover_property
-     if (OPTIONS.result_all && r.completed_covers.size() > 0) {
+     if (OPTIONS.r_cover && r.completed_covers.size() > 0) {
       out << out.indentation() << "\033[1;4mCOVER(S) COMPLETED (n=" 
                 << r.completed_covers.size() << "):\033[0m\n";
         out.indent();
         i = 1;
         for (const auto& _c : r.completed_covers) {
           out << out.indentation()
-              << "-(" << i << ") [w#" << _c->id << "] seed=" << _c->root_seed << " start-id=" << _c->start_id <<" depth=" << _c->depth << "\n"
-              << out.indentation()
+              << "-(" << i << ") [w#" << _c->id << "] seed=" << _c->root_seed << " start-id=" << _c->start_id <<" depth=" << _c->depth;
+#ifdef __ROMP__DO_MEASURE
+          out << " t=" << _c->active_time << " (|t|=" << _c->total_time << ')';
+#endif
+          out << out.nl()
               << "        last-rule={" << _c->inside->get_type() << " \"" << _c->inside->label() << "\"";
               if (not _c->inside->is_flat())
                 out << " quantifiers(" << _c->inside->quants() << ")";
@@ -730,14 +765,18 @@ public:
       out.out << out._dedent() << std::endl;
      }
 #endif
-    if (OPTIONS.result_all && r.max_depths_reached.size() > 0) {
+    if (OPTIONS.report_all && r.max_depths_reached.size() > 0) {
       out << out.indentation() << "\033[1;4mMAX DEPTH(S) REACHED (n=" 
-                << r.max_depths_reached.size() << "):\033[0m\n";
+                << r.max_depths_reached.size() << "):\033[0m";
         out.indent();
         i = 1;
-        for (const auto& _r : r.max_depths_reached)
-          out << out.indentation()
-              << "-(" << i++ << ") [w#" << _r->id << "] seed=" << _r->root_seed << " start-id=" << _r->start_id << "\n";
+        for (const auto& _r : r.max_depths_reached) {
+          out << out.nl()
+              << "-(" << i++ << ") [w#" << _r->id << "] seed=" << _r->root_seed << " start-id=" << _r->start_id;
+#ifdef __ROMP__DO_MEASURE
+          out << " t=" << _r->active_time << " (|t|=" << _r->total_time << ')';
+#endif
+        }
       out.out << out._dedent() << std::endl;
     }
     if (r.n_merrors_reached > 0) {
@@ -752,8 +791,11 @@ public:
         out.indent();
         for (const auto& a : _a.second) {
           out << out.indentation()
-              << "-[w#" << a->id << "] seed=" << a->root_seed << " start-id=" << a->start_id <<" depth=" << a->depth << "\n"
-              << out.indentation()
+              << "-[w#" << a->id << "] seed=" << a->root_seed << " start-id=" << a->start_id <<" depth=" << a->depth
+#ifdef __ROMP__DO_MEASURE
+              << " t=" << a->active_time << " (|t|={" << a->total_time << ')'
+#endif
+              << out.nl()
               << "        IN-RULE"
               << "={" << a->inside->get_type() << " \"" << a->inside->label() << "\"";
           if (not a->inside->is_flat())
@@ -779,16 +821,19 @@ public:
         out.indent();
         int j = 0;
         for (const auto& a : _a.second) {
-          if (j > 2 && not (OPTIONS.result_all || OPTIONS.result)) { 
+          if (j > 2 && not (OPTIONS.report_all || OPTIONS.report_error)) { 
             out << out.indentation() << "-[..] ... " << _a.second.size()-j << " more ...\n"; 
             break;
           }
           out << out.indentation()
-              << "-[w#" << a->id << "] seed=" << a->root_seed << " start-id=" << a->start_id <<" depth=" << a->depth << "\n";
+              << "-[w#" << a->id << "] seed=" << a->root_seed << " start-id=" << a->start_id <<" depth=" << a->depth;
+#ifdef __ROMP__DO_MEASURE
+          out << " t=" << a->active_time << " (|t|=" << a->total_time << ')';
+#endif
           if (not a->tripped->is_flat())
-            out << out.indentation()
-                << "        quantifiers(" << a->tripped->quants() << ")\n";
-          out << out.indentation()
+            out << out.nl()
+                << "        quantifiers(" << a->tripped->quants() << ")";
+          out << out.nl()
               << ((a->tripped->is_generic())
                   ? "        inside"
                   : "        last-rule")
@@ -805,7 +850,7 @@ public:
       }
       out.out << out._dedent() << std::endl;
     }
-    if (OPTIONS.result_all && r.unknown_causes.size() > 0) {
+    if (OPTIONS.report_all && r.unknown_causes.size() > 0) {
       issues += r.unknown_causes.size();
       abs_issues += r.unknown_causes.size();
       out << out.indentation() << "\033[41;37;1;4mUNKNOWN ERROR(S) (n=" 
@@ -816,7 +861,10 @@ public:
           out << out.indentation()
               << "-(" << i++ << ") ``" << ({_r->inside->write_root_excpt_what(out.out); "''\n";})
               << out._indent()
-              << "-[w#" << _r->id << "] seed=" << _r->root_seed << " start-id=" << _r->start_id << " depth=" << _r->depth << "\n"
+              << "-[w#" << _r->id << "] seed=" << _r->root_seed << " start-id=" << _r->start_id << " depth=" << _r->depth
+#ifdef __ROMP__DO_MEASURE
+              << " t=" << _r->active_time << " (|t|=" << _r->total_time << ")\n"
+#endif
               << "        inside={"
               << _r->inside->get_type()
               << " \"" << _r->inside->label() << '"';
@@ -828,14 +876,22 @@ public:
       out.out << out._dedent() << "\033[0m" << std::endl;
     }
     std::string color = ((issues>0) ? "\033[30;1;4m" : "\033[32;1m");
-    out << out.indentation() << '\n'
-        << out.indentation() << "\033[1;4mSUMMARY:\033[0m\n" << out.indent()
-        << out.indentation() << "       issues found: n=" << color << issues << "\033[0m"
-                                  << "  (|n|=" << color << abs_issues << "\033[0m)\n"
-        << out.indentation() << "total rules applied: " << r.rules_fired << '\n'
-        << out.indentation() << "  avg rules applied: " << std::setprecision(1) << r.rules_fired/r.size << '\n'
-        << out.indentation() << "         time taken: " << (((r.end_time > 0) ? r.end_time : std::time(NULL)) - r.start_time) << "s\n";
-    out.out << std::endl;
+    out << out.nl()
+        << out.nl() << "\033[1;4mSUMMARY:\033[0m" << out.indent()
+        << out.nl() << "       issues found: n=" << color << issues << "\033[0m"
+                                          << "  (|n|=" << color << abs_issues << "\033[0m)"
+        << out.nl() << "total rules applied: " << r.rules_fired
+        << out.nl() << "  avg rules applied: " << std::setprecision(1) << (r.rules_fired/r.size)
+#ifndef __ROMP__DO_MEASURE
+        << out.nl() << "            runtime: " << r.get_time();
+#else
+        << out.nl() << "    total walk time: t=" << r.total_walk_active_time << " "
+                                          "(|t|=" << r.total_walk_time << ")" 
+        << out.nl() << "     mean walk time: mean(t)=" << (r.total_walk_active_time/r.size) << " "
+                                           "(mean(|t|)=" << (r.total_walk_time/r.size) << ')' 
+        << out.nl() << "     actual runtime: " << r.get_time();
+#endif
+    out.out << "\n\n" << std::flush;
     return out;
   }
 };
@@ -856,7 +912,7 @@ unsigned int gen_random_seed(unsigned int &root_seed) {
  */
 std::vector<RandWalker*> gen_random_walkers(unsigned int root_seed)   {
   std::vector<RandWalker*> rws;
-  for(int i=0; i<OPTIONS.random_walkers; i++) {
+  for(int i=0; i<OPTIONS.walks; i++) {
     rws.push_back(new RandWalker(gen_random_seed(root_seed)));
   }
   return rws;
@@ -917,7 +973,13 @@ void launch_threads(unsigned int rand_seed) {
   std::mutex out_queue;
   // std::mutex _in_queue_mutex;
   // std::mutex _out_queue_mutex;
-  
+
+#ifdef DEBUG
+  const auto pause_delay = std::chrono::milliseconds(250); //DEBUG SLOW ME DOWN
+#else
+  const auto pause_delay = std::chrono::milliseconds(5);
+#endif
+
   auto lambda = [&]() { // code the threads run
     // std::lock_guard<std::mutex> in_queue(_in_queue_mutex);
     // std::lock_guard<std::mutex> out_queue(_out_queue_mutex);
@@ -948,9 +1010,9 @@ void launch_threads(unsigned int rand_seed) {
     in_queue.unlock();
   };
 
-  ResultTree summary;
   ostream_p out(std::cout,0);
   std::vector<std::thread> threads;
+  ResultTree summary;
   // std::vector<std::thread> threads(OPTIONS.threads);
   for (size_t i=0; i<OPTIONS.threads; ++i) {
     threads.push_back(std::thread(lambda));
@@ -958,8 +1020,7 @@ void launch_threads(unsigned int rand_seed) {
   // std::lock_guard<std::mutex> in_queue(_in_queue_mutex);
   // std::lock_guard<std::mutex> out_queue(_out_queue_mutex);
 
-  sleep(1u);
-  if (OPTIONS.result) {
+  if (OPTIONS.report_any()) {
     out << "\n\033[34;1m"
            "===================================\n"
            "  WALKS OF INTEREST ROMP RESULTS:  \n"
@@ -967,9 +1028,10 @@ void launch_threads(unsigned int rand_seed) {
            "\033[0m\n\n";
     out.out.flush();
   }
+  std::this_thread::sleep_for(pause_delay*2);
   while (true) {
-    for (int _; _<560; ++_) { _++; }  //DEBUG SLOW ME DOWN
     while (true) {  // handel outputs
+      std::this_thread::sleep_for(pause_delay);
       out_queue.lock();
       if (not (out_rws.size() > 0)) {
         out_queue.unlock();
@@ -979,16 +1041,16 @@ void launch_threads(unsigned int rand_seed) {
       out_rws.pop();
       out_queue.unlock();
       if (rw != nullptr) {
-        if (OPTIONS.result)
+        if (rw->do_report())
           std::cout << *rw << std::endl;
         // todo get the results
         summary.insert(rw->get_result());
         delete rw;
       }
     }
-    for (int _; _<560; ++_) { _++; }  //DEBUG SLOW ME DOWN
+    std::this_thread::sleep_for(pause_delay); 
     out_queue.lock();
-    if (not (walks_done < OPTIONS.random_walkers)) {
+    if (not (walks_done < OPTIONS.walks)) {
       out_queue.unlock();
       break;
     }
@@ -1049,6 +1111,7 @@ void launch_single(unsigned int rand_seed) {
   rw->finalize();
   std::cout << "SINGLE ROMP RESULT:\n\t" 
             << *rw << '\n' << std::endl;
+  summary.stop_timer();
   summary.insert(rw->get_result());
   delete rw;
   print_romp_results_summary(summary);

@@ -87,6 +87,7 @@ static void parse_args(int argc, char **argv) {
         exit(EXIT_FAILURE);
       }
       out = o;
+      romp::CodeGenerator::output_file_path = make_path(optarg);
       break;
     }
 
@@ -188,8 +189,8 @@ static void parse_args(int argc, char **argv) {
       exit(EXIT_FAILURE);
     }
     out = o;
+    romp::CodeGenerator::output_file_path = make_path(in_filename + ".romp.cpp");
   }
-  romp::CodeGenerator::output_file_path = make_path(optarg);
   romp::CodeGenerator::enable_preprocessor_option(
       ROMP_HISTORY_SIZE_PREPROCESSOR_VAR " (" + std::to_string(hist_len) + "ul)"
     );

@@ -127,6 +127,12 @@ void print_help() {
                "                          (NOTE: only effective if --report-error\n"
                "                            is provided)\n"
 #endif
+#ifdef __romp__ENABLE_cover_property
+               "                          This also performs --report-assume/-ra.\n"
+               "  --report-cover        Report walks that ``complete on cover''\n"
+               "    | --r-cover           (see --complete-on-cover for more info)\n"
+               "    | -rc                 \n"
+#endif
               //  "  --r-history <int>     Specify how much of a history of rules\n"
               //  "    | -rhl <int>          applied you want to see in a walks report\n"
               //  "                          <int> - (required) size of history buffer\n"
@@ -267,7 +273,7 @@ void parse_args(int argc, char **argv) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
         try {
-          OPTIONS.random_walkers = std::stoul(argv[i], nullptr, 0);
+          OPTIONS.walks = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument &ia) {
           std::cerr << "invalid argument : provided number of random walkers was not a number (NaN) !! (for "
                        "-w/--walk-count flag)\n"
@@ -349,6 +355,8 @@ void parse_args(int argc, char **argv) {
           exit(EXIT_FAILURE);
         }
       }
+    } else if ("-rc" == std::string(argv[i]) || "--r-cover" == std::string(argv[i]) || "--report-cover" == std::string(argv[i])) {
+      OPTIONS.r_cover = true;
 #endif
     } else if ("-ag" == std::string(argv[i]) || "-ll" == std::string(argv[i]) || "-al" == std::string(argv[i]) 
                 || "--attempt-guard" == std::string(argv[i]) || "--loop-limit" == std::string(argv[i]) || "--attempt-limit" == std::string(argv[i])) {
@@ -396,12 +404,19 @@ void parse_args(int argc, char **argv) {
     //     }
     //   }
     } else if ("-e" == std::string(argv[i]) || "-re" == std::string(argv[i]) || "--report-error" == std::string(argv[i])) {
-      OPTIONS.result = true;
+      OPTIONS.report_error = true;
     } else if ("-a" == std::string(argv[i]) || "--all" == std::string(argv[i]) || "--report-all" == std::string(argv[i]) || "-all" == std::string(argv[i])) {
-      OPTIONS.result = true;
-      OPTIONS.result_all = true;
+      OPTIONS.report_error = true;
+      OPTIONS.report_all = true;
 #ifdef __romp__ENABLE_assume_property
       OPTIONS.r_assume = true;
+#else
+      OPTIONS.r_assume = false;
+#endif
+#ifdef __romp__ENABLE_cover_property
+      OPTIONS.r_cover = true;
+#else
+      OPTIONS.r_cover = false;
 #endif
     } else if ("-rst" == std::string(argv[i]) || "--show-type" == std::string(argv[i]) || "--r-show-type" == std::string(argv[i])) {
       OPTIONS.result_show_type = true;
@@ -504,7 +519,7 @@ void parse_args(int argc, char **argv) {
         std::cerr << "\nERROR : number of threads cannot be 0 (--threads/-ptn)\n" << std::flush;
         exit(EXIT_FAILURE);
       }
-      if (OPTIONS.random_walkers == 0) {
+      if (OPTIONS.walks == 0) {
         std::cerr << "\nERROR : number of walks cannot be 0 (--walks/-w)\n" << std::flush;
         exit(EXIT_FAILURE);
       }
@@ -519,11 +534,11 @@ void parse_args(int argc, char **argv) {
                   << OPTIONS.threads << ")\n"
                   << std::flush;
       if (threads_provided && not walks_provided)
-        OPTIONS.random_walkers = _ROMP_THREAD_TO_RW_RATIO * OPTIONS.threads;  // post parse assign default value
-      if (threads_provided && walks_provided && OPTIONS.threads > OPTIONS.random_walkers) {
-        OPTIONS.threads = OPTIONS.random_walkers;
+        OPTIONS.walks = _ROMP_THREAD_TO_RW_RATIO * OPTIONS.threads;  // post parse assign default value
+      if (threads_provided && walks_provided && OPTIONS.threads > OPTIONS.walks) {
+        OPTIONS.threads = OPTIONS.walks;
         std::cerr << "\nWARNING : you specified more threads than walks !!\n"
-                      "        |-> we will only launch `" << OPTIONS.random_walkers << "` threads!\n"
+                      "        |-> we will only launch `" << OPTIONS.walks << "` threads!\n"
                   << std::flush;
       }
     }
@@ -532,7 +547,7 @@ void parse_args(int argc, char **argv) {
                   << std::flush;
     // warnings and end with errors as appropriate
     if (OPTIONS.deadlock == false) {
-      if (guard_provided && OPTIONS.result)
+      if (guard_provided && OPTIONS.report_error)
         std::cerr << "\nWARNING : --no-deadlock/-nd suppresses the output of walks terminated for violating the rule attempt limit !!\n"
                        "        |-> (aka the --attempt-limit/-al/--loop-limit/-ll/--attempt-guard/-ag flags)\n" << std::flush;
 #ifdef __romp__ENABLE_liveness_property
@@ -543,23 +558,175 @@ void parse_args(int argc, char **argv) {
       }
 #endif
     }
-#ifdef __romp__ENABLE_assume_property
-    if (OPTIONS.r_assume && not OPTIONS.result) {
-      std::cerr << "\nINFO : --report-assume/--r-assume/-ra does nothing unless the --report-error/-re flag is set !!\n" << std::flush;
+// #ifdef __romp__ENABLE_assume_property
+//     if (OPTIONS.r_assume && not OPTIONS.report_error) {
+//       std::cerr << "\nINFO : --report-assume/--r-assume/-ra does nothing unless the --report-error/-re flag is set !!\n" << std::flush;
+//     }
+// #endif
+#ifdef __romp__ENABLE_cover_property
+    if (OPTIONS.r_cover && not OPTIONS.complete_on_cover) {
+      std::cerr << "\nINFO : --report-cover/--r-cover/-rc does nothing unless the --complete-on-cover/-cc flag is set !!\n" << std::flush;
     }
 #endif
 }
 
-const stream_void Options::write_config(ostream_p& out) {
+const stream_void Options::write_config(ostream_p& out) const noexcept {
   Options defaults;
+  std::string sep = "";
+  std::string startstate_str = ((start_id == defaults.start_id)
+                                ? ({std::stringstream buf; buf << __caller__::STARTSTATES[start_id]; buf.str();})
+                                : ((do_even_start)
+                                    ? ("even/distributed (" + std::to_string(walks/_ROMP_STARTSTATES_LEN) + " walks per startstate)" )
+                                    : "randomly assigned (default)"));
+  std::string deadlock_str = "";
+  if (deadlock) {
+#ifdef __romp__ENABLE_liveness_property
+    if (liveness) deadlock_str += sep + "liveness property violations";
+    sep = ", ";
+#endif
+    if (attempt_limit != defaults.attempt_limit) deadlock_str += sep + "attempt limit";
+  } else deadlock_str = "NO DETECTION (" + std::string((deadlock == defaults.deadlock) ? " (default)" : "");
+  sep = "";
+  std::string report_str = "property violations | error statements reached";
+  std::string pw_report_str = "";
+  bool _compound = false;
+#ifdef __romp__ENABLE_assume_property
+  if (r_assume) {
+    _compound = true;
+    report_str += " | " "assume property violated"; 
+    pw_report_str += "assume property violated";
+    sep = " | ";
+  }
+#endif
+#ifdef __romp__ENABLE_cover_property
+  if (complete_on_cover) report_str += " | " "cover properties completed";
+  if (r_cover) {
+    pw_report_str += sep + "cover properties completed";
+    sep = " | ";
+  }
+#endif
+  if (report_error) pw_report_str += sep + "property violations | error statements reached"; 
+  if (report_all) pw_report_str = "ALL WALKS";
+  else if (not _compound) pw_report_str = "NONE (default)";
   out << out.indentation()
-      << "LAUNCH CONFIG:"                                           << out.indent() << out.nl()
-      << "threads: " << threads << ((threads==defaults.threads) ? " (default)" : "")<< out.nl()
-      << "  walks: " << walks << ((walks==defaults.walks) ? " (default)" : "")      << out.nl()
-      << "   seed: " << rand_seed << ((rand_seed==defaults.rand_seed) ? " (default:time)" : "")
+      << "BASE LAUNCH CONFIG:"                                      << out.indent() << out.nl()
+      << "    threads: " << threads << ((threads==defaults.threads) ? " (default)" : "")<< out.nl()
+      << "      walks: " << walks << ((walks==defaults.walks) ? " (default)" : "")  << out.nl()
+      << "       seed: " << rand_seed << ((rand_seed==defaults.rand_seed) ? " (default:time)" : "")  << out.nl()
+      << " startstate: " << startstate_str                                          << out.nl()
+      << "  max depth: " << depth << ((depth==defaults.depth) ? " (default)" : "")  << out.nl()
+      << "   deadlock: " << deadlock_str                                            << out.nl()
+#ifdef __romp__ENABLE_symmetry
+      << "   symmetry: YES, heuristic (config when generating with romp)"
+#else
+      << "   symmetry: NO  (config when generating with romp; --no-symmetry/-s)"
+#endif
       << out.dedent()                                                               << out.nl()
-      << ""
+#if defined(__romp__ENABLE_assume_property) || defined(__romp__ENABLE_cover_property) || defined(__romp__ENABLE_liveness_property)
+      << "SPECIAL/RUMUR PROPERTIES ENABLED:"                        << out.indent()
+#ifdef __romp__ENABLE_assume_property
+                                                                                    << out.nl()
+      << "      assume: YES, " << (r_assume ? "reporting" : "non-reporting (default)")  
+#endif
+#ifdef __romp__ENABLE_cover_property
+                                                                                    << out.nl()
+      << "       cover: " << ((complete_on_cover) 
+                              ? "YES, " + ((r_cover) ? "reporting" : "non-reporting")
+                              : "NO (default)" )                                    << out.nl()
+      << " cover-count: " << ((complete_on_cover)
+                              ? std::to_string(cover_count)
+                              : "n/a")
+#endif
+#ifdef __romp__ENABLE_liveness_property
+                                                                                    << out.nl()
+      << "    liveness: " << ((liveness) ? "YES" : "NO (default)")                  << out.nl()
+      << "liveness lim: " << ((liveness)
+                              ? std::to_string(lcount)
+                              : "n/a")
+#endif
+      << out.dedent()                                                               << out.nl()
+#endif
+      << "PER WALK REPORTS:"                                        << out.indent() << out.nl()
+      << "history len: " << _ROMP_HIST_LEN << "(config when generating with romp)"  << out.nl()
+      << "     report: " << pw_report_str                                           << out.nl()
+#ifdef __ROMP__DO_MEASURE
+      << " report time: YES (config when generating with romp)"
+#else
+      << " report time: NO  (config when generating with romp)"
+#endif
+      << out.dedent()                                                               << out.nl()
+      << "INCLUDE IN FINAL REPORT:"                 << out.indent() << out.indent() << out.nl()
+      << report_str                                                                 << out.nl()
+      << out.dedent() << out.dedent()                                               << out.nl();
 }
 
 } // namespace options
+
+template<class O>
+ojstream<O>& operator << (ojstream<O>& json, const options::Options& opts) noexcept {
+  json << "{"
+            "\"model\":\"" __model__filepath "\","
+            "\"romp-id\":" << ROMP_ID << ","
+            "\"root-seed\":\"" << opts.seed_str << "\","
+            "\"walks\":" << opts.walks << ","
+            "\"threads\":" << opts.threads << ","
+            "\"do-single\":" << opts.do_single << ","
+            "\"max-depth\":" << opts.depth << ","
+            "\"abs-attempt-limit\":" << std::to_string(_ROMP_ATTEMPT_LIMIT_DEFAULT) << ","
+            "\"attempt-limit\":" << ((opts.attempt_limit != _ROMP_ATTEMPT_LIMIT_DEFAULT
+                                        && opts.deadlock) 
+                                      ? std::to_string(opts.attempt_limit) 
+                                      : "null") << ","
+            "\"start-mode\":" << ((opts.start_id != _ROMP_START_ID_DEFAULT)
+                                  ? ("\"single\"")
+                                  : (((opts.do_even_start)
+                                                  ? ("\"even\"")
+                                                  : ("\"random\"")))) << ","
+            "\"single-start-id\":" << ((opts.start_id != _ROMP_START_ID_DEFAULT)
+                                        ? std::to_string(opts.start_id)
+                                        : "null") << ","
+#ifdef __romp__ENABLE_symmetry
+            "\"symmetry-reduction\":true,"
+#else
+            "\"symmetry-reduction\":false,"
+#endif
+#ifdef __romp__ENABLE_assume_property
+            "\"enable-assume\":true,"
+#else
+            "\"enable-assume\":false,"
+#endif
+#ifdef __romp__ENABLE_cover_property
+            "\"enable-cover\":" << opts.complete_on_cover << ","
+            "\"cover-count\":" << ((opts.complete_on_cover) 
+                                    ? std::to_string(opts.cover_count) 
+                                    : "null") << ","
+#else
+            "\"enable-cover\":false,"
+            "\"cover-count\":null,"
+#endif
+#ifdef __romp__ENABLE_liveness_property
+            "\"enable-liveness\":" << opts.liveness << ","
+            "\"liveness-limit\":" << ((opts.liveness) 
+                                      ? std::to_string(opts.lcount) 
+                                      : "null") << ","
+#else
+            "\"enable-liveness\":false,"
+            "\"liveness-limit\":null,"
+#endif
+#ifdef __ROMP__DO_MEASURE
+            "\"do-measure\":true,"
+#else
+            "\"do-measure\":false,"
+#endif
+#ifdef __ROMP__SIMPLE_TRACE
+            "\"simple-trace\":true,"
+#else
+            "\"simple-trace\":false,"
+#endif
+            "\"total-rule-count\":" << std::to_string(_ROMP_RULE_COUNT) << ","
+            "\"possible-state-count\":" _ROMP_STATESPACE_COUNT_str ""
+       << "}";
+  return json;
+}
+
 } // namespace romp

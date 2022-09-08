@@ -50,11 +50,27 @@ SR_SS_FACTORY: Callable[[Any],Un[Tuple,NamedTuple]] = (
 #         set.add(self,j_dump(state))
 # #? END class StateSet
 
+class Version(tuple):
+    "Simple multi part version handler"
+    def __init__(self, val:Un[str,Sequence]) -> None:
+        if isinstance(val,str):
+            tuple.__init__(self,Version.__parse_v_str(val))
+        elif isinstance(val, Sequence):
+            tuple.__init__(self,val)
+        elif isinstance(val,Num):
+            tuple.__init__(self,[val])
+        else:
+            raise Exception(f"`{type(val)!s}` is not a valid initializer for a Version")
+    @staticmethod
+    def __parse_v_str(val:str) -> Sequence:
+        return map(int,val.split('.'))
+#? END class Version
+
 @dataclass(eq=True,frozen=True,unsafe_hash=False)
 class RompID:
     """A unique identifier for a "romp" indexed by the model,
     and when it was run, also holds (but is not hashed with) the metadata of a run."""
-    romp_vers: str
+    romp_vers: Version
     model: str
     romp_init_time: int
     root_seed: str
@@ -71,6 +87,14 @@ class RompID:
     @property
     def possible_state_count(self) -> int:
         return self.metadata['possible-state-count']
+    @property
+    def transition_count(self) -> int:
+        return self.rule_count * self.possible_state_count
+    @property
+    def time_unit(self) -> str:
+        if romp_vers < (0,0,3):
+            return "sec"
+        return "ms"
 #? END @dataclass RompID
 
 @dataclass(eq=True,frozen=True,unsafe_hash=False)
@@ -207,6 +231,7 @@ SR_PPM_FMT: dict = {'summary_fmt_str': "{:>12.3g} {:^12.4g} {:>12.3g} {:>12.2g} 
 JSON_t: Type = Un[list,dict,str,Num,None,bool]
 JSON_OBJ_t: Type = Dict[str,JSON_t]
 STATE_t: Type = Un[tuple,str]
+RULE_t: Type = str # Un[str,JSON_OBJ_t]
 NormState: Type = Callable[[JSON_t],STATE_t]
 
 
@@ -271,27 +296,17 @@ def get_state_simple(json:JSON_t) -> STATE_t:
     return tuple(json)
 #? END def get_state_simple: NormState
 
-class Version(tuple):
-    "Simple multi part version handler"
-    def __init__(self, val:Un[str,Sequence]) -> None:
-        if isinstance(val,str):
-            tuple.__init__(self,Version.__parse_v_str(val))
-        elif isinstance(val, Sequence):
-            tuple.__init__(self,val)
-        elif isinstance(val,Num):
-            tuple.__init__(self,[val])
-        else:
-            raise Exception(f"`{type(val)!s}` is not a valid initializer for a Version")
-    @staticmethod
-    def __parse_v_str(val:str) -> Sequence:
-        return map(int,val.split('.'))
-#? END class Version
-    
+@dataclass()
+class ModelTransition:
+    "simple dataclass representing a transition in the model"
+    state: STATE_t
+    rule: RULE_t
+#? END dataclass ModelTransition
 
 @dataclass(init=False)
 class TraceData:
     """An immutable dataclass that takes the directory and name of a file in that dir,
-    that is a either a "romp-trace" or a "romp-simple-trace" 
+    that is a either a "romp-trace" or a "romp-simple-trace"
     and extracts the relevant data from it for statistical processing."""
     id: TraceID
     romp_id: RompID
@@ -305,9 +320,11 @@ class TraceData:
     is_valid: bool
     is_error: bool
     result: str
-    unique_applied_rules: FSet[str]
-    unique_rules: FSet[str]
-    unique_states: FSet[str]
+    unique_applied_rules: FSet[RULE_t]
+    unique_rules: FSet[RULE_t]
+    unique_applied_transitions: FSet[ModelTransition]
+    unique_transitions: FSet[ModelTransition]
+    unique_states: FSet[STATE_t]
     property_violated: Un[None,str,dict]
     property_violated_inside: Un[None,str,dict]
     active_time: Un[int,None]
@@ -327,9 +344,11 @@ class TraceData:
         self.is_valid: bool = None
         self.is_error: bool = None
         self.result: str = None
-        self.unique_applied_rules: FSet[str] = None
-        self.unique_rules: FSet[str] = None
-        self.unique_states: FSet[str] = None
+        self.unique_applied_rules: FSet[RULE_t] = None
+        self.unique_rules: FSet[RULE_t] = None
+        self.unique_applied_transitions: FSet[ModelTransition] = None
+        self.unique_transitions: FSet[ModelTransition] = None
+        self.unique_states: FSet[STATE_t] = None
         self.property_violated: Un[None,str,dict] = None
         self.property_violated_inside: Un[None,str,dict] = None
         self.active_time: Un[int,None] = None
@@ -343,13 +362,14 @@ class TraceData:
             if json['$type'] not in ["romp-trace", "romp-simple-trace"]:
                 raise Exception("Not a romp trace file")
             metadata = json['metadata']
-            self.romp_id = RompID(json['$version'],
+            version = Version(json['$version'])
+            self.romp_id = RompID(version,
                                 metadata['model'],
                                 int(metadata['romp-id']),
                                 metadata['root-seed'],
                                 metadata
                                 )
-            if Version(json['$version']) >= (0,0,2):
+            if version >= (0,0,2):
                 self.id = TraceID(self.romp_id,
                                 _trace_dir,_file_name,
                                 int(json['trace-id']),
@@ -367,16 +387,20 @@ class TraceData:
             rule_misses, rule_hits = 0, 0
             state_misses, state_hits = 0, 0
             abs_state_misses, abs_state_hits = 0, 0
-            unique_states: Set[str] = set()
+            unique_states: Set[STATE_t] = set()
             unique_rules_applied: Set[str] = set()
+            unique_applied_transitions: Set[ModelTransition] = set()
+            unique_transitions: Set[ModelTransition] = set()
             unique_rules: Set[str] = set()
-            unique_states.add(get_state(json['trace'][0]['state']))
+            state: STATE_t = get_state(json['trace'][0]['state'])
+            unique_states.add(state)
             # self.depth += 1
             # self.tries += 1
             for elm in json['trace'][1:]:
                 self.tries += 1
                 rule = j_dump(elm['rule'])
                 unique_rules.add(rule)
+                unique_transitions.add(ModelTransition(state,rule))
                 if elm['$type'] in ["rule-fail", "rule-miss"]: # CASE: rule miss
                     rule_misses += 1
                     if rule_hits > 0:
@@ -418,6 +442,7 @@ class TraceData:
                     self.abs_state_miss_streak.add_data(abs_state_misses)
                     abs_state_misses = 0
                 unique_states.add(state)
+                unique_applied_transitions.add(ModelTransition(state,rule))
             if rule_hits > 0:
                 self.rule_hit_streak.add_data(rule_hits)
             if rule_misses > 0:
@@ -454,6 +479,8 @@ class TraceData:
             self.unique_states = frozenset(unique_states)
             self.unique_rules = frozenset(unique_rules)
             self.unique_applied_rules = frozenset(unique_rules_applied)
+            self.unique_transitions = frozenset(unique_transitions)
+            self.unique_applied_transitions = frozenset(unique_applied_transitions)
         except Exception as ex:
             if DEBUG:
                 traceback.print_exc()
@@ -501,7 +528,7 @@ class TraceData:
         return len(self.unique_applied_rules)
     #? END @property avg_miss_streak(self) -> Num:
     @property
-    def unique_tried_but_not_applied_rules(self) -> FSet[str]:
+    def unique_tried_but_not_applied_rules(self) -> FSet[RULE_t]:
         return self.unique_rules - self.unique_applied_rules
     #? END @property avg_miss_streak(self) -> Num:
     @property
@@ -511,6 +538,26 @@ class TraceData:
     @property
     def never_tried_rule_count(self) -> Num:
         return self.romp_id.rule_count - len(self.unique_rules)
+    #? END @property avg_miss_streak(self) -> Num:
+    @property
+    def unique_transition_count(self) -> Num:
+        return len(self.unique_transitions)
+    #? END @property avg_miss_streak(self) -> Num:
+    @property
+    def unique_applied_transition_count(self) -> Num:
+        return len(self.unique_applied_transitions)
+    #? END @property avg_miss_streak(self) -> Num:
+    @property
+    def unique_tried_but_not_applied_transitions(self) -> FSet[ModelTransition]:
+        return self.unique_transitions - self.unique_applied_transitions
+    #? END @property avg_miss_streak(self) -> Num:
+    @property
+    def unique_tried_but_not_applied_transition_count(self) -> Num:
+        return len(self.unique_tried_but_not_applied_transitions)
+    #? END @property avg_miss_streak(self) -> Num:
+    @property
+    def never_tried_transition_count(self) -> Num:
+        return self.romp_id.transition_count - len(self.unique_transitions)
     #? END @property avg_miss_streak(self) -> Num:
     @property
     def never_tried_rule_coverage(self) -> Num:
@@ -585,18 +632,23 @@ class ModelResult:
     active_time: StatRange
     total_time: StatRange
     unique_state_count: StatRange
-    unique_states: Set[str]
+    unique_states: Set[STATE_t]
     unique_rule_count: StatRange
-    unique_rules: Set[str]
+    unique_rules: Set[RULE_t]
     unique_applied_rule_count: StatRange
     unique_applied_rules: Set[str]
-    unique_startstates: Set[int]
-    avg_never_tried_rule_count: StatRange
-    avg_never_tried_rule_coverage: StatRange
     avg_never_tried_but_never_applied_rule_count: StatRange
+    unique_transition_count: StatRange
+    unique_transitions: Set[ModelTransition]
+    unique_applied_transition_count: StatRange
+    avg_never_tried_but_never_applied_transition_count: StatRange
+    unique_applied_transitions: Set[str]
+    avg_never_tried_rule_count: StatRange
     avg_never_tried_but_never_applied_rule_coverage: StatRange
+    avg_never_tried_rule_coverage: StatRange
     avg_tried_rule_coverage: StatRange
     avg_applied_rule_coverage: StatRange
+    unique_startstates: Set[int]
     avg_state_coverage: StatRange
     properties_violated: Set[Un[None,str]]
     errors_found: int
@@ -622,14 +674,19 @@ class ModelResult:
         self.active_time: Un[StatRange,None] = StatRange()
         self.total_time: Un[StatRange,None] = StatRange()
         self.unique_state_count: StatRange = StatRange()
-        self.unique_states: Set[str] = set()
+        self.unique_states: Set[STATE_t] = set()
         self.unique_rule_count: StatRange = StatRange()
-        self.unique_rules: Set[str] = set()
+        self.unique_rules: Set[RULE_t] = set()
         self.unique_applied_rule_count: StatRange = StatRange()
         self.unique_applied_rules: Set[str] = set()
+        self.avg_tried_but_never_applied_rule_count: StatRange = StatRange()
+        self.unique_transition_count: StatRange = StatRange()
+        self.unique_transitions: Set[ModelTransition] = set()
+        self.unique_applied_transition_count: StatRange = StatRange()
+        self.unique_applied_transitions: Set[str] = set()
+        self.avg_tried_but_never_applied_transition_count: StatRange = StatRange()
         self.unique_startstates: Set[int] = set()
         self.avg_never_tried_rule_count: StatRange = StatRange()
-        self.avg_tried_but_never_applied_rule_count: StatRange = StatRange()
         self.avg_tried_rule_coverage: StatRange = StatRange(**SR_PERCENT_FMT)
         self.avg_tried_but_never_applied_rule_coverage: StatRange = StatRange(**SR_PERCENT_FMT)
         self.avg_applied_rule_coverage: StatRange = StatRange(**SR_PERCENT_FMT)
@@ -673,8 +730,13 @@ class ModelResult:
         self.unique_rules |= trace.unique_rules
         self.unique_applied_rule_count.add_data(trace.unique_applied_rule_count)
         self.unique_applied_rules |= trace.unique_applied_rules
+        self.unique_applied_transition_count.add_data(trace.unique_applied_transition_count)
+        self.unique_applied_transitions |= trace.unique_applied_transitions
         self.avg_tried_but_never_applied_rule_count.add_data(trace.unique_tried_but_not_applied_rule_count)
         self.avg_never_tried_rule_count.add_data(trace.never_tried_rule_count)
+        self.avg_tried_but_never_applied_transition_count.add_data(trace.unique_tried_but_not_applied_transition_count)
+        self.avg_tried_transition_coverage.add_data(trace.tried_transition_coverage)
+        self.avg_never_tried_transition_count.add_data(trace.never_tried_transition_count)
         self.avg_never_tried_rule_coverage.add_data(trace.never_tried_rule_coverage)
         self.avg_tried_rule_coverage.add_data(trace.tried_rule_coverage)
         self.avg_tried_but_never_applied_rule_coverage.add_data(trace.tried_but_never_applied_rule_coverage)
@@ -695,23 +757,23 @@ class ModelResult:
         return len(self.unique_states)
     #? END @property unique_state_count() -> int:
     @property
-    def abs_unique_rule_count(self) -> int:
-        return len(self.unique_rules)
+    def startstates_count(self) -> int:
+        return len(self.unique_startstates)
     #? END @property unique_state_count() -> int:
     @property
-    def abs_rule_coverage(self) -> Num:
-        return len(self.unique_rules) / self.id.rule_count
+    def abs_state_coverage(self) -> Num:
+        return len(self.unique_states) / self.possible_state_count
+    #? END @property unique_state_count() -> int:
+    @property
+    def abs_unique_rule_count(self) -> int:
+        return len(self.unique_rules)
     #? END @property unique_state_count() -> int:
     @property
     def abs_unique_applied_rule_count(self) -> int:
         return len(self.unique_applied_rules)
     #? END @property unique_state_count() -> int:
     @property
-    def startstates_count(self) -> int:
-        return len(self.unique_startstates)
-    #? END @property unique_state_count() -> int:
-    @property
-    def unique_tried_but_not_applied_rules(self) -> FSet[str]:
+    def unique_tried_but_not_applied_rules(self) -> FSet[RULE_t]:
         return frozenset(self.unique_rules - self.unique_applied_rules)
     #? END @property unique_state_count() -> int:
     @property
@@ -723,8 +785,28 @@ class ModelResult:
         return self.id.rule_count - len(self.unique_rules)
     #? END @property unique_state_count() -> int:
     @property
-    def abs_state_coverage(self) -> Num:
-        return len(self.unique_states) / self.possible_state_count
+    def abs_unique_transition_count(self) -> int:
+        return len(self.unique_transitions)
+    #? END @property unique_state_count() -> int:
+    @property
+    def abs_unique_applied_transition_count(self) -> int:
+        return len(self.unique_applied_transitions)
+    #? END @property unique_state_count() -> int:
+    @property
+    def unique_tried_but_not_applied_transitions(self) -> FSet[RULE_t]:
+        return frozenset(self.unique_transitions - self.unique_applied_transitions)
+    #? END @property unique_state_count() -> int:
+    @property
+    def unique_tried_but_not_applied_transition_count(self) -> int:
+        return len(self.unique_tried_but_not_applied_transitions)
+    #? END @property unique_state_count() -> int:
+    @property
+    def abs_never_tried_transition_count(self) -> int:
+        return self.id.transition_count - len(self.unique_transitions)
+    #? END @property unique_state_count() -> int:
+    @property
+    def abs_rule_coverage(self) -> Num:
+        return len(self.unique_rules) / self.id.rule_count
     #? END @property unique_state_count() -> int:
     @property
     def error_detection_rate(self) -> Num:
@@ -757,6 +839,7 @@ class ModelResult:
             time_label = StatRange.DEFAULT_SUMMARY_LABEL_STR
             t_time = f"{'n/a':>12s} {'n/a':^12s} {'n/a':>12s} {'n/a':>12s} {'n/a':>12s}"
             a_time = t_time
+        timeU = "({self.id.time_unit})"
         return (f"{'='*80}\n"
                 f"  {self.id!s:^76s}  \n"
                 f"  {'-'*76}  \n"
@@ -764,7 +847,7 @@ class ModelResult:
                 f"  max-depth: {self.metadata['max-depth']:<67d}\n"
                 f"  symmetry?: {self.do_symmetry!s:<67s}\n"
                 f"    {'TIME:':_^72}\n"
-                f"       (sec) {time_label:-<66s}\n"
+                f"{timeU:>11}  {time_label:-<66s}\n"
                 f"     active: {a_time!s:<67s}\n"
                 f"      total: {t_time!s:<67s}\n"
                 f"    {'ERRORS:':_^72}\n"
@@ -815,6 +898,17 @@ class ModelResult:
                 f"     misses: {self.state_miss_streak.summary_str:<67s}\n"
                 f"     |hits|: {self.abs_state_hit_streak.summary_str:<67s}\n"
                 f"   |misses|: {self.abs_state_miss_streak.summary_str:<67s}\n"
+                f"    {'TRANSITIONS:':_^72}\n"
+                f"             {self.unique_transition_count.str_label:-<66s}\n"
+                f"      tried: {self.unique_transition_count.summary_str:<67s}\n"
+                f"    applied: {self.unique_applied_transition_count.summary_str:<67s}\n"
+                f"    tr - ap: {self.avg_tried_but_never_applied_transition_count.summary_str:<67s}\n"
+                f"      never: {self.avg_never_tried_transition_count.summary_str:<67s}\n"
+                # f"   possible: {self.id.transition_count:<67.9g}\n"
+                f"    |tried|: {self.abs_unique_transition_count:<67.3g}\n"
+                f"  |applied|: {self.abs_unique_applied_transition_count:<67.3g}\n"
+                f"  |tr - ap|: {self.unique_tried_but_not_applied_transition_count:<67.3g}\n"
+                # f"    |never|: {self.abs_never_tried_transition_count:<67.4g}\n"
                 f"    {'PROPS:':_^72}\n"
                 f" #-violated: {len(self.properties_violated):<67d}\n" 
             #     f"       list: " +

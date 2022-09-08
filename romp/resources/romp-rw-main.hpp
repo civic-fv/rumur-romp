@@ -31,11 +31,30 @@ namespace romp {
       exit(EXIT_FAILURE);
     }
   }
+  
+  void launch_prompt() {
+    ostream_p out(std::cout,0);
+    std::cout << '\n';
+    OPTIONS.write_config(out);
+    std::cout.flush();
+    for (;;) {
+      std::cout << "Correct Config? [yes=launch/no=exit]: " << std::flush;
+      std::string _val, val;
+      std::cin >> _val; val = "";
+      for (auto c : _val) val += std::tolower(c);
+      if ("yes" == val || "y" == val) return;
+      if ("no" == val || "n" == val) { std::cout << std::endl; exit(EXIT_SUCCESS); }
+      std::cout << "COULDN'T RECOGNISE RESPONSE; TRY AGAIN\n";
+    }
+  }
 }
 
 int main(int argc, char **argv) {
 
   ::romp::options::parse_args(argc, argv);
+
+  if (not (::romp::OPTIONS.skip_launch_prompt))
+    ::romp::launch_prompt();
 
   if (::romp::OPTIONS.do_trace)
     ::romp::init_trace_dir();

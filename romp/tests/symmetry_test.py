@@ -83,12 +83,12 @@ def run_tests(model_path:str, test_args:str="-s '{}' -d 2000 -w 128",
     sym_t_dir = path.join(trace_dir,path.basename(model_path)+'_sym')
     no_sym_t_dir = path.join(trace_dir,path.basename(model_path)+'_nsym')
     # run sym model checker
-    ret = run_cmd(f"{model_path}.sym.test {test_args} -t '{sym_t_dir}'" +
+    ret = run_cmd(f"{model_path}.sym.test {test_args} -t '{sym_t_dir}' -y" +
                    " >/dev/null 2>&1"  if not DEBUG else "")
     if ret != 0:
         raise Exception("error while running symmetric model-checker")
     # run no sym model checker
-    ret = run_cmd(f"{model_path}.nosym.test {test_args} -t '{no_sym_t_dir}'" +
+    ret = run_cmd(f"{model_path}.nosym.test {test_args} -t '{no_sym_t_dir}' -y" +
                    " >/dev/null 2>&1"  if not DEBUG else "")
     if ret != 0:
         raise Exception("error while running non-symmetric model-checker")

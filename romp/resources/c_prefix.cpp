@@ -47,7 +47,7 @@
 #endif
 
 
-#define _ROMP_TRACE_JSON_VERSION "0.0.2"
+#define _ROMP_TRACE_JSON_VERSION "0.0.3"
 #ifdef DEBUG
 #define _ROMP_FLUSH_FREQ (32ul)
 #else
@@ -113,6 +113,7 @@ namespace __info__ { // LANGUAGE SERVER SUPPORT ONLY!!
 }
 
 namespace romp {
+
   const std::string EMPTY_STR = "";
   const time_t ROMP_ID = std::time(nullptr);
   const auto INIT_TIME = *std::localtime(&ROMP_ID);
@@ -136,39 +137,40 @@ namespace romp {
     }
 
 #define _ROMP_ATTEMPT_LIMIT_DEFAULT UINT16_MAX
+#define _ROMP_START_ID_DEFAULT ((unsigned)(~(0u)))
     struct Options {
       // size_t history_length = 4;
       bool do_trace = false;
       unsigned int threads =  get_default_thread_count(); 
       size_t depth = 1024ul; // INT16_MAX;      
-      unsigned int random_walkers = threads*_ROMP_THREAD_TO_RW_RATIO; 
+      unsigned int walks = threads*_ROMP_THREAD_TO_RW_RATIO; 
       unsigned int rand_seed = ROMP_ID; 
-      std::string seed_str = std::to_string(ROMP_ID); 
+      std::string seed_str = std::to_string(ROMP_ID);
       bool do_single = false;
+      bool do_even_start = false;
+      id_t start_id = _ROMP_START_ID_DEFAULT;
+      bool skip_launch_prompt = false;
       size_t attempt_limit = _ROMP_ATTEMPT_LIMIT_DEFAULT; // disabled if _ROMP_ATTEMPT_LIMIT_DEFAULT
       std::string trace_dir = "./traces/"; // path for the trace file to be created during each walk
       bool deadlock = true; // do deadlock protections
-      bool result = false; // print results for each walker in addition to the summery
-      bool result_all = false;
-      bool result_show_type = false;
-      bool result_emit_state = true;
-      unsigned int tab_size = 2;
-      char tab_char = ' ';
-#ifdef __romp__ENABLE_assume_property
-      bool r_assume = false;
+#ifdef __romp__ENABLE_liveness_property
+      bool liveness = false;
+      size_t lcount = INT16_MAX;
 #endif
 #ifdef __romp__ENABLE_cover_property
       bool complete_on_cover = false;
       id_t cover_count = INT16_MAX; 
 #endif
-#ifdef __romp__ENABLE_liveness_property
-      bool liveness = false;
-      size_t lcount = INT16_MAX;
-#endif
-      bool do_even_start = false;
-      id_t start_id = ~0u;
-      bool skip_launch_prompt = false;
-      const stream_void write_metadata_json(std::ostream& out) const;
+      bool r_cover = false;
+// #ifdef __romp__ENABLE_assume_property
+      bool r_assume = false;
+// #endif
+      bool report_error = false; // print results for each walker in addition to the summery
+      bool report_all = false;
+      bool result_show_type = false;
+      bool result_emit_state = true;
+      unsigned int tab_size = 2;
+      char tab_char = ' ';
       const stream_void write_config(ostream_p& out) const noexcept;
       const std::string get_trace_dir() const noexcept {
         if (do_single) return trace_dir;
@@ -181,10 +183,15 @@ namespace romp {
         std::stringstream buf; buf << INIT_TIME_STAMP;
         return trace_dir + "/" + __model__filename + "_" + buf.str() + ".trace.json"; 
       }
-      friend std::ostream& operator << (std::ostream&, const Options&);
+      bool report_any() const {
+        return (report_all || do_single || report_error || r_assume || r_cover);
+      }
     };
   }
   options::Options OPTIONS;
+
+  template<class O>
+  ojstream<O>& operator << (ojstream<O>& json, const options::Options& opts) noexcept;
   
   typedef _ROMP_STATE_TYPE State_t;
 
@@ -235,6 +242,8 @@ namespace romp {
     ojstream<O>& operator << (const char* str) { out << str; return *this; }
     ojstream<O>& operator << (const unsigned char val) { out << val; return *this; }
     ojstream<O>& operator << (const char val) { out << val; return *this; }
+    ojstream<O>& operator << (const unsigned long long val) { out << val; return *this; }
+    ojstream<O>& operator << (const long long val) { out << val; return *this; }
     ojstream<O>& operator << (const unsigned long val) { out << val; return *this; }
     ojstream<O>& operator << (const long val) { out << val; return *this; }
     ojstream<O>& operator << (const unsigned int val) { out << val; return *this; }
@@ -252,13 +261,13 @@ namespace romp {
       // if (--ex_level == 0) out << "],";
       return *this; 
     }
-    template<typename... Args>
-    static ojstream<O> make(Args &&...args) { return ojstream<O>(Args &&...args); }
     std::string str() { 
       if (std::is_base_of<std::stringstream, O>::value) return out.str(); 
       else return "Not Allowed for non stringstream base (json_str_t) !!\t[dev-error]";
     }
   };
+  template<>
+  ojstream<std::ostream>::~ojstream() { out << std::flush; }
 
   typedef ojstream<std::ofstream> json_file_t;
   typedef ojstream<std::stringstream> json_str_t;
@@ -288,64 +297,72 @@ namespace romp {
   // inline ostream_p& ostream_p::operator << <std::_Setw>(const std::_Setw val) { _width = val._M_n; return *this; } 
   template <>
   inline ostream_p& ostream_p::operator << <stream_void>(const stream_void val) { return *this; }
+  template <>
+  inline ostream_p& ostream_p::operator << <bool>(const bool val) { return (*this << ((val) ? "YES" : "NO")); }
   inline std::ostream& operator << (std::ostream& out, const options::Options& opts) {
     ostream_p _out(out,0); opts.write_config(_out); return out;
   }
+  ostream_p& operator << (ostream_p& out, const options::Options& opts) noexcept { opts.write_config(out); return out; }
 
-  const stream_void options::Options::write_metadata_json(std::ostream& out) {
-    ojstream<std::ostream> json = ojstream<std::ostream>::make(out);
-    json << "{"
-                  "\"model\":\"" __model__filepath "\","
-                  "\"romp-id\":" << ROMP_ID << ","
-                  "\"root-seed\":\"" << seed_str << "\","
-                  "\"max-depth\":" << depth << ","
-                  "\"abs-attempt-limit\":" << std::to_string(_ROMP_ATTEMPT_LIMIT_DEFAULT) << ","
-                  "\"attempt-limit\":" << ((attempt_limit != _ROMP_ATTEMPT_LIMIT_DEFAULT
-                                              && deadlock) 
-                                            ? std::to_string(attempt_limit) 
-                                            : "null") << ","
-#ifdef __romp__ENABLE_symmetry
-                  "\"symmetry-reduction\":true,"
-#else
-                  "\"symmetry-reduction\":false,"
-#endif
-#ifdef __romp__ENABLE_assume_property
-                  "\"enable-assume\":true,"
-#else
-                  "\"enable-assume\":false,"
-#endif
-#ifdef __romp__ENABLE_cover_property
-                  "\"enable-cover\":" << complete_on_cover << ","
-                  "\"cover-count\":" << ((complete_on_cover) 
-                                          ? std::to_string(cover_count) 
-                                          : "null") << ","
-#else
-                  "\"enable-cover\":false,"
-                  "\"cover-count\":null,"
-#endif
-#ifdef __romp__ENABLE_liveness_property
-                  "\"enable-liveness\":" << liveness << ","
-                  "\"liveness-limit\":" << ((liveness) 
-                                            ? std::to_string(lcount) 
-                                            : "null") << ","
-#else
-                  "\"enable-liveness\":false,"
-                  "\"liveness-limit\":null,"
-#endif
-#ifdef __ROMP__DO_MEASURE
-                  "\"do-measure\":true,"
-#else
-                  "\"do-measure\":false,"
-#endif
-#ifdef __ROMP__SIMPLE_TRACE
-                  "\"simple-trace\":true,"
-#else
-                  "\"simple-trace\":false,"
-#endif
-                  "\"total-rule-count\":" << std::to_string(_ROMP_RULE_COUNT) << ","
-                  "\"possible-state-count\":" _ROMP_STATESPACE_COUNT_str ""
-                  "}";
-    return S_VOID;
+  template<typename T, class R> 
+  const std::string _pre0(const std::chrono::duration<T,R> dur) { return ((dur.count()<10) ? "0" : ""); }
+  template<typename T, class R>
+  ostream_p& operator << (ostream_p& out, const std::chrono::duration<T,R> _dur) noexcept {
+    using namespace std::chrono;
+    using day_t = duration<T, std::ratio<3600 * 24>>;
+    enum TimeUnit {_ms,_s,_min,_hr,_d};
+    std::chrono::duration<T,R> dur(_dur);
+    day_t d(0);
+    hours h(0);
+    minutes m(0);
+    seconds s(0);
+    milliseconds ms(0);
+    TimeUnit msu = _ms;
+    if (dur > day_t(3)) {
+      d = duration_cast<day_t>(dur);
+      dur -= d; msu = _d;
+    }
+    if (msu > _ms || dur > hours(3)) {
+      h = duration_cast<hours>(dur);
+      dur -= h; msu = ((msu > _hr) ? msu : _hr);
+    }
+    if (msu > _ms || dur > minutes(3)) {
+      m = duration_cast<minutes>(dur);
+      dur -= m; msu = ((msu > _min) ? msu : _min);
+    }
+    if (msu > _ms || dur >= seconds(10)) {
+      s = duration_cast<seconds>(dur);
+      dur -= m; msu = ((msu > _s) ? msu : _s);
+    }
+    ms = duration_cast<milliseconds>(dur);
+    
+    switch (msu) {
+      case _d:
+        return (out << d.count() << "d " 
+                    << _pre0(h) << h.count() << ':'
+                    << _pre0(m) << m.count() << ':'
+                    << _pre0(s) << s.count() << '.'
+                    << ms.count());
+      case _hr:
+        return (out << _pre0(h) << h.count() << ':'
+                    << _pre0(m) << m.count() << ':'
+                    << _pre0(s) << s.count() << '.'
+                    << ms.count());
+      case _min:
+        return (out << _pre0(m) << m.count() << ':'
+                    << _pre0(s) << s.count() << '.'
+                    << ms.count());
+      case _s:
+        out << s.count();
+        if (ms > milliseconds(0))
+          out << '.' << ms.count();
+        return (out << "s");
+      case _ms:
+        return (out << ms.count() << "ms");
+      default:
+        return (out << "<ERROR_PARSING_DURATION>");
+    }
+    return out;
   }
 
   // template<> char* json_str_t::str() { return out.str(); }
@@ -912,6 +929,7 @@ namespace romp {
   };
 
   struct Result {
+    using duration_ms_t = std::chrono::duration<long long,std::milli>;
     enum Cause {
         NO_CAUSE=0,
         RUNNING=0,
@@ -934,6 +952,10 @@ namespace romp {
     size_t depth; // depth reached 
     const IModelError* tripped;  // what was tripped (promised not nested)
     const IModelError* inside;  // where it was tripped (could be nested w/ root cause)
+#ifdef __ROMP__DO_MEASURE
+    duration_ms_t active_time;
+    duration_ms_t total_time;
+#endif
     // Result(Result& old) 
     //   : id(old.id), root_seed(old.root_seed), start_id(old.start_id),
     //     cause(old.cause), depth(old.depth), 
