@@ -39,11 +39,19 @@ namespace romp {
     std::cout.flush();
     for (;;) {
       std::cout << "Correct Config? [yes=launch/no=exit]: " << std::flush;
-      std::string _val, val;
-      std::cin >> _val; val = "";
-      for (auto c : _val) val += std::tolower(c);
-      if ("yes" == val || "y" == val) return;
-      if ("no" == val || "n" == val) { std::cout << std::endl; exit(EXIT_SUCCESS); }
+      std::string _val; char val;
+      std::cin >> _val;
+      if (_val.size()>0) val = std::tolower(_val[0]);
+      switch (val) {
+        case 'y': 
+        case 'l': 
+          return;
+        case 'n':
+        case 'e': 
+          exit(EXIT_SUCCESS); break;
+        default: 
+          break;
+      }
       std::cout << "COULDN'T RECOGNISE RESPONSE; TRY AGAIN\n";
     }
   }
@@ -51,7 +59,7 @@ namespace romp {
 
 int main(int argc, char **argv) {
 
-  ::romp::options::parse_args(argc, argv);
+  ::romp::OPTIONS.parse_args(argc, argv);
 
   if (not (::romp::OPTIONS.skip_launch_prompt))
     ::romp::launch_prompt();

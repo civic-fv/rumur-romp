@@ -22,11 +22,24 @@
 // << =================================== Type Declarations ==================================== >>
 
 namespace romp {
-  using duration_ms_t = std::chrono::duration<long long,std::milli>;
-  using time_ms_t = std::chrono::time_point<std::chrono::high_resolution_clock,std::chrono::duration<long long,std::milli>>;
+
+  using duration_ms_t = std::chrono::duration<long double,std::milli>;
+  using time_ms_t = std::chrono::time_point<std::chrono::high_resolution_clock,std::chrono::duration<long double,std::milli>>;
+
+  // using duration_ms_t = std::chrono::duration<long long,std::milli>;
+  // using time_ms_t = std::chrono::time_point<std::chrono::high_resolution_clock,std::chrono::duration<long long,std::milli>>;
+
+  using duration_msf_t = std::chrono::duration<long double,std::milli>;
 
   time_ms_t time_ms() {
     return std::chrono::time_point_cast<duration_ms_t>(std::chrono::high_resolution_clock::now());
+  }
+
+  using duration_mr_t = std::chrono::duration<long long,std::chrono::high_resolution_clock::period>;
+  using time_mr_t = std::chrono::time_point<std::chrono::high_resolution_clock,std::chrono::duration<long long,std::chrono::high_resolution_clock::period>>;
+
+  time_mr_t time_mr() {
+    return std::chrono::time_point_cast<duration_mr_t>(std::chrono::high_resolution_clock::now());
   }
 
 /**
@@ -53,7 +66,7 @@ private:
   bool _valid = true;  // legacy 
   bool _is_error = false; // legacy
   Result::Cause status = Result::RUNNING;
-  json_file_t* json;
+  json_file_t* json = nullptr;
   // tripped thing
   IModelError* tripped = nullptr;
   IModelError* tripped_inside = nullptr;
@@ -62,10 +75,10 @@ private:
   struct History {
     const Rule* rule;
   };
-  size_t history_level = 1;
+  size_t history_level = 0;
   constexpr size_t history_size() const {return _ROMP_HIST_LEN;}
   History history[_ROMP_HIST_LEN];
-  size_t history_start = 1;
+  size_t history_start = 0;
   /**
    * @brief call if rule is applied to store what rule made the change in the
    * history circular buffer.
@@ -74,20 +87,20 @@ private:
   void add_to_history(const Rule& r) {
     history[history_level%history_size()] = History{&r};
     ++history_level;
-    if (history_level >= history_size())
+    if (history_level > history_size())
       ++history_start;
   }
 #ifdef __ROMP__DO_MEASURE
   time_ms_t init_time;
-  time_ms_t start_time;
-  duration_ms_t active_time = duration_ms_t(0l);
+  time_mr_t start_time;
+  duration_mr_t active_time = duration_mr_t(0l);
   duration_ms_t total_time = duration_ms_t(0l);
 #endif
   
   void init_state() noexcept {    
     const StartState& startstate = ::__caller__::STARTSTATES[start_id];
 #ifdef __ROMP__DO_MEASURE
-    start_time = time_ms();
+    start_time = time_mr();
 #endif
     try {
       startstate.initialize(state);
@@ -119,7 +132,7 @@ private:
       }
     // if (json != nullptr) delete json;
 #ifdef __ROMP__DO_MEASURE
-    active_time += time_ms() - start_time;
+    active_time += time_mr() - start_time;
 #endif
   }
 
@@ -164,7 +177,9 @@ public:
     state.__rw__ = this; /* provide a semi-hidden reference to this random walker for calling the property handlers */ 
     if (OPTIONS.do_trace) {
       init_trace();
-    }
+    } /* else {
+      json = nullptr;
+    } */
     for (int i=0; i<history_size(); ++i) history[i] = History{nullptr};
 #ifdef __romp__ENABLE_symmetry
     for (int i=0; i<_ROMP_RULESETS_LEN; ++i) next_rule[i] = 0;
@@ -264,7 +279,7 @@ private:
 
   void sim1Step_trace() noexcept {
 #ifdef __ROMP__DO_MEASURE
-    start_time = time_ms();
+    start_time = time_mr();
 #endif
     // const RuleSet& rs = rand_ruleset();
     // const Rule& r = rand_rule(rs);
@@ -312,7 +327,7 @@ private:
           status = Result::UNKNOWN_CAUSE;
         }
 #ifdef __ROMP__DO_MEASURE
-    active_time += time_ms() - start_time;
+    active_time += time_mr() - start_time;
 #endif
     if (_fuel % _ROMP_FLUSH_FREQ == 0)
       json->out.flush();
@@ -320,7 +335,7 @@ private:
 
   void sim1Step_no_trace() noexcept {
 #ifdef __ROMP__DO_MEASURE
-    start_time = time_ms();
+    start_time = time_mr();
 #endif
     // const RuleSet& rs= rand_ruleset();
     // const Rule& r= rand_rule(rs);
@@ -361,7 +376,7 @@ private:
           status = Result::UNKNOWN_CAUSE;
         }
 #ifdef __ROMP__DO_MEASURE
-    active_time += time_ms() - start_time;
+    active_time += time_mr() - start_time;
 #endif             
   }
 
@@ -382,6 +397,7 @@ private:
   }
 
   void trace_result_out() const {
+    using namespace std::chrono;
     *json << "]"; // close trace
     // if (_valid && tripped == nullptr) // if it didn't end in an error we need to: 
     if (tripped_inside == nullptr) // if it didn't end in an error we need to: 
@@ -389,8 +405,8 @@ private:
     *json << ",\"results\":{\"depth\":"<< OPTIONS.depth-_fuel <<",\"valid\":null,\"is-error\":null"
           << ",\"result\":\"" << std::to_string(status) << "\"" 
 #ifdef __ROMP__DO_MEASURE
-                                << ",\"active-time\":" << active_time.count() 
-                                << ",\"total-time\":" << total_time.count()
+                                << ",\"active-time\":" << (duration_cast<duration_msf_t>(active_time).count()) 
+                                << ",\"total-time\":" << (duration_cast<duration_msf_t>(total_time).count())
 #else
                                 << ",\"active-time\":null,\"total-time\":null" 
 #endif
@@ -434,20 +450,21 @@ public:
         << "       Seed: " << rw.init_rand_seed                                     << out.nl()
         << "      Depth: " << OPTIONS.depth - rw._fuel                              << out.nl()
         << "   Start ID: " << rw.start_id                                           << out.nl()
-        << "             {" << ::__caller__::STARTSTATES[rw.start_id] << '}'        << out.nl()
+        << " StartState: " << ::__caller__::STARTSTATES[rw.start_id]                << out.nl()
         << "     Result: " << res_color << std::to_string(rw.status) << "\033[0m"   << out.nl()
         << out.dedent()                                                             << out.nl()
         << "TRACE LITE:"                                            << out.indent() << out.nl()
         << "NOTE - " << ((OPTIONS.do_trace) 
                           ? "see \"" + OPTIONS.trace_dir + std::to_string(rw.init_rand_seed) + ".json\" for full trace." 
                           : "use the --trace/-t option to generate a full & detailed trace." ) << out.nl()
-        << "History: [\n" << out.indent();
-    if (rw.history_start > 1)
-      out << out.indentation() << "-(..) ... forgotten past ...\n";
-    for (size_t i=rw.history_start; i<rw.history_level; ++i)
-      out << out.indentation() << "-(" << i <<") " << *(rw.history[i%rw.history_size()].rule) << "\n";
+        << "History: ["                                             << out.indent() << out.nl()
+        << "-(0) " << ::__caller__::STARTSTATES[rw.start_id] << '\n';
+      if (rw.history_start > 0)
+        out << out.indentation() << "-(..) ... forgotten past ...\n";
+      for (size_t i=rw.history_start; i<rw.history_level; ++i)
+        out << out.indentation() << "-(" << i+1 <<") " << *(rw.history[i%rw.history_size()].rule) << "\n";
     out << out.dedent() << "]"                                                      << out.nl();
-    if (OPTIONS.result_emit_state)
+    if (OPTIONS.report_emit_state)
       out << "  State: " <<  out.indent() << rw.state << out.dedent()               ;// << out.nl();
     if (rw.tripped != nullptr || rw.tripped_inside != nullptr) {
       out << out.dedent()                                                           << out.nl()
@@ -579,7 +596,7 @@ class ResultTree {
   size_t rules_fired = 0;
   size_t size = 0;
 #ifdef __ROMP__DO_MEASURE
-  duration_ms_t total_walk_active_time = duration_ms_t(0);
+  duration_mr_t total_walk_active_time = duration_mr_t(0);
   duration_ms_t total_walk_time = duration_ms_t(0);
 #endif
   std::vector<const Result*> unknown_causes;
@@ -695,7 +712,7 @@ public:
           out << out.indentation()
               << "-[w#" << a->id << "] seed=" << a->root_seed << " start-id=" << a->start_id <<" depth=" << a->depth;
 #ifdef __ROMP__DO_MEASURE
-          out << " t=" << a->active_time << " (|t|=" << a->total_time << ')';
+          out << " t=" << a->active_time << " (Δt=" << a->total_time << ')';
 #endif
           if (not a->tripped->is_flat())
             out << out.nl()
@@ -727,7 +744,7 @@ public:
           out << out.indentation()
               << "-(" << i << ") [w#" << _al->id << "] seed=" << _al->root_seed << " start-id=" << _al->start_id <<" depth=" << _al->depth;
 #ifdef __ROMP__DO_MEASURE
-          out << " t=" << _al->active_time << " (|t|=" << _al->total_time << ')';
+          out << " t=" << _al->active_time << " (Δt=" << _al->total_time << ')';
 #endif
           out << out.nl()
               << "        last-rule=";
@@ -753,7 +770,7 @@ public:
           out << out.indentation()
               << "-(" << i << ") [w#" << _c->id << "] seed=" << _c->root_seed << " start-id=" << _c->start_id <<" depth=" << _c->depth;
 #ifdef __ROMP__DO_MEASURE
-          out << " t=" << _c->active_time << " (|t|=" << _c->total_time << ')';
+          out << " t=" << _c->active_time << " (Δt=" << _c->total_time << ')';
 #endif
           out << out.nl()
               << "        last-rule={" << _c->inside->get_type() << " \"" << _c->inside->label() << "\"";
@@ -774,7 +791,7 @@ public:
           out << out.nl()
               << "-(" << i++ << ") [w#" << _r->id << "] seed=" << _r->root_seed << " start-id=" << _r->start_id;
 #ifdef __ROMP__DO_MEASURE
-          out << " t=" << _r->active_time << " (|t|=" << _r->total_time << ')';
+          out << " t=" << _r->active_time << " (Δt=" << _r->total_time << ')';
 #endif
         }
       out.out << out._dedent() << std::endl;
@@ -793,7 +810,7 @@ public:
           out << out.indentation()
               << "-[w#" << a->id << "] seed=" << a->root_seed << " start-id=" << a->start_id <<" depth=" << a->depth
 #ifdef __ROMP__DO_MEASURE
-              << " t=" << a->active_time << " (|t|={" << a->total_time << ')'
+              << " t=" << a->active_time << " (Δt={" << a->total_time << ')'
 #endif
               << out.nl()
               << "        IN-RULE"
@@ -828,7 +845,7 @@ public:
           out << out.indentation()
               << "-[w#" << a->id << "] seed=" << a->root_seed << " start-id=" << a->start_id <<" depth=" << a->depth;
 #ifdef __ROMP__DO_MEASURE
-          out << " t=" << a->active_time << " (|t|=" << a->total_time << ')';
+          out << " t=" << a->active_time << " (Δt=" << a->total_time << ')';
 #endif
           if (not a->tripped->is_flat())
             out << out.nl()
@@ -863,7 +880,7 @@ public:
               << out._indent()
               << "-[w#" << _r->id << "] seed=" << _r->root_seed << " start-id=" << _r->start_id << " depth=" << _r->depth
 #ifdef __ROMP__DO_MEASURE
-              << " t=" << _r->active_time << " (|t|=" << _r->total_time << ")\n"
+              << " t=" << _r->active_time << " (Δt=" << _r->total_time << ")\n"
 #endif
               << "        inside={"
               << _r->inside->get_type()
@@ -886,9 +903,9 @@ public:
         << out.nl() << "            runtime: " << r.get_time();
 #else
         << out.nl() << "    total walk time: t=" << r.total_walk_active_time << " "
-                                          "(|t|=" << r.total_walk_time << ")" 
+                                          "(Δt=" << r.total_walk_time << ")" 
         << out.nl() << "     mean walk time: mean(t)=" << (r.total_walk_active_time/r.size) << " "
-                                           "(mean(|t|)=" << (r.total_walk_time/r.size) << ')' 
+                                           "(mean(Δt)=" << (r.total_walk_time/r.size) << ')' 
         << out.nl() << "     actual runtime: " << r.get_time();
 #endif
     out.out << "\n\n" << std::flush;

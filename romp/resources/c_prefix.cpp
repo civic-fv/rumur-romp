@@ -167,10 +167,11 @@ namespace romp {
 // #endif
       bool report_error = false; // print results for each walker in addition to the summery
       bool report_all = false;
-      bool result_show_type = false;
-      bool result_emit_state = true;
+      bool report_show_type = false;
+      bool report_emit_state = true;
       unsigned int tab_size = 2;
       char tab_char = ' ';
+      void parse_args(int, char **);
       const stream_void write_config(ostream_p& out) const noexcept;
       const std::string get_trace_dir() const noexcept {
         if (do_single) return trace_dir;
@@ -250,6 +251,7 @@ namespace romp {
     ojstream<O>& operator << (const int val) { out << val; return *this; }
     ojstream<O>& operator << (const unsigned short val) { out << val; return *this; }
     ojstream<O>& operator << (const short val) { out << val; return *this; }
+    ojstream<O>& operator << (const long double val) { out << val; return *this; }
     ojstream<O>& operator << (const bool val) { out << ((val) ? "true" : "false"); return *this; }
     ojstream<O>& operator << (const stream_void& me) noexcept { return *this; };
     ojstream<O>& operator << (const IModelError& me) noexcept;
@@ -304,37 +306,71 @@ namespace romp {
   }
   ostream_p& operator << (ostream_p& out, const options::Options& opts) noexcept { opts.write_config(out); return out; }
 
+  template<typename ratio1, typename ratio2>
+  struct CompareRatios { 
+    // std::static_assert(std::is_base_of<std::ratio,ratio1>::value, "ratio1, must be a ratio");
+    // std::static_assert(std::is_base_of<std::ratio,ratio1>::value, "ratio2, must be a ratio");
+    static constexpr long double dif() { return (ratio1::num/ratio1::den) - (ratio2::num/ratio2::den); };
+  }; 
+
   template<typename T, class R> 
   const std::string _pre0(const std::chrono::duration<T,R> dur) { return ((dur.count()<10) ? "0" : ""); }
   template<typename T, class R>
   ostream_p& operator << (ostream_p& out, const std::chrono::duration<T,R> _dur) noexcept {
     using namespace std::chrono;
     using day_t = duration<T, std::ratio<3600 * 24>>;
-    enum TimeUnit {_ms,_s,_min,_hr,_d};
-    std::chrono::duration<T,R> dur(_dur);
+    using femtosecond_t = duration<T, std::femto>;
+    using picosecond_t = duration<T, std::pico>;
+    enum TimeUnit {__U,__ms,_fs,_ps,_ns,_us,_ms,_s,_min,_hr,_d};
+    const TimeUnit _SU = __U;
+    std::chrono::duration<long double,R> dur(_dur);
     day_t d(0);
     hours h(0);
     minutes m(0);
     seconds s(0);
     milliseconds ms(0);
-    TimeUnit msu = _ms;
-    if (dur > day_t(3)) {
-      d = duration_cast<day_t>(dur);
-      dur -= d; msu = _d;
+    microseconds us(0);
+    nanoseconds ns(0);
+    picosecond_t ps(0);
+    // femtosecond_t fs(0);
+    TimeUnit msu = _fs;
+    if (CompareRatios<R,std::milli>::dif() > 0.0l // case: lower precision clock
+        || dur > seconds(10)) { // case: "large"/"macro" time format(s)
+      if (dur > day_t(3)) {
+        d = duration_cast<day_t>(dur);
+        dur -= d; msu = _d;
+      }
+      if (msu > _hr || dur > hours(3)) {
+        h = duration_cast<hours>(dur);
+        dur -= h; msu = ((msu > _hr) ? msu : _hr);
+      }
+      if (msu > _min || dur > minutes(3)) {
+        m = duration_cast<minutes>(dur);
+        dur -= m; msu = ((msu > _min) ? msu : _min);
+      }
+      if (msu > _s || dur >= seconds(10)) {
+        s = duration_cast<seconds>(dur);
+        dur -= m; msu = ((msu > _s) ? msu : _s);
+      } 
+      if (msu > _ms || dur >= microseconds(1)) {
+        ms = duration_cast<milliseconds>(dur);
+      } else msu = __ms;  // case: measured essentially 0 time ms
+    } else /* if (CompareRatios<R,std::milli>::dif() < 0.0l) */ { // case: higher precision clock
+      if (dur >= microseconds(10)) { // case: "small"/milli+micro time format
+        ms = duration_cast<milliseconds>(dur);
+        us = duration_cast<microseconds>(dur -= ms);
+        msu = _ms;
+      } else {
+        if (dur >= picosecond_t(1)) { // case: "smaller"/nano+pico time format
+          ns = duration_cast<nanoseconds>(dur);
+          ps = duration_cast<picosecond_t>(dur -= ns);
+          msu = _ns;
+        } else                            // case: "smallest"/"too small to care about"/femto time "format"
+          msu = _fs;
+      // } else                              // case: "not needed "   
+      //   msu = __ms;
+      }
     }
-    if (msu > _ms || dur > hours(3)) {
-      h = duration_cast<hours>(dur);
-      dur -= h; msu = ((msu > _hr) ? msu : _hr);
-    }
-    if (msu > _ms || dur > minutes(3)) {
-      m = duration_cast<minutes>(dur);
-      dur -= m; msu = ((msu > _min) ? msu : _min);
-    }
-    if (msu > _ms || dur >= seconds(10)) {
-      s = duration_cast<seconds>(dur);
-      dur -= m; msu = ((msu > _s) ? msu : _s);
-    }
-    ms = duration_cast<milliseconds>(dur);
     
     switch (msu) {
       case _d:
@@ -358,7 +394,22 @@ namespace romp {
           out << '.' << ms.count();
         return (out << "s");
       case _ms:
-        return (out << ms.count() << "ms");
+      case _us:
+        out << ms.count();
+        if (us > microseconds(0))
+          out << '.' << us.count();
+        return (out << "ms");;
+      case _ns:
+      case _ps:
+        out << ns.count();
+        if (ps > picosecond_t(0))
+          out << '.' << ps.count();
+        return (out << "ns");
+      case __ms:
+        return (out << "<0.001ms");
+      case _fs:
+        return (out << "<0.001ns");
+      case __U:
       default:
         return (out << "<ERROR_PARSING_DURATION>");
     }
@@ -929,7 +980,6 @@ namespace romp {
   };
 
   struct Result {
-    using duration_ms_t = std::chrono::duration<long long,std::milli>;
     enum Cause {
         NO_CAUSE=0,
         RUNNING=0,
@@ -953,7 +1003,9 @@ namespace romp {
     const IModelError* tripped;  // what was tripped (promised not nested)
     const IModelError* inside;  // where it was tripped (could be nested w/ root cause)
 #ifdef __ROMP__DO_MEASURE
-    duration_ms_t active_time;
+    using duration_ms_t = std::chrono::duration<long double,std::milli>;
+    using duration_mr_t = std::chrono::duration<long long,std::chrono::high_resolution_clock::period>;
+    duration_mr_t active_time;
     duration_ms_t total_time;
 #endif
     // Result(Result& old) 

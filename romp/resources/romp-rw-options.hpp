@@ -41,11 +41,20 @@ void print_help() {
                "CLI USAGE:    <> - required  {} - optional  * - can have 0 or more\n"
                "   ./<this-file> {options}*\n"
                "\n\n"
+               "NOTE:\n"
+               "  Option flags and arguments are NOT POSIX compliant!\n"
+               "  Please separate all options and their arguments with spaces,\n"
+               "   and do not join multiple short option flags into one.\n"
+               "    (i.e. `-s <str/int>` and `-y` must be input as\n"
+               "          ``-y -s 5`` and NOT ``-ys 5``, ``-ys5``, \n"
+               "            ``-ys=5``, ``-y -s=5``, or ``-y --seed=5``)\n"
+               "\n"
                "GENERAL OPTIONS:\n"
                "   -h | --help      Display help information (this page).\n"
                "   -y | -l          Launch without prompting (skip launch prompt).\n"
-               "   --list-starts    Output a list of all startstates & their id's.\n"
-               "     | -ls            (see --start-id/-sid for more info)\n"
+               "   --list-starts    Output a list of all the ruleset expanded\n"
+               "     | -ls            startstates & their id's\n"
+               "                     (see --start-id/-sid for more info)\n"
                "\n"
                "RANDOM WALKER OPTIONS:\n"
                "  --depth <int>     Maximum number of rules to apply in a walk \n"
@@ -65,6 +74,11 @@ void print_help() {
                "  --start-id <id>   Set a single startstate to use (For all walks).\n"  
                "    | -sid <id>       <id> is an int determined by a startstate's\n"
                "                      position in the file after ruleset expansion.\n"
+               "                      Valid <id> values are integers between:\n"
+               "                         0 to " << _ROMP_STARTSTATES_LEN-1 << " inclusive\n"
+               "                      Use -ls/--list-starts to see mappings of id's\n"
+               "                        to the ruleset expanded startstates of\n"
+               "                        of your model.\n"
                "                      NOTE: overrides --even-start/-es\n"
                "\n"
                "PROPERTY CONFIGURATIONS:\n"
@@ -178,7 +192,7 @@ void list_starts() {
   std::cout << std::flush;
 }
 
-void parse_args(int argc, char **argv) {
+void Options::parse_args(int argc, char **argv) {
   Options default_opts;
   bool threads_provided = false;
   bool walks_provided = false;
@@ -192,9 +206,9 @@ void parse_args(int argc, char **argv) {
       print_help();
       exit(EXIT_SUCCESS);
     } else if ("-l" == std::string(argv[i]) || "-y" == std::string(argv[i])) {
-      OPTIONS.skip_launch_prompt = true;
+      skip_launch_prompt = true;
     } else if ("-es" == std::string(argv[i]) || "--even-start" == std::string(argv[i])) {
-      OPTIONS.do_even_start = true;
+      do_even_start = true;
     } else if ("-ls" == std::string(argv[i]) || "--list-starts" == std::string(argv[i])) {
       list_starts();
       exit(EXIT_SUCCESS);
@@ -204,21 +218,27 @@ void parse_args(int argc, char **argv) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) { 
         ++i;
         try {
-          OPTIONS.start_id = std::stoul(argv[i], nullptr, 0);
+          start_id = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument &ia) {
-          std::cerr << "invalid argument : provided walk/search depth was not a number (NaN) !! (for -sid/--start-id flag)\n"
+          std::cerr << "invalid argument : provided start-id was not a number (NaN) !! (for -sid/--start-id flag)\n"
                     << std::flush;
           exit(EXIT_FAILURE);
         } catch (std::out_of_range &oor) {
-          std::cerr << "invalid argument : provided walk/search depth was out of range (for --sid/--start-id flag) must be "
-                       "unsigned int (aka must be positive)\n"
+          std::cerr << "invalid argument : provided start-id was out of range (for --sid/--start-id flag) must be "
+                       "between 0 and " << _ROMP_STARTSTATES_LEN-1 << " to be a valid start-id!\n"
                     << std::flush;
           exit(EXIT_FAILURE);
         }
       } else {
         std::cerr << "invalid argument : -sid/--start-id requires you to provide a value immediately after (positive integer),\n"
                      "                      else exclude it to use default value: "
-                  <<OPTIONS.start_id<< std::endl;
+                  <<start_id<< std::endl;
+        exit(EXIT_FAILURE);
+      }
+      if (start_id >= _ROMP_STARTSTATES_LEN) {
+        std::cerr << "invalid argument : provided start-id was out of range (for --sid/--start-id flag) must be "
+                      "between 0 and " << _ROMP_STARTSTATES_LEN-1 << " to be a valid start-id!\n"
+                  << std::flush;
         exit(EXIT_FAILURE);
       }
     }
@@ -226,7 +246,7 @@ void parse_args(int argc, char **argv) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
         try {
-          OPTIONS.depth = std::stoul(argv[i], nullptr, 0);
+          depth = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument &ia) {
           std::cerr << "invalid argument : provided walk/search depth was not a number (NaN) !! (for -d/--depth flag)\n"
                     << std::flush;
@@ -240,7 +260,7 @@ void parse_args(int argc, char **argv) {
       } else {
         std::cerr << "invalid argument : -d/--depth requires you to provide a value immediately after (positive integer),\n"
                      "                      else exclude it to use default value: "
-                  << ((OPTIONS.depth == INT32_MAX) ? "INT32_MAX" : std::to_string(OPTIONS.depth)) << std::endl;
+                  << ((depth == INT32_MAX) ? "INT32_MAX" : std::to_string(depth)) << std::endl;
         exit(EXIT_FAILURE);
       }
     } else if ("-ptn" == std::string(argv[i]) || "--threads" == std::string(argv[i])) {
@@ -248,7 +268,7 @@ void parse_args(int argc, char **argv) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) {
         ++i;
         try {
-          OPTIONS.threads = std::stoul(argv[i], nullptr, 0);
+          threads = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument &ia) {
           std::cerr << "invalid argument : provided walk/search threads was not a number (NaN) !! (for -ptn/--threads flag)\n"
                     << std::flush;
@@ -263,17 +283,17 @@ void parse_args(int argc, char **argv) {
         std::cerr
             << "invalid argument : -ptn/--threads requires you to provide a value immediately after (positive integer),\n"
                "                      else exclude it to use default value: "
-            << OPTIONS.threads << std::endl;
+            << threads << std::endl;
         exit(EXIT_FAILURE);
       }
     } else if ("-sw" == std::string(argv[i]) || "--single-walk" == std::string(argv[i])) {
-      OPTIONS.do_single = true;
+      do_single = true;
     } else if ("-w" == std::string(argv[i]) || "--walks" == std::string(argv[i]) || "--walk-count" == std::string(argv[i])) {
       walks_provided = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
         try {
-          OPTIONS.walks = std::stoul(argv[i], nullptr, 0);
+          walks = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument &ia) {
           std::cerr << "invalid argument : provided number of random walkers was not a number (NaN) !! (for "
                        "-w/--walk-count flag)\n"
@@ -295,32 +315,32 @@ void parse_args(int argc, char **argv) {
       }
     } else if ("-s" == std::string(argv[i]) || "--seed" == std::string(argv[i])) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) {
-        OPTIONS.seed_str = argv[i + 1];
+        seed_str = argv[i + 1];
         try {
-          OPTIONS.rand_seed = std::stoul(argv[i + 1], nullptr, 0);
+          rand_seed = std::stoul(argv[i + 1], nullptr, 0);
         } catch (std::invalid_argument &ia) {
           std::hash<std::string> str_hash;
-          OPTIONS.rand_seed = str_hash(argv[i + 1]);
+          rand_seed = str_hash(argv[i + 1]);
         } catch (std::out_of_range &oor) {
           std::cerr << "invalid argument : provided seed was out of range (for -s/--seed flag) must be unsigned int\n"
                     << std::flush;
           exit(EXIT_FAILURE);
         }
-      } else { // OPTIONS.rand_seed = std::time(NULL); // no need
+      } else { // rand_seed = std::time(NULL); // no need
         std::cerr << "invalid argument : -s/--seed requires you to provide a seed after the flag\n"
                      "                   else exclude it to use default value: (current_system_time)\n"
                   << std::flush;
         exit(EXIT_FAILURE);
       }
     } else if ("-nd" == std::string(argv[i]) || "--no-deadlock" == std::string(argv[i])) {
-      OPTIONS.deadlock = false;
+      deadlock = false;
 #ifdef __romp__ENABLE_liveness_property
     } else if ("-lc" == std::string(argv[i]) || "--liveness-check" == std::string(argv[i])) {
-      OPTIONS.liveness = true;
+      liveness = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
         try {
-          OPTIONS.lcount = std::stoul(argv[i], nullptr, 0);
+          lcount = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument &ia) {
           std::cerr << "invalid argument : provided liveness check limit was not a number (NaN) !! (for -lc/--liveness-check "
                        "flag)\n"
@@ -337,11 +357,11 @@ void parse_args(int argc, char **argv) {
 #endif
 #ifdef __romp__ENABLE_cover_property
     } else if ("-cc" == std::string(argv[i]) || "--complete-on-cover" == std::string(argv[i]) || "--cover-check" == std::string(argv[i])) {
-      OPTIONS.complete_on_cover = true;
+      complete_on_cover = true;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
         try {
-          OPTIONS.cover_count = std::stoul(argv[i], nullptr, 0);
+          cover_count = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument &ia) {
           std::cerr << "invalid argument : provided cover property coverage goal was not a number (NaN) !!\n"
                        "                   |-> (for -cc/--cover-check/--complete-on-cover flag)\n"
@@ -356,17 +376,17 @@ void parse_args(int argc, char **argv) {
         }
       }
     } else if ("-rc" == std::string(argv[i]) || "--r-cover" == std::string(argv[i]) || "--report-cover" == std::string(argv[i])) {
-      OPTIONS.r_cover = true;
+      r_cover = true;
 #endif
     } else if ("-ag" == std::string(argv[i]) || "-ll" == std::string(argv[i]) || "-al" == std::string(argv[i]) 
                 || "--attempt-guard" == std::string(argv[i]) || "--loop-limit" == std::string(argv[i]) || "--attempt-limit" == std::string(argv[i])) {
-      // OPTIONS.do_attempt_guard = true;  // just check to make sure this value is not 0
+      // do_attempt_guard = true;  // just check to make sure this value is not 0
       guard_provided = true;
-      OPTIONS.attempt_limit = _ROMP_RULE_COUNT * 2;
+      attempt_limit = _ROMP_RULE_COUNT * 2;
       if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
         ++i;
         try {
-          OPTIONS.attempt_limit = std::stoul(argv[i], nullptr, 0);
+          attempt_limit = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument &ia) {
           std::cerr << "invalid argument : provided attempt limit was not a number (NaN) !!\n"
                        "                   |-> (for -al/--attempt-limit or -ag/--attempt-guard or -ll/--loop-limit flag)\n"
@@ -380,17 +400,17 @@ void parse_args(int argc, char **argv) {
           exit(EXIT_FAILURE);
         }
       } else {
-        OPTIONS.attempt_limit = _ROMP_RULE_COUNT;
+        attempt_limit = _ROMP_RULE_COUNT;
         std::cerr << "\nWARNING : no attempt limit was provided, but it was enabled.\n"
                      "        |-> default value will be used (default: " << _ROMP_RULE_COUNT << " (# of rules post ruleset expansion))\n"
                   << std::flush;
       }
     // } else if ("-rhl" == std::string(argv[i]) || "--r-history" == std::string(argv[i])) {
-    //   // OPTIONS.result_history = true;
+    //   // result_history = true;
     //   if (i + 1 < argc && '-' != argv[i + 1][0]) { // is it not argv[i+1]
     //     ++i;
     //     try {
-    //       OPTIONS.history_length = std::stoul(argv[i], nullptr, 0);
+    //       history_length = std::stoul(argv[i], nullptr, 0);
     //     } catch (std::invalid_argument &ia) {
     //       std::cerr << "invalid argument : provided history length count was not a number (NaN) !! (for "
     //                    "-rhl/--r-history flag)\n"
@@ -404,31 +424,31 @@ void parse_args(int argc, char **argv) {
     //     }
     //   }
     } else if ("-e" == std::string(argv[i]) || "-re" == std::string(argv[i]) || "--report-error" == std::string(argv[i])) {
-      OPTIONS.report_error = true;
+      report_error = true;
     } else if ("-a" == std::string(argv[i]) || "--all" == std::string(argv[i]) || "--report-all" == std::string(argv[i]) || "-all" == std::string(argv[i])) {
-      OPTIONS.report_error = true;
-      OPTIONS.report_all = true;
+      report_error = true;
+      report_all = true;
 #ifdef __romp__ENABLE_assume_property
-      OPTIONS.r_assume = true;
+      r_assume = true;
 #else
-      OPTIONS.r_assume = false;
+      r_assume = false;
 #endif
 #ifdef __romp__ENABLE_cover_property
-      OPTIONS.r_cover = true;
+      r_cover = true;
 #else
-      OPTIONS.r_cover = false;
+      r_cover = false;
 #endif
     } else if ("-rst" == std::string(argv[i]) || "--show-type" == std::string(argv[i]) || "--r-show-type" == std::string(argv[i])) {
-      OPTIONS.result_show_type = true;
+      report_show_type = true;
     } else if ("-ros" == std::string(argv[i]) || "--omit-state" == std::string(argv[i]) || "--r-omit-state" == std::string(argv[i])) {
-      OPTIONS.result_emit_state = false;
+      report_emit_state = false;
     } else if ("-rtc" == std::string(argv[i]) || "--tab-char" == std::string(argv[i]) || "--r-tab-char" == std::string(argv[i])) {
-      OPTIONS.tab_char = '\t';
+      tab_char = '\t';
     } else if ("-rts" == std::string(argv[i]) || "--tab-size" == std::string(argv[i]) || "--r-tab-size-" == std::string(argv[i])) {
       if (i + 1 < argc && '-' != argv[i + 1][0]) {
         ++i;
         try {
-          OPTIONS.tab_size = std::stoul(argv[i], nullptr, 0);
+          tab_size = std::stoul(argv[i], nullptr, 0);
         } catch (std::invalid_argument &ia) {
           std::cerr << "invalid argument : provided tab size was not a number (NaN) !!\n"
                        "                   |-> (for --r-tab-size/--tab-size/-rts flag)\n"
@@ -448,20 +468,20 @@ void parse_args(int argc, char **argv) {
       }
 #ifdef __romp__ENABLE_assume_property
     } else if ("-ra" == std::string(argv[i]) || "--r-assume" == std::string(argv[i]) || "--report-assume" == std::string(argv[i])) {
-      OPTIONS.r_assume = true;
+      r_assume = true;
 #endif
     // } else if ("-o" == std::string(argv[i]) || "--output" == std::string(argv[i])) {
-    //   OPTIONS.output_results = true;
+    //   output_results = true;
     //   if (i + 1 < argc && argv[i + 1][0] != '-')
-    //     OPTIONS.result_out_file = std::string(argv[++i]);
+    //     result_out_file = std::string(argv[++i]);
     //   else
     //     std::cerr << "\nWARNING : you have not specified an outfile after using the -o/--output flag !!\n"
     //                  "        |-> `${CWD}/results.txt` will be used by default !!\n"
     //               << std::flush;
     } else if ("-t" == std::string(argv[i]) || "--trace" == std::string(argv[i])) {
-      OPTIONS.do_trace = true;
+      do_trace = true;
       if (i + 1 < argc && argv[i + 1][0] != '-')
-        OPTIONS.trace_dir = validate_dir_path(std::string(argv[++i]));
+        trace_dir = validate_dir_path(std::string(argv[++i]));
       else
         std::cerr << "\nWARNING : you have not specified an out directory after using the -t/--trace flag !!\n"
                      "        |-> `./traces/` will be used by default !!\n"
@@ -472,99 +492,99 @@ void parse_args(int argc, char **argv) {
     }
   }
     // modifying values to match complex default values
-    if (OPTIONS.tab_char == '\t') {
-      OPTIONS.tab_size = 1;
+    if (tab_char == '\t') {
+      tab_size = 1;
     }
     
     // check for inconsistent or contradictory options here
     // TODO (OPTIONAL) check OPTIONS to make sure config is valid and output
-    // if (OPTIONS.history_length == 0) {
+    // if (history_length == 0) {
     //   std::cerr << "\nERROR : history size cannot be 0 (--r-history/-rhl)\n" << std::flush;
     //   exit(EXIT_FAILURE);
     // }
-    if (OPTIONS.attempt_limit == 0) {
+    if (attempt_limit == 0) {
       std::cerr << "\nERROR : attempt limit cannot be 0 (--attempt-limit/-al/--loop-limit/-ll/--attempt-guard/-ag)\n" << std::flush;
       exit(EXIT_FAILURE);
     }
-    if (OPTIONS.depth == 0) {
+    if (depth == 0) {
       std::cerr << "\nERROR : max depth cannot be 0 (--depth/-d)\n" << std::flush;
       exit(EXIT_FAILURE);
     }
 #ifdef __romp__ENABLE_cover_property
-    if (OPTIONS.complete_on_cover && OPTIONS.cover_count == 0) {
+    if (complete_on_cover && cover_count == 0) {
       std::cerr << "\nERROR : cover check goal cannot be 0 (--cover-check/-cc)\n" << std::flush;
       exit(EXIT_FAILURE);
     }
 #endif
 #ifdef __romp__ENABLE_liveness_property
-    if (OPTIONS.liveness && OPTIONS.lcount == 0) {
+    if (liveness && lcount == 0) {
       std::cerr << "\nERROR : liveness limit cannot be 0 (--liveness-check/-lc)\n" << std::flush;
       exit(EXIT_FAILURE);
     }
 #endif
-    if (OPTIONS.do_single) {
+    if (do_single) {
       if (walks_provided)
         std::cerr << "\nWARNING : -w/--walks/--walk_count is ignored when the -sw/--single-walk flag is set !!\n"
                   << std::flush;
       if (threads_provided)
         std::cerr << "\nWARNING : -ptn/--threads is ignored when the -sw/--single-walk flag(s) is set !!\n" << std::flush;
     } else { // not doing a single walk
-      if (not threads_provided && OPTIONS.threads == 0) {
+      if (not threads_provided && threads == 0) {
         std::cerr << "\nERROR : could not determine hardware thread capacity & no --threads/-ptn option was provided !!\n"
                     "         try again using the --threads/-ptn flag to set the number of threads you want to use.\n"
                     <<std::flush;
         exit(EXIT_FAILURE);
       }
-      if (OPTIONS.threads == 0) {
+      if (threads == 0) {
         std::cerr << "\nERROR : number of threads cannot be 0 (--threads/-ptn)\n" << std::flush;
         exit(EXIT_FAILURE);
       }
-      if (OPTIONS.walks == 0) {
+      if (walks == 0) {
         std::cerr << "\nERROR : number of walks cannot be 0 (--walks/-w)\n" << std::flush;
         exit(EXIT_FAILURE);
       }
       if (not threads_provided)
         std::cerr << "\nINFO : the number of threads to use was not specified (with -ptn/--threads flags)\n"
                      "     |-> defaults to "
-                  << OPTIONS.threads << std::endl;
+                  << threads << std::endl;
       if (not walks_provided)
         std::cerr << "\nINFO : the number of random walkers was not specified (with -w/--walks/--walk-count flags)\n"
                      "     |-> defaults to "
-                  << _ROMP_THREAD_TO_RW_RATIO * OPTIONS.threads << "(= " << _ROMP_THREAD_TO_RW_RATIO << " * "
-                  << OPTIONS.threads << ")\n"
+                  << _ROMP_THREAD_TO_RW_RATIO * threads << "(= " << _ROMP_THREAD_TO_RW_RATIO << " * "
+                  << threads << ")\n"
                   << std::flush;
       if (threads_provided && not walks_provided)
-        OPTIONS.walks = _ROMP_THREAD_TO_RW_RATIO * OPTIONS.threads;  // post parse assign default value
-      if (threads_provided && walks_provided && OPTIONS.threads > OPTIONS.walks) {
-        OPTIONS.threads = OPTIONS.walks;
+        walks = _ROMP_THREAD_TO_RW_RATIO * threads;  // post parse assign default value
+      if (threads_provided && walks_provided && threads > walks) {
+        threads = walks;
         std::cerr << "\nWARNING : you specified more threads than walks !!\n"
-                      "        |-> we will only launch `" << OPTIONS.walks << "` threads!\n"
+                      "        |-> we will only launch `" << walks << "` threads!\n"
                   << std::flush;
       }
     }
-    if (start_provided && OPTIONS.do_even_start)
+    if (start_provided && do_even_start)
       std::cerr << "\nWARNING : --even-start/-es is ignored when --start-id/-sid is provided !!\n"
                   << std::flush;
     // warnings and end with errors as appropriate
-    if (OPTIONS.deadlock == false) {
-      if (guard_provided && OPTIONS.report_error)
+    if (deadlock == false) {
+      if (guard_provided && report_error)
         std::cerr << "\nWARNING : --no-deadlock/-nd suppresses the output of walks terminated for violating the rule attempt limit !!\n"
                        "        |-> (aka the --attempt-limit/-al/--loop-limit/-ll/--attempt-guard/-ag flags)\n" << std::flush;
 #ifdef __romp__ENABLE_liveness_property
-      if (OPTIONS.liveness) {
-        OPTIONS.liveness = false;
-        OPTIONS.lcount = default_opts.lcount;
+      if (liveness) {
+        liveness = false;
+        lcount = default_opts.lcount;
         std::cerr << "\nWARNING : --no-deadlock/-nd overrides/disables the --liveness-check/-lc flag !!\n" << std::flush;
       }
 #endif
     }
 // #ifdef __romp__ENABLE_assume_property
-//     if (OPTIONS.r_assume && not OPTIONS.report_error) {
+//     if (r_assume && not report_error) {
 //       std::cerr << "\nINFO : --report-assume/--r-assume/-ra does nothing unless the --report-error/-re flag is set !!\n" << std::flush;
 //     }
 // #endif
 #ifdef __romp__ENABLE_cover_property
-    if (OPTIONS.r_cover && not OPTIONS.complete_on_cover) {
+    if (r_cover && not complete_on_cover) {
       std::cerr << "\nINFO : --report-cover/--r-cover/-rc does nothing unless the --complete-on-cover/-cc flag is set !!\n" << std::flush;
     }
 #endif
@@ -573,19 +593,21 @@ void parse_args(int argc, char **argv) {
 const stream_void Options::write_config(ostream_p& out) const noexcept {
   Options defaults;
   std::string sep = "";
-  std::string startstate_str = ((start_id == defaults.start_id)
+  std::string startstate_str = ((start_id < _ROMP_STARTSTATES_LEN)
                                 ? ({std::stringstream buf; buf << __caller__::STARTSTATES[start_id]; buf.str();})
                                 : ((do_even_start)
                                     ? ("even/distributed (" + std::to_string(walks/_ROMP_STARTSTATES_LEN) + " walks per startstate)" )
-                                    : "randomly assigned (default)"));
+                                    : "randomly assigned \t(default)"));
   std::string deadlock_str = "";
   if (deadlock) {
 #ifdef __romp__ENABLE_liveness_property
-    if (liveness) deadlock_str += sep + "liveness property violations";
-    sep = ", ";
+    if (liveness) {
+      deadlock_str += sep + "liveness property violations";
+      sep = ", ";
+    }
 #endif
     if (attempt_limit != defaults.attempt_limit) deadlock_str += sep + "attempt limit";
-  } else deadlock_str = "NO DETECTION (" + std::string((deadlock == defaults.deadlock) ? " (default)" : "");
+  } else deadlock_str = "NO DETECTION (" + std::string((deadlock == defaults.deadlock) ? " \t(default)" : "");
   sep = "";
   std::string report_str = "property violations | error statements reached";
   std::string pw_report_str = "";
@@ -593,71 +615,111 @@ const stream_void Options::write_config(ostream_p& out) const noexcept {
 #ifdef __romp__ENABLE_assume_property
   if (r_assume) {
     _compound = true;
-    report_str += " | " "assume property violated"; 
+    // report_str += " | " "assume property violated"; 
     pw_report_str += "assume property violated";
     sep = " | ";
   }
 #endif
 #ifdef __romp__ENABLE_cover_property
-  if (complete_on_cover) report_str += " | " "cover properties completed";
-  if (r_cover) {
+  // if (complete_on_cover) report_str += " | " "cover properties completed";
+  if (complete_on_cover && r_cover) {
+    _compound = true;
     pw_report_str += sep + "cover properties completed";
     sep = " | ";
   }
 #endif
-  if (report_error) pw_report_str += sep + "property violations | error statements reached"; 
-  if (report_all) pw_report_str = "ALL WALKS";
-  else if (not _compound) pw_report_str = "NONE (default)";
+  if (report_all) pw_report_str = "ALL WALKS"; 
+  else if (report_error) pw_report_str += sep + "property violations | error statements reached"; 
+  else if (not _compound) pw_report_str = "NONE \t(default)";
   out << out.indentation()
       << "BASE LAUNCH CONFIG:"                                      << out.indent() << out.nl()
-      << "    threads: " << threads << ((threads==defaults.threads) ? " (default)" : "")<< out.nl()
-      << "      walks: " << walks << ((walks==defaults.walks) ? " (default)" : "")  << out.nl()
-      << "       seed: " << rand_seed << ((rand_seed==defaults.rand_seed) ? " (default:time)" : "")  << out.nl()
+      << "    threads: " << threads << ((threads==defaults.threads) ? " \t(default)" : "")<< out.nl()
+      << "      walks: " << walks << ((walks==defaults.walks) ? " \t(default)" : "")<< out.nl()
+      << "       seed: " << rand_seed << ((rand_seed==defaults.rand_seed) ? " \t(default:time)" : "")  << out.nl()
       << " startstate: " << startstate_str                                          << out.nl()
-      << "  max depth: " << depth << ((depth==defaults.depth) ? " (default)" : "")  << out.nl()
+      << "  max depth: " << depth << ((depth==defaults.depth) ? " \t(default)" : "")  << out.nl()
       << "   deadlock: " << deadlock_str                                            << out.nl()
 #ifdef __romp__ENABLE_symmetry
-      << "   symmetry: YES, heuristic (config when generating with romp)"
+      << "   symmetry: YES, heuristic \t(config when generating with romp)"
 #else
-      << "   symmetry: NO  (config when generating with romp; --no-symmetry/-s)"
+      << "   symmetry: NO  \t(config when generating with romp)"
 #endif
       << out.dedent()                                                               << out.nl()
+      << "TRACE OPTIONS:"                                           << out.indent() << out.nl();
+  if (do_trace) {
+    out<<"   do trace: YES"                                                         << out.nl()
+       <<"  trace dir: \"" << trace_dir << '"' << ((trace_dir==defaults.trace_dir) ? " \t(default)" : "");
+  } else {
+    out << "\t>>\tDISABLED \t(default)\t<<";
+  }
+  out << out.dedent()                                                               << out.nl();
 #if defined(__romp__ENABLE_assume_property) || defined(__romp__ENABLE_cover_property) || defined(__romp__ENABLE_liveness_property)
-      << "SPECIAL/RUMUR PROPERTIES ENABLED:"                        << out.indent()
+  out << "ENABLED SPECIAL/RUMUR PROPERTIES:"                        << out.indent()
 #ifdef __romp__ENABLE_assume_property
                                                                                     << out.nl()
-      << "      assume: YES, " << (r_assume ? "reporting" : "non-reporting (default)")  
+      << "      assume: YES, " << (r_assume ? "reporting" : "non-reporting \t(default)")  
 #endif
 #ifdef __romp__ENABLE_cover_property
                                                                                     << out.nl()
       << "       cover: " << ((complete_on_cover) 
-                              ? "YES, " + ((r_cover) ? "reporting" : "non-reporting")
-                              : "NO (default)" )                                    << out.nl()
+                              ? "YES, " + std::string((r_cover) ? "reporting" : "non-reporting")
+                              : "NO \t(default)" )                                    << out.nl()
       << " cover-count: " << ((complete_on_cover)
                               ? std::to_string(cover_count)
                               : "n/a")
 #endif
 #ifdef __romp__ENABLE_liveness_property
                                                                                     << out.nl()
-      << "    liveness: " << ((liveness) ? "YES" : "NO (default)")                  << out.nl()
+      << "    liveness: " << ((liveness) ? "YES" : "NO \t(default)")                << out.nl()
       << "liveness lim: " << ((liveness)
                               ? std::to_string(lcount)
                               : "n/a")
 #endif
-      << out.dedent()                                                               << out.nl()
+      << out.dedent()                                                               << out.nl();
 #endif
-      << "PER WALK REPORTS:"                                        << out.indent() << out.nl()
-      << "history len: " << _ROMP_HIST_LEN << "(config when generating with romp)"  << out.nl()
+  out << "PER WALK REPORTS:"                                        << out.indent() << out.nl()
       << "     report: " << pw_report_str                                           << out.nl()
+      << "history len: " << _ROMP_HIST_LEN << " \t(config when generating with romp)"<< out.nl()
+      << "print state: " << ((report_emit_state)
+                             ? ("YES"
+                                + std::string((report_show_type) 
+                                                ? ", w/ type info"
+                                                : "")
+                                + std::string((report_emit_state==defaults.report_emit_state 
+                                                && report_show_type==defaults.report_show_type) 
+                                              ? " \t(default)" 
+                                              : ""))
+                             : ("NO"
+                                + std::string((report_emit_state==defaults.report_emit_state)
+                                              ? " \t(default)"
+                                              : "")))                               << out.nl()
 #ifdef __ROMP__DO_MEASURE
-      << " report time: YES (config when generating with romp)"
+      << " report time: YES \t(config when generating with romp)"
 #else
-      << " report time: NO  (config when generating with romp)"
+      << " report time: NO  \t(config when generating with romp)"
 #endif
       << out.dedent()                                                               << out.nl()
-      << "INCLUDE IN FINAL REPORT:"                 << out.indent() << out.indent() << out.nl()
-      << report_str                                                                 << out.nl()
-      << out.dedent() << out.dedent()                                               << out.nl();
+      << "WALKS INCLUDED IN FINAL REPORT:" << ((report_all) ? " \t[ALL]" : "")
+                                                    << out.indent() << out.indent() << out.nl()
+      << " - property violations      \t(default)"                                  << out.nl()
+      << " - error statements reached \t(default)"                                  << out.nl();
+  if (r_assume) out << " - assumptions violation"                                   << out.nl();
+  if (r_cover) out << " - walks with completed cover property coverage"             << out.nl();
+  if (report_all) {
+    out << " - max depth reached"                                                   << out.nl()
+        << " - attempt limit reached"
+            << ((attempt_limit == defaults.attempt_limit)
+                ? (" \t(`built-in`" 
+                    + std::string((deadlock) 
+                                  ? ")"
+                                  : "; ignores -nd/--no-deadlock)"))
+                : ((deadlock)
+                    ? ""
+                    : " \t(ignores -nd/--no-deadlock; DBG:``shouldn't be possible'')"))
+                                                                                    << out.nl();
+  }
+  out << out.dedent() << out.dedent()                                               << out.nl();
+  return S_VOID;
 }
 
 } // namespace options

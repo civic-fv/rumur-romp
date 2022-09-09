@@ -401,7 +401,7 @@ void CTypeGenerator::emit_stream_operators__scalarset(const std::string &name, c
 
   *this << indentation() << ROMP_MAKE_STREAM_CONVERTER_SIG(name) " { ";
   // *this << "out << \": " << type_str << " := \" << ((scalarset_t)val); "
-  *this << "out << ((scalarset_t)val); "
+  *this << "out << ((scalarset_t)val) << \"_" << name << "\"; "
            // "return out; "
            "return ::romp::S_VOID;"
            "}\n";
@@ -416,7 +416,7 @@ void CTypeGenerator::emit_stream_operators__scalarset(const std::string &name, c
 
 void CTypeGenerator::emit_stream_operators__typeexprid(const std::string &name, const TypeExprID &te) {
   std::string type_id = te.referent->name;
-  *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name);
+  *this << indentation() << ROMP_MAKE_JSON_CONVERTER_SIG(name) "{ ";
   *this << "json << " ROMP_MAKE_JSON_CONVERTER_CALL(type_id,"((" + type_id + ")val)") "; "
             // "return json; "
             "return ::romp::S_VOID;"

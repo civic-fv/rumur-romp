@@ -127,7 +127,7 @@
 #define ROMP_MAKE_TYPE_INIT_SIG(_type) "void _init_" << (_name) << "(" << (_name) << "& val)"
 #define ROMP_MAKE_TYPE_INIT_CALL(_type,_val) "_init_" << (_type) << "(" << (_val) << ")" 
 
-#define ROMP_SHOW_TYPE_OPTION_EXPR "::romp::OPTIONS.result_show_type"
+#define ROMP_SHOW_TYPE_OPTION_EXPR "::romp::OPTIONS.report_show_type"
 // #define ROMP_MAKE_SHOW_TYPE_TURN_COND(_type) "((::romp::OPTIONS.result_show_type) ? \\": " + (_type) + " =\\" : \\":=\\")"
 
 #define ROMP_GENERATED_FILE_PREFACE(p) \

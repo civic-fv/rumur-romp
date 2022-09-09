@@ -95,11 +95,11 @@ static void parse_args(int argc, char **argv) {
       try {
         hist_len = std::stoul(optarg, nullptr, 0);
       } catch (std::invalid_argument &ia) {
-        std::cerr << "invalid argument : provided rule history length threads was not a number (NaN) !! (for -r/--rule-history-len flag)\n"
+        std::cerr << "invalid argument : provided rule history length value was not a number (NaN) !! (for -r/--rule-history-len flag)\n"
                   << std::flush;
         exit(EXIT_FAILURE);
       } catch (std::out_of_range &oor) {
-        std::cerr << "invalid argument : provided rule history length threads was out of range !! (for -r/--rule-history-len flag)\n"
+        std::cerr << "invalid argument : provided rule history length value was out of range !! (for -r/--rule-history-len flag)\n"
                   << std::flush;
         exit(EXIT_FAILURE);
       }

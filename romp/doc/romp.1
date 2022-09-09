@@ -2,7 +2,7 @@
 .SH NAME
 romp \- translate a Murphi model to C++ for model checking via parallel random walks.
 .SH SYNOPSIS
-.B \fB romp\fR \fB[options]\fR [\fB--output\fR \fI FILE\fR] [\fI FILE\fR]
+.B \fB romp\fR \fB[options]\fR [\fB--output\fR \fI OUT_FILE\fR] [\fI IN_FILE\fR]
 .SH DESCRIPTION
 \fB romp \fR is a parallel Murphi based model checker generator,
 meant for large models that other murphi model checkers can't handle.
@@ -12,12 +12,25 @@ Therefore the \fB romp\fR model checker is blind as to when to stop,
 and a number of configurable options are available in the model checker to 
 determine when to end end a ``romp''/random-walk.
 .PP
+PLEASE NOTE: this generates a C++ based model checker not a C based model checker,
+so ensure that you use a C++ compiler when building the model checker.
+Additionally, while \fB romp\fR requires a unix based system to be built,
+the model checker only uses the C++ stdlib 
+\fI (no direct use of OS libs, just use your preferred -pthread flag alternative)\fR
+so you \fI theoretically \fR could build it on any OS (untested).
+.PP
 See
 .BR rumur(1)
 for more information about \fB rumur \fR or Murphi.
 .PP
 See the \fB FEATURE SUPPORT \fR section below for information about
-what murphi and \fB rumur\fR features \fB romp\fR does and does not support. 
+what murphi and \fB rumur\fR features \fB romp\fR does and does not support.
+.SH ARGUMENTS
+\fBIN_FILE\fR
+.RS
+A File Path/Name of the Murphi model you wish to generate a model for.
+.\" If none provided it can read from STDIN.
+.RE
 .SH OPTIONS
 \fB --help\fR or \fB -h \fR
 .RS
@@ -27,7 +40,19 @@ Display this help page.
 \fB--output\fR \fI FILE\fR or \fB-o\fR \fI FILE\fR
 .RS
 Set path to write the generated C++ code to. 
-Without this option, code is written to stdout.
+Without this option, code is written to \fI<IN_FILE>.romp.cpp\fR.
+.RE
+.PP
+\fB--rule-history-len\fR \fI NUM\fR or \fB-r\fR \fI NUM\fR
+.RS
+Set the size of the rule history that is displayed in a per walk report,
+and is kept in a walker's buffer.
+Useful for getting more info about what a walk has done, 
+without using trace files.
+Increases the size of a random walker's memory footprint by 8bytes 
+per entry.
+Without this option, the size of the history buffer defaults to 4.
+\fINUM\fR must be a positive integer.
 .RE
 .PP
 \fB--no-symmetry\fR or \fB-s\fR

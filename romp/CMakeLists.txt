@@ -98,13 +98,6 @@ add_custom_command(
   MAIN_DEPENDENCY doc/romp.1
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
-# custom clean
-add_custom_target(clean-tests-romp
-  OUTPUT none.txt
-  COMMAND rm tests/*.test ; rm tests/*.test.cpp ; rm -R traces ; rm -R ../traces
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
 install(TARGETS romp
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES

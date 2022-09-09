@@ -512,8 +512,8 @@
                 "-ll",
                 "64",
                 "-rhl",
-                "8",
-                "-y"
+                "8"
+                // ,"-y"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -550,8 +550,8 @@
                 "256",
                 "-ll",
                 "64",
-                "-ros",
-                "-y"
+                "-ros"
+                ,"-y"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -589,8 +589,8 @@
                 "-ll",
                 "-ros",
                 "-rhl",
-                "8",
-                "-y"
+                "8"
+                //,"-y"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
