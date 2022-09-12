@@ -9,16 +9,17 @@ CMakeFiles/**
 **/traces/*.json
 
 # ignore generated test files
-**/tests/**
+**/tests/**/*.*
 # but don't ignore test models, scripts, docs, or test build config data
-!**/tests/*.m
-!**/tests/*.py
-!**/tests/*.sh
-!**/tests/*.zsh
-!**/tests/*.txt
-!**/tests/*.md
-!**/tests/*.rst
-!**/tests/*.ipynb
+!**/tests/**/*.m
+!**/tests/**/*.py
+!**/tests/**/*.sh
+!**/tests/**/*.zsh
+!**/tests/**/*.txt
+!**/tests/**/*.md
+!**/tests/**/*.rst
+!**/tests/**/*.eml
+!**/tests/**/*.ipynb
 !**/README
 !tests/config/**
 !tests/murphi-comment-ls/*.cc
