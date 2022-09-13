@@ -90,20 +90,47 @@ struct RUMUR_API_WITH_RTTI Scalarset : public TypeExpr {
   Ptr<Expr> bound;
 
   Scalarset(const Ptr<Expr> &bound_, const location &loc_);
-  Scalarset *clone() const final;
+  Scalarset *clone() const;
   virtual ~Scalarset() = default;
 
+  virtual void visit(BaseExtTraversal& visitor);
+  virtual void visit(ConstBaseExtTraversal& visitor) const;
   void visit(BaseTraversal &visitor) final;
   void visit(ConstBaseTraversal &visitor) const final;
 
   mpz_class count() const final;
   bool is_simple() const final;
-  void validate() const final;
+  void validate() const;
 
   std::string lower_bound() const final;
   std::string upper_bound() const final;
   std::string to_string() const final;
   bool constant() const final;
+  virtual bool is_useful() const;
+};
+
+struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset {
+
+  std::vector<Ptr<TypeExpr>> members;
+
+  ScalarsetUnion(const std::vector<Ptr<TypeExpr>>& members_, const location &loc_);
+  ScalarsetUnion *clone() const final;
+  virtual ~ScalarsetUnion() = default;
+
+  void visit(BaseExtTraversal& visitor) override;
+  void visit(ConstBaseExtTraversal& visitor) const override;
+
+  void validate() const;
+  bool is_useful() const final;
+  /**
+   * perform final operations that require symbol resolution to complete first
+   * (a messy solution to a design decision).
+   * Must be called after symbol resolution has occurred for all of it's members!
+   * This is done by default in the resolve-symbol helper at the appropriate time.
+   */ 
+  void finalize();
+private:
+  bool _useful;
 };
 
 struct RUMUR_API_WITH_RTTI Enum : public TypeExpr {

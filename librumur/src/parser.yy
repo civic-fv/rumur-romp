@@ -154,6 +154,7 @@
 %token PIPEPIPE "||"
 %token PROCEDURE
 %token PUT
+/* %token REAL  /* added to give temp support for reals */  
 %token RECORD
 %token RETURN
 %token RSH ">>"
@@ -167,6 +168,7 @@
 %token TO
 %token TYPE
 %token UNDEFINE
+%token UNION /* added to give full support to scalarset Unions in ROMP (not rumur) */
 %token VAR
 %token WHILE
 
@@ -222,6 +224,8 @@
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 typedecl
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 typedecls
 %type <rumur::Ptr<rumur::TypeExpr>>                          typeexpr
+%type <std::vector<rumur::Ptr<rumur::TypeExpr>>>             union_list
+%type <rumur::Ptr<rumur::TypeExpr>>                          union_list_item
 %type <std::vector<rumur::Ptr<rumur::VarDecl>>>              vardecl
 %type <std::vector<rumur::Ptr<rumur::VarDecl>>>              vardecls
 %type <std::shared_ptr<bool>>                                var_opt
@@ -621,6 +625,23 @@ typedecls: typedecls typedecl semi_opt {
   /* nothing required */
 };
 
+/* addition of optional union list */
+union_list: union_list ',' union_list_item {
+  $$ = $1;
+  $$.emplace_back($2);
+} | union_list_item ',' union_list_item { /* at least 2 is required */
+  $$ = std::vector<rumur::Ptr<rumur::TypeExpr>>{$1,$2};
+} | %empty {
+  /* do nothing and check size later */ 
+};
+
+/* addition of optional union list */
+union_list_item: ID {
+  $$ = rumur::Ptr<rumur::TypeExprID>::make($1, nullptr, @$);
+} | ENUM '{' id_list_opt '}' {
+  $$ = rumur::Ptr<rumur::Enum>::make($3, @$);
+};
+
 typeexpr: BOOLEAN {
   /* We need to special case this instead of just using the ID rule because IDs
    * are treated as case-sensitive while "boolean" is not. To avoid awkwardness
@@ -639,6 +660,8 @@ typeexpr: BOOLEAN {
   $$ = rumur::Ptr<rumur::Array>::make($3, $6, @$);
 } | SCALARSET '(' expr ')' {
   $$ = rumur::Ptr<rumur::Scalarset>::make($3, @$);
+} | UNION '{' union_list '}' {
+  $$ = rumur::Ptr<ScalarsetUnion>::make($3,@$);
 };
 
 vardecl: id_list_opt ':' typeexpr {

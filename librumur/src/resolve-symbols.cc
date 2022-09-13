@@ -16,7 +16,7 @@
 #include <rumur/Symtab.h>
 #include <rumur/TypeExpr.h>
 #include <rumur/resolve-symbols.h>
-#include <rumur/traverse.h>
+#include <rumur/ext_traverse.h>
 #include <rumur/validate.h>
 #include <string>
 #include <utility>
@@ -25,7 +25,7 @@ using namespace rumur;
 
 namespace {
 
-class Resolver : public Traversal {
+class Resolver : public ExtTraversal {
 
 private:
   Symtab symtab;
@@ -383,6 +383,13 @@ public:
 
   void visit_scalarset(Scalarset &n) final {
     dispatch(*n.bound);
+    disambiguate(n.bound);
+  }
+
+  void visit_scalarsetunion(ScalarsetUnion &n) final {
+    for (auto m : n.members) 
+      dispatch(*m);
+    n.finalize();
     disambiguate(n.bound);
   }
 

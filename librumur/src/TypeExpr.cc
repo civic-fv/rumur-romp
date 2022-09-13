@@ -257,6 +257,38 @@ std::string Scalarset::to_string() const {
 }
 
 bool Scalarset::constant() const { return bound->constant(); }
+bool Scalarset::is_useful() const { return true; }
+
+
+ScalarsetUnion::ScalarsetUnion(const std::vector<Ptr<TypeExpr>>& members_, const location &loc_) 
+  : Scalarset(Ptr<TypeExprID>::make("_union_none_",nullptr,loc), loc), 
+    members(members_), _useful(false) {}
+ScalarsetUnion* ScalarsetUnion::clone() const { return new ScalarsetUnion(members,loc); }
+
+void ScalarsetUnion::validate() const { 
+  for (const auto _m : members) {
+    const auto m = _m->resolve();
+    if (isa<Enum>(m)) {
+      if (m->count() <= 0)
+        throw Error("ScalarsetUnions require included enums to define at least 1 member!",_m->loc);
+      continue;
+    } else if (isa<TypeExprID>(_m) && isa<Scalarset>(m)) {
+      continue;
+    }
+    throw Error("ScalarsetUnion can only union: enums, and named Scalarsets.", _m->loc);
+  }
+}
+bool ScalarsetUnion::is_useful() const { return _useful; }
+void ScalarsetUnion::finalize() {
+  mpz_class sum = 0_mpz;
+  for (const auto _m : members) 
+    sum += _m->count();
+  bound = Ptr<Number>::make(sum,loc);
+  _useful = (sum > 1_mpz);
+  // stand in reason to be useful since we already exclude non-useful types for unioning
+  // in both the grammar of the parser and the validate function above.
+}
+
 
 Enum::Enum(const std::vector<std::pair<std::string, location>> &members_,
            const location &loc_)

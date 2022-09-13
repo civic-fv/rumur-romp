@@ -54,6 +54,7 @@
 
 alias         { return rumur::parser::token::ALIAS;         }
 array         { return rumur::parser::token::ARRAY;         }
+multiset      { return rumur::parser::token::ARRAY;         }  /* not directly an array but this addes temp support */
 assert        { return rumur::parser::token::ASSERT;        }
 assume        { return rumur::parser::token::ASSUME;        }
 begin         { return rumur::parser::token::BEGIN_TOK;     }
