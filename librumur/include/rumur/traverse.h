@@ -272,10 +272,8 @@ public:
   virtual void visit_xor(const Xor &n) = 0;
 
   // extended syntax nodes
-  void visit_chooserule(const ext::ChooseRule& n);
   void visit_ismember(const ext::IsMember& n);
   void visit_multiset(const ext::Multiset& n);
-  void visit_multisetvarquantifier(const ext::MultisetVarQuantifier& n);
   void visit_scalarsetunion(const ext::ScalarsetUnion& n);
   void visit_sucast(const ext::SUCast& n);
 
