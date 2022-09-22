@@ -913,6 +913,8 @@ void Element::validate() const {
 
   const Ptr<TypeExpr> t = array->type()->resolve();
   ;
+  if (isa<Multiset>(t))
+    throw Error("you cannot access elements of a multiset directly in this context", loc);
 
   if (!isa<Array>(t))
     throw Error("array index on an expression that is not an array", loc);
@@ -932,6 +934,17 @@ std::string Element::to_string() const {
 }
 
 bool Element::is_pure() const { return true; }
+
+void Element::update() {
+  if (auto _a = dynamic_cast<Array*>(array->type().get())) {
+    auto it = _a->index_type->resolve();
+    if (not index->type()->equal_to(*it)) {
+      if (isa<Scalarset>(it) || isa<Enum>(it)) // scalarset+union or enum
+        index = Ptr<SUCast>::make(it, index, index->loc);
+        // SUCast will also throw an error if the cast can't be done
+    }
+  }
+}
 
 FunctionCall::FunctionCall(const std::string &name_,
                            const std::vector<Ptr<Expr>> &arguments_,

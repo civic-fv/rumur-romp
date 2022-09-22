@@ -53,10 +53,17 @@ struct RUMUR_API_WITH_RTTI TypeExpr : public Node {
   // can a value of this type can be assigned to or compared with a value of the
   // given type?
   bool coerces_to(const TypeExpr &other) const;
+  // is the value of this type the same as the `other` type?
+  bool equal_to(const TypeExpr &other) const;
+  inline bool operator == (const TypeExpr& other) const;
+  inline bool operator != (const TypeExpr& other) const;
 
   // Is this the type Boolean? Note that this only returns true for the actual
   // type Boolean, and not for TypeExprIDs that point at Boolean.
   virtual bool is_boolean() const;
+
+  // Can this type possibly be used to aid with symmetry reduction?
+  virtual bool is_useful() const;
 
 protected:
   TypeExpr(const TypeExpr &) = default;
@@ -88,13 +95,12 @@ struct RUMUR_API_WITH_RTTI Range : public TypeExpr {
 struct RUMUR_API_WITH_RTTI Scalarset : public TypeExpr {
 
   Ptr<Expr> bound;
+  std::string name; // added durring update of type decl, if ""/empty it is unnamed 
 
   Scalarset(const Ptr<Expr> &bound_, const location &loc_);
   Scalarset *clone() const;
   virtual ~Scalarset() = default;
 
-  virtual void visit(BaseExtTraversal& visitor);
-  virtual void visit(ConstBaseExtTraversal& visitor) const;
   void visit(BaseTraversal &visitor) final;
   void visit(ConstBaseTraversal &visitor) const final;
 
@@ -104,33 +110,9 @@ struct RUMUR_API_WITH_RTTI Scalarset : public TypeExpr {
 
   std::string lower_bound() const final;
   std::string upper_bound() const final;
-  std::string to_string() const final;
+  std::string to_string() const;
   bool constant() const final;
-  virtual bool is_useful() const;
-};
-
-struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset {
-
-  std::vector<Ptr<TypeExpr>> members;
-
-  ScalarsetUnion(const std::vector<Ptr<TypeExpr>>& members_, const location &loc_);
-  ScalarsetUnion *clone() const final;
-  virtual ~ScalarsetUnion() = default;
-
-  void visit(BaseExtTraversal& visitor) override;
-  void visit(ConstBaseExtTraversal& visitor) const override;
-
-  void validate() const;
-  bool is_useful() const final;
-  /**
-   * perform final operations that require symbol resolution to complete first
-   * (a messy solution to a design decision).
-   * Must be called after symbol resolution has occurred for all of it's members!
-   * This is done by default in the resolve-symbol helper at the appropriate time.
-   */ 
-  void finalize();
-private:
-  bool _useful;
+  bool is_useful() const;
 };
 
 struct RUMUR_API_WITH_RTTI Enum : public TypeExpr {
@@ -138,7 +120,7 @@ struct RUMUR_API_WITH_RTTI Enum : public TypeExpr {
   std::vector<std::pair<std::string, location>> members;
 
   // The range [unique_id, unique_id_limit) is usable by this node as
-  // identifiers. Enum types need this specialisation due to the way references
+  // identifiers. Enum types need this specialization due to the way references
   // to their members are resolved (see resolve_symbols()).
   size_t unique_id_limit = SIZE_MAX;
 
@@ -192,8 +174,9 @@ struct RUMUR_API_WITH_RTTI Array : public TypeExpr {
 
   mpz_class width() const final;
   mpz_class count() const final;
-  void validate() const final;
-  std::string to_string() const final;
+  void validate() const;
+  std::string to_string() const;
+  bool is_useful() const;
 };
 
 struct RUMUR_API_WITH_RTTI TypeExprID : public TypeExpr {
@@ -214,6 +197,7 @@ struct RUMUR_API_WITH_RTTI TypeExprID : public TypeExpr {
   bool is_simple() const final;
   Ptr<TypeExpr> resolve() const final;
   void validate() const final;
+  bool is_useful() const final;
 
   std::string lower_bound() const final;
   std::string upper_bound() const final;

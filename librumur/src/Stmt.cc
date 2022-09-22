@@ -60,6 +60,18 @@ Assignment::Assignment(const Ptr<Expr> &lhs_, const Ptr<Expr> &rhs_,
 
 Assignment *Assignment::clone() const { return new Assignment(*this); }
 
+#include <rumur/ext/Expr.h>
+void Assignment::update() {
+  // check to see if a scalarset union cast might be necessary
+  const auto target_t = lhs->type();
+  const auto expr_t = rhs->type();
+  if (*target_t != *expr_t) {
+    if (isa<Scalarset>(target_t) || isa<Enum>(target_t)) // scalarset+union or enum
+      rhs = Ptr<SUCast>::make(target_t, rhs, rhs->loc);
+    // SUCast will also throw an error if the cast can't be done
+  }
+    // else validate should catch this
+}
 void Assignment::validate() const {
 
   if (!lhs->is_lvalue())

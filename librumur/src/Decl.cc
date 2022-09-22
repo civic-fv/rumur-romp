@@ -1,4 +1,5 @@
 #include "location.hh"
+#include "../../common/isa.h"
 #include <cstddef>
 #include <gmpxx.h>
 #include <iostream>
@@ -91,6 +92,21 @@ void TypeDecl::visit(BaseTraversal &visitor) { visitor.visit_typedecl(*this); }
 
 void TypeDecl::visit(ConstBaseTraversal &visitor) const {
   visitor.visit_typedecl(*this);
+}
+
+// void TypeDecl::validate() const {
+//   if (isa<TypeExprID>(value) && isa<Scalarset>(value->resolve()))
+//     throw Error("``Type masking'' a Scalarset or scalarset union is not supported !", loc);
+// }
+
+void TypeDecl::update() {
+  // mark scalarset as a named scalarset by giving it the decl name
+  if (auto _s = dynamic_cast<Scalarset*>(value->resolve().get())) {
+    auto t = ((isa<TypeExprID>(value))
+              ? (Ptr<Scalarset>::make(_s->bound,value->loc)) // make a "inplace" nivea copy
+              : (Ptr<Scalarset>(_s)));
+    t->name = name;
+  }
 }
 
 VarDecl::VarDecl(const std::string &name_, const Ptr<TypeExpr> &type_,

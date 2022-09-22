@@ -102,7 +102,7 @@ struct RUMUR_API_WITH_RTTI Ruleset : public Rule {
   std::vector<Ptr<Rule>> rules;
 
   Ruleset(const std::vector<Quantifier> &quantifiers_,
-          const std::vector<Ptr<Rule>> &rules_, const location &loc_);
+          const std::vector<Ptr<Rule>>& rules_, const location& loc_);
   virtual ~Ruleset() = default;
   Ruleset *clone() const final;
   void validate() const final;

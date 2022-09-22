@@ -10,8 +10,10 @@
 #include <rumur/Number.h>
 #include <rumur/Ptr.h>
 #include <rumur/TypeExpr.h>
+#include <rumur/ext/TypeExpr.h>
 #include <rumur/except.h>
 #include <rumur/traverse.h>
+#include <rumur/ext/traverse.h>
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -64,7 +66,7 @@ bool TypeExpr::constant() const {
 // operator== and we do not want to expose it to other files.
 static bool equal(const TypeExpr &t1, const TypeExpr &t2) {
 
-  class Equater : public ConstTypeTraversal {
+  class Equater : public ConstExtTypeTraversal {
 
   private:
     const Ptr<TypeExpr> t;
@@ -75,7 +77,9 @@ static bool equal(const TypeExpr &t1, const TypeExpr &t2) {
     explicit Equater(const TypeExpr &type) : t(type.resolve()) {}
 
     void visit_array(const Array &n) final {
-      if (auto a = dynamic_cast<const Array *>(t.get())) {
+      if (isa<Multiset>(t)) {
+        result = false;
+      } else if (auto a = dynamic_cast<const Array *>(t.get())) {
         result &= equal(*a->index_type, *n.index_type);
         result &= equal(*a->element_type, *n.element_type);
       } else {
@@ -97,6 +101,15 @@ static bool equal(const TypeExpr &t1, const TypeExpr &t2) {
           }
           result &= it->first == it2->first;
         }
+      } else {
+        result = false;
+      }
+    }
+
+    void visit_multiset(const Multiset& n) {
+      if (auto a = dynamic_cast<const Multiset *>(t.get())) {
+        result &= equal(*a->index_type, *n.index_type);
+        result &= equal(*a->element_type, *n.element_type);
       } else {
         result = false;
       }
@@ -132,8 +145,18 @@ static bool equal(const TypeExpr &t1, const TypeExpr &t2) {
     }
 
     void visit_scalarset(const Scalarset &n) final {
-      if (auto s = dynamic_cast<const Scalarset *>(t.get())) {
+      if (isa<ScalarsetUnion>(t)) {
+        result = false;
+      } else if (auto s = dynamic_cast<const Scalarset *>(t.get())) {
         result = s->bound->constant_fold() == n.bound->constant_fold();
+      } else {
+        result = false;
+      }
+    }
+
+    void visit_scalarsetunion(const ScalarsetUnion& n) {
+      if (auto u = dynamic_cast<const ScalarsetUnion *>(t.get())) {
+        result = (n.contains(*u) && u->contains(n));
       } else {
         result = false;
       }
@@ -152,11 +175,24 @@ bool TypeExpr::coerces_to(const TypeExpr &other) const {
   const Ptr<TypeExpr> t1 = resolve();
   const Ptr<TypeExpr> t2 = other.resolve();
 
+  if (const auto _t1 = dynamic_cast<const ScalarsetUnion *>(t1.get()))
+    return _t1->contains(*t2);
+  if (const auto _t2 = dynamic_cast<const ScalarsetUnion *>(t2.get()))
+    return _t2->contains(*t1);
+
   if (isa<Range>(t1) && isa<Range>(t2))
     return true;
 
   return equal(*t1, *t2);
 }
+
+bool TypeExpr::equal_to(const TypeExpr &other) const {
+  return equal(*this, other);
+}
+bool TypeExpr::operator == (const TypeExpr &other) const { return equal_to(other); }
+bool TypeExpr::operator != (const TypeExpr &other) const { return not equal_to(other); }
+
+
 
 bool TypeExpr::is_boolean() const { return false; }
 
@@ -173,6 +209,8 @@ Range::Range(const Ptr<Expr> &min_, const Ptr<Expr> &max_, const location &loc_)
     max = Ptr<Number>::make(mpz_class("9223372036854775807"), location());
   }
 }
+
+bool TypeExpr::is_useful() const { return false; }
 
 Range *Range::clone() const { return new Range(*this); }
 
@@ -257,37 +295,7 @@ std::string Scalarset::to_string() const {
 }
 
 bool Scalarset::constant() const { return bound->constant(); }
-bool Scalarset::is_useful() const { return true; }
-
-
-ScalarsetUnion::ScalarsetUnion(const std::vector<Ptr<TypeExpr>>& members_, const location &loc_) 
-  : Scalarset(Ptr<TypeExprID>::make("_union_none_",nullptr,loc), loc), 
-    members(members_), _useful(false) {}
-ScalarsetUnion* ScalarsetUnion::clone() const { return new ScalarsetUnion(members,loc); }
-
-void ScalarsetUnion::validate() const { 
-  for (const auto _m : members) {
-    const auto m = _m->resolve();
-    if (isa<Enum>(m)) {
-      if (m->count() <= 0)
-        throw Error("ScalarsetUnions require included enums to define at least 1 member!",_m->loc);
-      continue;
-    } else if (isa<TypeExprID>(_m) && isa<Scalarset>(m)) {
-      continue;
-    }
-    throw Error("ScalarsetUnion can only union: enums, and named Scalarsets.", _m->loc);
-  }
-}
-bool ScalarsetUnion::is_useful() const { return _useful; }
-void ScalarsetUnion::finalize() {
-  mpz_class sum = 0_mpz;
-  for (const auto _m : members) 
-    sum += _m->count();
-  bound = Ptr<Number>::make(sum,loc);
-  _useful = (sum > 1_mpz);
-  // stand in reason to be useful since we already exclude non-useful types for unioning
-  // in both the grammar of the parser and the validate function above.
-}
+bool Scalarset::is_useful() const { return count() > 1_mpz; }  // @Smattr you might want to tweak this comparison
 
 
 Enum::Enum(const std::vector<std::pair<std::string, location>> &members_,
@@ -441,6 +449,10 @@ std::string Array::to_string() const {
          element_type->to_string();
 }
 
+bool Array::is_useful() const {
+  return index_type->is_useful();
+}
+
 TypeExprID::TypeExprID(const std::string &name_, const Ptr<TypeDecl> &referent_,
                        const location &loc_)
     : TypeExpr(loc_), name(name_), referent(referent_) {}
@@ -482,6 +494,12 @@ Ptr<TypeExpr> TypeExprID::resolve() const {
 void TypeExprID::validate() const {
   if (referent == nullptr)
     throw Error("unresolved type symbol \"" + name + "\"", loc);
+}
+
+bool TypeExprID::is_useful() const {
+  if (referent == nullptr)
+    throw Error("unresolved type symbol \"" + name + "\"", loc);
+  return referent->is_useful();
 }
 
 std::string TypeExprID::lower_bound() const {

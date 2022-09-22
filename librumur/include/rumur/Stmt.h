@@ -72,6 +72,8 @@ struct RUMUR_API_WITH_RTTI Assignment : public Stmt {
   void validate() const final;
   void visit(BaseTraversal &visitor) final;
   void visit(ConstBaseTraversal &visitor) const final;
+
+  void update() const final;
 };
 
 struct RUMUR_API_WITH_RTTI Clear : public Stmt {

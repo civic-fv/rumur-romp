@@ -54,7 +54,6 @@
 
 alias         { return rumur::parser::token::ALIAS;         }
 array         { return rumur::parser::token::ARRAY;         }
-multiset      { return rumur::parser::token::ARRAY;         }  /* not directly an array but this addes temp support */
 assert        { return rumur::parser::token::ASSERT;        }
 assume        { return rumur::parser::token::ASSUME;        }
 begin         { return rumur::parser::token::BEGIN_TOK;     }
@@ -89,8 +88,10 @@ forall        { return rumur::parser::token::FORALL;        }
 function      { return rumur::parser::token::FUNCTION;      }
 if            { return rumur::parser::token::IF;            }
 invariant     { return rumur::parser::token::INVARIANT;     }
+ismember      { return rumur::parser::token::ISMEMBER;      }
 isundefined   { return rumur::parser::token::ISUNDEFINED;   }
 liveness      { return rumur::parser::token::LIVENESS;      }
+multiset      { return rumur::parser::token::MULTISET;      }
 of            { return rumur::parser::token::OF;            }
 procedure     { return rumur::parser::token::PROCEDURE;     }
 put           { return rumur::parser::token::PUT;           }
@@ -106,7 +107,7 @@ then          { return rumur::parser::token::THEN;          }
 to            { return rumur::parser::token::TO;            }
 type          { return rumur::parser::token::TYPE;          }
 undefine      { return rumur::parser::token::UNDEFINE;      }
-union         { throw rumur::Error("union types are not supported", *loc); }
+union         { return rumur::parser::token::UNION;         }
 var           { return rumur::parser::token::VAR;           }
 while         { return rumur::parser::token::WHILE;         }
 

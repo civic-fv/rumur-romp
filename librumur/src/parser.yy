@@ -40,14 +40,15 @@
   #include <cstddef>
   #include <memory>
   #include <rumur/Decl.h>
-  #include <rumur/Expr.h>
-  #include <rumur/Function.h>
+  #include <rumur/ext/Expr.h>
+  #include <rumur/ext/Function.h>
   #include <rumur/Model.h>
   #include <rumur/Node.h>
   #include <rumur/Number.h>
   #include <rumur/Ptr.h>
   #include <rumur/Rule.h>
   #include <rumur/Stmt.h>
+  #include <rumur/ext/TypeExpr.h>
 
   /* Forward declare the scanner class that Flex will produce for us. */
   namespace rumur {
@@ -142,12 +143,14 @@
 %token IF
 %token IMPLIES "->"
 %token INVARIANT
+%token ISMEMBER
 %token ISUNDEFINED
 %token LAND "∧"
 %token LEQ "<="
 %token LIVENESS
 %token LOR "∨"
 %token LSH "<<"
+%token MULTISET
 %token NEQ "!="
 %token <std::string> NUMBER
 %token OF
@@ -224,8 +227,8 @@
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 typedecl
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 typedecls
 %type <rumur::Ptr<rumur::TypeExpr>>                          typeexpr
-%type <std::vector<rumur::Ptr<rumur::TypeExpr>>>             union_list
-%type <rumur::Ptr<rumur::TypeExpr>>                          union_list_item
+%type <std::vector<rumur::ScalarsetUnionMember>>             union_list
+%type <rumur::ScalarsetUnionMember>                          union_list_item
 %type <std::vector<rumur::Ptr<rumur::VarDecl>>>              vardecl
 %type <std::vector<rumur::Ptr<rumur::VarDecl>>>              vardecls
 %type <std::shared_ptr<bool>>                                var_opt
@@ -402,6 +405,9 @@ expr: expr '?' expr ':' expr {
   $$ = rumur::Ptr<rumur::FunctionCall>::make($1, $3, @$);
 } | ISUNDEFINED '(' designator ')' {
   $$ = rumur::Ptr<rumur::IsUndefined>::make($3, @$);
+// extended expr ...
+} | ISMEMBER '(' designator ',' typeexpr ')' {
+  $$ = rumur::Ptr<rumur::IsMember>::make($3, $5, @$);
 };
 
 exprdecl: id_list_opt ':' expr {
@@ -626,20 +632,20 @@ typedecls: typedecls typedecl semi_opt {
 };
 
 /* addition of optional union list */
+union_list_item: ID {
+  $$ = rumur::ScalarsetUnionMember(rumur::Ptr<rumur::TypeExprID>::make($1, nullptr, @$));
+} | ENUM '{' id_list_opt '}' {
+  $$ = rumur::ScalarsetUnionMember(rumur::Ptr<rumur::Enum>::make($3, @$));
+};
+
+/* addition of optional union list */
 union_list: union_list ',' union_list_item {
   $$ = $1;
   $$.emplace_back($2);
 } | union_list_item ',' union_list_item { /* at least 2 is required */
-  $$ = std::vector<rumur::Ptr<rumur::TypeExpr>>{$1,$2};
+  $$ = std::vector<rumur::ScalarsetUnionMember>{$1,$2};
 } | %empty {
   /* do nothing and check size later */ 
-};
-
-/* addition of optional union list */
-union_list_item: ID {
-  $$ = rumur::Ptr<rumur::TypeExprID>::make($1, nullptr, @$);
-} | ENUM '{' id_list_opt '}' {
-  $$ = rumur::Ptr<rumur::Enum>::make($3, @$);
 };
 
 typeexpr: BOOLEAN {
@@ -660,8 +666,11 @@ typeexpr: BOOLEAN {
   $$ = rumur::Ptr<rumur::Array>::make($3, $6, @$);
 } | SCALARSET '(' expr ')' {
   $$ = rumur::Ptr<rumur::Scalarset>::make($3, @$);
+// extended types ...
 } | UNION '{' union_list '}' {
   $$ = rumur::Ptr<ScalarsetUnion>::make($3,@$);
+} | MULTISET '[' expr ']' OF typeexpr {
+  $$ = rumur::Ptr<Multiset>::make($3, $6, @$);
 };
 
 vardecl: id_list_opt ':' typeexpr {

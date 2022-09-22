@@ -13,8 +13,6 @@
 
 namespace rumur {
 
-void BaseTraversal::dispatch(Node &n) { n.visit(*this); }
-
 void BaseTraversal::visit_ambiguousamp(AmbiguousAmp &n) {
   dispatch(*n.lhs);
   dispatch(*n.rhs);

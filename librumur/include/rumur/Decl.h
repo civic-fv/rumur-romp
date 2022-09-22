@@ -108,6 +108,9 @@ struct RUMUR_API_WITH_RTTI TypeDecl : public Decl {
 
   void visit(BaseTraversal &visitor) final;
   void visit(ConstBaseTraversal &visitor) const final;
+
+  // void validate() const final;
+  void update() override;
 };
 
 struct RUMUR_API_WITH_RTTI VarDecl : public ExprDecl {

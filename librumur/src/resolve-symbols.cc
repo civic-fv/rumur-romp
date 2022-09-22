@@ -16,19 +16,24 @@
 #include <rumur/Symtab.h>
 #include <rumur/TypeExpr.h>
 #include <rumur/resolve-symbols.h>
-#include <rumur/ext_traverse.h>
+#include <rumur/ext/traverse.h>
 #include <rumur/validate.h>
 #include <string>
+#include <queue>
 #include <utility>
 
 using namespace rumur;
 
 namespace {
 
+using child_iter_t = std::vector<Node>::iterator;
+
 class Resolver : public ExtTraversal {
 
 private:
   Symtab symtab;
+  child_iter_t cur;
+  std::queue<std::pair<child_iter_t,Ptr<Node>>> to_emit;
 
 public:
   Resolver() {
@@ -387,10 +392,10 @@ public:
   }
 
   void visit_scalarsetunion(ScalarsetUnion &n) final {
-    for (auto m : n.members) 
+    for (auto m : n.decl_list) 
       dispatch(*m);
-    n.finalize();
-    disambiguate(n.bound);
+    // n.update();          // not needed with new update design
+    // disambiguate(n.bound);
   }
 
   void visit_simplerule(SimpleRule &n) final {

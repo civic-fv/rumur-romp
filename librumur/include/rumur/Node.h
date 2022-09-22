@@ -14,6 +14,9 @@ namespace rumur {
 class BaseTraversal;
 class ConstBaseTraversal;
 
+class BaseTraversal;
+class ConstBaseTraversal;
+
 struct RUMUR_API_WITH_RTTI Node {
 
   /// originating line and column source position
@@ -34,6 +37,22 @@ struct RUMUR_API_WITH_RTTI Node {
   /// agnostic class like `Ptr` can call this to copy a node without knowing its
   /// precise derived type and without object slicing.
   virtual Node *clone() const = 0;
+
+  /// Perform operations that require symbol resolution to be complete first,
+  /// or that need to be recalculated after changes to dependent nodes occurred
+  /// (a messy solution to a earlier design decision, and to support legacy code).
+  /// Must be called after symbol resolution has occurred for all of it's members!
+  /// It is always called whenever a non-const traversal tool is used to visit a node!
+  /// This is called by default in the resolve-symbol helper after a Node has been visited
+  ///   and its symbols linked.
+  ///  (aka in the dispatch method after returning from a visit call)
+  /// It is recommended to always call it after modifying an AST member
+  ///  therefore it is also always recommended to ensure a node's 
+  ///  dependent and dependee symbols are properly updated after making any changes.
+  /// (This exists only because this parsing system/lib does not keeping 
+  ///   an active symtab structure during parsing and until the AST is discarded)
+  /// CONTRACT: implementations and overrides of this function should NEVER break symbol resolution!
+  virtual void update();
 
   /// Confirm that data structure invariants hold. This function throws
   /// `rumur::Error` if invariants are violated.

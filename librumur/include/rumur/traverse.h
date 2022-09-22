@@ -8,6 +8,9 @@
 #include <rumur/Stmt.h>
 #include <rumur/TypeExpr.h>
 
+#include <rumur/ext/Expr.h>
+#include <rumur/ext/TypeExpr.h>
+
 #ifndef RUMUR_API_WITH_RTTI
 #define RUMUR_API_WITH_RTTI __attribute__((visibility("default")))
 #endif
@@ -20,7 +23,7 @@ namespace rumur {
  * that provides default implementations for the 'visit' methods you don't need
  * to override, inherit from Traversal below.
  */
-class RUMUR_API_WITH_RTTI BaseTraversal {
+class RUMUR_API_WITH_RTTI BaseTraversal : public ext::INonExtTraversal {
 
 public:
   virtual void visit_add(Add &n) = 0;
@@ -88,6 +91,23 @@ public:
   virtual void visit_vardecl(VarDecl &n) = 0;
   virtual void visit_while(While &n) = 0;
   virtual void visit_xor(Xor &n) = 0;
+
+  // extended syntax visitation methods.
+  // Unlike other visitation methods we provide implementation for them,
+  //  so that they can be interpreted as parent syntax nodes for 
+  //  legacy applications that do not want to update to completely support newer syntax elements,
+  //  but would still like to be able to support Murphi models written with them.
+  //  WARNING: assumes extended syntax nodes have had symbol resolution, 
+  //           & finalization/conversion before called, unless overriden.
+  void visit_chooserule(ext::ChooseRule& n);
+  void visit_ismember(ext::IsMember& n);
+  void visit_multiset(ext::Multiset& n);
+  void visit_multisetvarquantifier(ext::MultisetVarQuantifier& n);
+  void visit_scalarsetunion(ext::ScalarsetUnion& n);
+  void visit_sucast(ext::SUCast& n);
+
+  void visit_BuiltInFunction(ext::IBuiltInFunction& n); 
+
 
   /* Visitation dispatch. This simply determines the type of the Node argument
    * and calls the appropriate specialised 'visit' method. This is not virtual
@@ -184,7 +204,7 @@ private:
 };
 
 // Read-only equivalent of BaseTraversal.
-class RUMUR_API_WITH_RTTI ConstBaseTraversal {
+class RUMUR_API_WITH_RTTI ConstBaseTraversal : public ConstNonExtTraversal {
 
 public:
   virtual void visit_add(const Add &n) = 0;
@@ -252,6 +272,17 @@ public:
   virtual void visit_vardecl(const VarDecl &n) = 0;
   virtual void visit_while(const While &n) = 0;
   virtual void visit_xor(const Xor &n) = 0;
+
+  // extended syntax nodes
+  void visit_chooserule(const ext::ChooseRule& n);
+  void visit_ismember(const ext::IsMember& n);
+  void visit_multiset(const ext::Multiset& n);
+  void visit_multisetvarquantifier(const ext::MultisetVarQuantifier& n);
+  void visit_scalarsetunion(const ext::ScalarsetUnion& n);
+  void visit_sucast(const ext::SUCast& n);
+
+  void visit_BuiltInFunction(const ext::IBuiltInFunction& n);
+
 
   void dispatch(const Node &n);
 

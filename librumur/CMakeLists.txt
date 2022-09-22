@@ -75,6 +75,10 @@ add_library(librumur
   src/traverse.cc
   src/TypeExpr.cc
   src/validate.cc
+  src/ext_Expr.cc
+  src/ext_Function.cc
+  src/ext_traverse.cc
+  src/ext_TypeExpr.cc
   ${FLEX_lexer_OUTPUTS}
   ${BISON_parser_OUTPUTS})
 
