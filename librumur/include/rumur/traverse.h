@@ -99,10 +99,8 @@ public:
   //  but would still like to be able to support Murphi models written with them.
   //  WARNING: assumes extended syntax nodes have had symbol resolution, 
   //           & finalization/conversion before called, unless overriden.
-  void visit_chooserule(ext::ChooseRule& n);
   void visit_ismember(ext::IsMember& n);
   void visit_multiset(ext::Multiset& n);
-  void visit_multisetvarquantifier(ext::MultisetVarQuantifier& n);
   void visit_scalarsetunion(ext::ScalarsetUnion& n);
   void visit_sucast(ext::SUCast& n);
 

@@ -9,11 +9,6 @@ namespace rumur {
 // <<      IMPLEMENTATION OF EXT SYNTAX VISITATION METHODS NODES FOR (CONST)BASETRAVERSAL        >> 
 // << ========================================================================================== >> 
 
-void BaseTraversal::visit_chooserule(ext::ChooseRule& n) {
-  assert((n.aliases.size() <= 0) 
-          && "ChooseRule was not updated before visitation");
-  visit_ruleset(n);
-}
 void BaseTraversal::visit_ismember(ext::IsMember& n) {
   assert((n.lhs != nullptr && n.rhs != nullptr) 
           && "IsMember was not updated before visitation!");
@@ -22,11 +17,6 @@ void BaseTraversal::visit_ismember(ext::IsMember& n) {
 void BaseTraversal::visit_multiset(ext::Multiset& n) {
   // nothing to assert for multiset it's truly just an array in disguise under the hood
   visit_array(n);
-}
-void BaseTraversal::visit_multisetvarquantifier(ext::MultisetVarQuantifier& n) {
-  assert((n.to != nullptr)
-          && "MultisetVarQuantifier was not updated before visitation");
-  visit_quantifier(n);
 }
 void BaseTraversal::visit_scalarsetunion(ext::ScalarsetUnion& n) {
   assert((n.bound != nullptr) 
@@ -48,11 +38,6 @@ void BaseTraversal::visit_BuiltInFunction(ext::IBuiltInFunction& n) {
 
 // << ------------------------------------------------------------------------------------------ >> 
 
-void ConstBaseTraversal::visit_chooserule(const ext::ChooseRule& n) {
-  assert((n.aliases.size() <= 0) 
-          && "ChooseRule was not updated before visitation");
-  visit_ruleset(n);
-}
 void ConstBaseTraversal::visit_ismember(const ext::IsMember& n) {
   assert((n.lhs != nullptr && n.rhs != nullptr) 
           && "IsMember was not updated before visitation!");
@@ -62,7 +47,6 @@ void ConstBaseTraversal::visit_multiset(const ext::Multiset& n) {
   // nothing to assert for multiset it's truly just an array in disguise under the hood
   visit_array(n);
 }
-void ConstBaseTraversal::visit_multisetvarquantifier(const ext::MultisetVarQuantifier& n) {}
 void ConstBaseTraversal::visit_scalarsetunion(const ext::ScalarsetUnion& n) {
   assert((n.bound != nullptr) 
           && "ScalarSetUnion was not updated before visitation!");

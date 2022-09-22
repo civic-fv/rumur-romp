@@ -55,20 +55,5 @@ struct RUMUR_API_WITH_RTTI Multiset : public Array {
   std::string to_string() const;  
 };
 
-struct RUMUR_API_WITH_RTTI MultisetVarQuantifier : public Quantifier {
-
-  Ptr<Expr> designator;
-
-  MultisetVarQuantifier(const std::string& name_, const Ptr<Expr>& designator_, const location& loc_);
-  MultisetVarQuantifier *clone() const override;
-  ~MultisetVarQuantifier() = default;
-
-  void visit(BaseTraversal& visitor) override;
-  void visit(ConstBaseTraversal& visitor) const override;
-
-  void update() override;
-  void validate() const override;
-}
-
 } //namespace ext
 } //namespace rumur
