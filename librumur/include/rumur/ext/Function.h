@@ -11,49 +11,50 @@
 namespace rumur {
 namespace ext {
 
-  /**
-   * @brief A type of function that is dependent on the values in a TypeExpr.
-   *        This should never be revealed in syntax but is useful for 
-   *        making new syntax compatible with legacy systems. 
-   * 
-   *        WARNING: No validation is done when reached during normal AST traversal 
-   *                 in the builtin validate operation.
-   *                 Therefore it's exprs, stmts, decls, etc. must be validated 
-   *                  from BuiltInFunctionCall.
-   *        CONTRACT: All built in functions must be 100% pure.
-   */
-  struct RUMUR_API_WITH_RTTI IBuiltInFunction : Function {
+/**
+ * @brief A type of function that is dependent on the values in a TypeExpr.
+ *        This should never be revealed in syntax but is useful for 
+ *        making new syntax compatible with legacy systems. 
+ * 
+ *        WARNING: No validation is done when reached during normal AST traversal 
+ *                 in the builtin validate operation.
+ *                 Therefore it's exprs, stmts, decls, etc. must be validated 
+ *                  from BuiltInFunctionCall.
+ *        CONTRACT: All built in functions must be 100% pure.
+ */
+struct RUMUR_API_WITH_RTTI IBuiltInFunction : public Function {
 
-    IBuiltInFunction() = 0; // this is a abstract parent class
-    IBuiltInFunction *clone();
+  IBuiltInFunction *clone() const override;
+  ~IBuiltInFunction() = default;
 
-    visit(BaseTraversal& visitor);
-    visit(ConstBaseTraversal& visitor) const;
+  visit(BaseTraversal& visitor) override;
+  visit(ConstBaseTraversal& visitor) const override;
 
-    virtual TypeExpr& dependent_on() = 0;
-  };
+  void validate() const override;
+  void update() override;
 
-  /**
-   * @brief A type of function that is dependent on the values in a TypeExpr.
-   *        This should never be revealed in syntax but is useful for 
-   *        making new syntax compatible with legacy systems. 
-   * 
-   *        WARNING: No validation is done when reached during normal AST traversal 
-   *                 in the builtin validate operation.
-   *                 Therefore it's exprs, stmts, decls, etc. must be validated 
-   *                  from BuiltInFunctionCall.
-   *        CONTRACT: All built in functions must be 100% pure.
-   */
-  struct RUMUR_API_WITH_RTTI IBuiltInProcedure : Function {
+protected:
+  IBuiltInFunction(); // this is a pseudo abstract parent class
+};
 
-    IBuiltInProcedure() = 0; // this is a abstract parent class
-    IBuiltInProcedure *clone() override = 0;
 
-    visit(BaseTraversal& visitor);
-    visit(ConstBaseTraversal& visitor) const;
+/**
+ * @brief A matching function call for IBuiltInFunction.
+ */
+struct RUMUR_API_WITH_RTTI IBuiltInFunctionCall : public FunctionCall {
 
-    virtual TypeExpr& dependent_on() = 0;
-  };
+  IBuiltInFunctionCall *clone() const override;
+  ~IBuiltInFunctionCall() = default;
+
+  visit(BaseTraversal& visitor) override;
+  visit(ConstBaseTraversal& visitor) const override;
+
+  void validate() const override;
+  void update() override;
+
+protected:
+  IBuiltInFunctionCall(); // this is a pseudo abstract parent class
+};
 
 } //namespace ext
 } //namespace rumur

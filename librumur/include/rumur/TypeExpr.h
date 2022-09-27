@@ -104,7 +104,7 @@ struct RUMUR_API_WITH_RTTI Scalarset : public TypeExpr {
   void visit(BaseTraversal &visitor) final;
   void visit(ConstBaseTraversal &visitor) const final;
 
-  mpz_class count() const final;
+  mpz_class count() const;
   bool is_simple() const final;
   void validate() const;
 

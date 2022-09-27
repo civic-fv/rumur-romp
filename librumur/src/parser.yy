@@ -49,6 +49,7 @@
   #include <rumur/Rule.h>
   #include <rumur/Stmt.h>
   #include <rumur/ext/TypeExpr.h>
+  #include <rumur/ext/Stmt.h>
 
   /* Forward declare the scanner class that Flex will produce for us. */
   namespace rumur {
@@ -109,6 +110,7 @@
 %token BOOLEAN
 %token BY
 %token CASE
+%token CHOOSE
 %token CLEAR
 %token COLON_EQ ":="
 %token CONST
@@ -120,6 +122,7 @@
 %token ELSIF
 %token END
 %token ENDALIAS
+%token ENDCHOOSE
 %token ENDEXISTS
 %token ENDFOR
 %token ENDFORALL
@@ -151,6 +154,10 @@
 %token LOR "∨"
 %token LSH "<<"
 %token MULTISET
+%token MULTISETADD
+%token MULTISETCOUNT
+%token MULTISETREMOVE
+%token MULTISETREMOVEPRED
 %token NEQ "!="
 %token <std::string> NUMBER
 %token OF
@@ -191,6 +198,7 @@
 
 %type <rumur::Ptr<rumur::AliasRule>>                         aliasrule
 %type <std::shared_ptr<rumur::Property::Category>>           category
+%type <rumur::Ptr<ChooseRule>>                               chooserule
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 decl
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 decls
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 decls_header
@@ -205,6 +213,8 @@
 %type <rumur::Ptr<rumur::Expr>>                              guard_opt
 %type <std::vector<std::pair<std::string, rumur::location>>> id_list
 %type <std::vector<std::pair<std::string, rumur::location>>> id_list_opt
+%type <rumur::shared_ptr<rumur::ext::MultisetQuantifier>>    multisetquantifier
+%type <std::vector<rumur::ext::MultisetQuantifier>>          multisetquantifiers
 %type <std::vector<rumur::Ptr<rumur::Node>>>                 nodes
 %type <std::vector<rumur::Ptr<rumur::VarDecl>>>              parameter
 %type <std::vector<rumur::Ptr<rumur::VarDecl>>>              parameters
@@ -305,6 +315,17 @@ designator: designator '.' ID {
   $$ = rumur::Ptr<rumur::ExprID>::make($1, nullptr, @$);
 };
 
+multisetquantifier: ID ':' designator {
+  $$ = std::make_shared<rumur::ext::MultisetQuantifier>($1, $3, @$);
+};
+
+multisetquantifiers: multisetquantifiers semis multisetquantifier {
+  $$ = $1;
+  $$.push_back(*$3);
+} | multisetquantifier {
+  $$.push_back(*$1);
+};
+
 else_opt: ELSE stmts {
   $$.push_back(rumur::IfClause(nullptr, $2, @$));
 } | %empty {
@@ -325,6 +346,7 @@ endif: END | ENDIF;
 endrecord: END | ENDRECORD;
 endrule: END | ENDRULE;
 endruleset: END | ENDRULESET;
+endchoose: END | ENDCHOOSE;
 endstartstate: END | ENDSTARTSTATE;
 endswitch: END | ENDSWITCH;
 endwhile: END | ENDWHILE;
@@ -407,7 +429,9 @@ expr: expr '?' expr ':' expr {
   $$ = rumur::Ptr<rumur::IsUndefined>::make($3, @$);
 // extended expr ...
 } | ISMEMBER '(' designator ',' typeexpr ')' {
-  $$ = rumur::Ptr<rumur::IsMember>::make($3, $5, @$);
+  $$ = rumur::Ptr<rumur::ext::IsMember>::make($3, $5, @$);
+} | MULTISETCOUNT '(' multisetquantifier ',' expr ')' {
+  $$ = rumur::Ptr<rumur::ext::MultisetCount>::make(*$3, $5, @$);
 };
 
 exprdecl: id_list_opt ':' expr {
@@ -515,6 +539,9 @@ rule: startstate {
   $$ = $1;
 } | aliasrule {
   $$ = $1;
+// extended syntax rules
+} | chooserule {
+  $$ = $1;
 };
 
 rules: rules rule semi_opt {
@@ -537,6 +564,10 @@ simplerule: RULE string_opt guard_opt decls_header stmts endrule {
 
 startstate: STARTSTATE string_opt decls_header stmts endstartstate {
   $$ = rumur::Ptr<rumur::StartState>::make($2, $3, $4, @$);
+};
+
+chooserule: CHOOSE multisetquantifiers DO rules endchoose {
+  $$ = rumur::Ptr<rumur::ChooseRule>::make($2, $4, @$);
 };
 
 stmt: category STRING expr {
@@ -581,6 +612,13 @@ stmt: category STRING expr {
   $$ = rumur::Ptr<rumur::While>::make($2, $4, @$);
 } | SWITCH expr switchcases endswitch {
   $$ = rumur::Ptr<rumur::Switch>::make($2, $3, @$);
+// extended statements
+} | MULTISETADD '(' expr ',' designator ')' {
+  $$ = rumur::Ptr<rumur::ext::MultisetAdd>::make($3, $5, @$);
+} | MULTISETREMOVE '(' expr ',' designator ')' {
+  $$ = rumur::Ptr<rumur::ext::MultisetRemove>::make($3, $5, @$);
+} | MULTISETREMOVEPRED '(' multisetquantifier ',' expr ')' {
+  $$ = rumur::Ptr<rumur::ext::MultisetRemovePred>::make(*$3, $5, @$);
 };
 
 stmts: stmts_cont stmt semi_opt {

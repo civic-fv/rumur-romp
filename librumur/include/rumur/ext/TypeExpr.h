@@ -1,5 +1,6 @@
 #pragma once
 
+#include <rumur/ext/un-ext.h>
 #include <rumur/TypeExpr.h>
 #include <unordered_map>
 
@@ -17,13 +18,16 @@ struct RUMUR_API_WITH_RTTI ScalarsetUnionMember {
 };
 
 
-struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset {
+struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset, public IExtNode<Scalarset> {
 
-  /// map of the NAME of a scalarset or single Enum value in this union
-  /// NOTE: this only has a value after symbol-resolution and finalization
-  std::unordered_map<std::string,ScalarsetUnionMember> members;
   // the list of types to union
   std::vector<Ptr<TypeExpr>> decl_list;
+  /// map of the NAME of a scalarset or single Enum value in this union
+  /// NOTE: this only has a value after symbol-resolution and a call to `update()`
+  /// WARNING: meant for implementing legacy code adaptations and the contains method ONLY!
+  ///          do not use in your implementation unless you know what you are doing,
+  ///          it gets overwritten every time `update()` is called.
+  std::unordered_map<std::string,ScalarsetUnionMember> members;
 
   ScalarsetUnion(const std::vector<Ptr<TypeExpr>>& decl_list_, const location& loc_);
   ScalarsetUnion *clone() const;
@@ -32,17 +36,22 @@ struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset {
   void visit(BaseTraversal& visitor);
   void visit(ConstBaseTraversal& visitor) const;
 
+  void count() const override;
+
   void update() override;
   void validate() const override;
   bool is_useful() const override;
   bool contains(const TypeExpr &other) const;
   std::string to_string() const override;
+
+  Ptr<Scalarset> make_legacy() const override;
 };
 
 
-struct RUMUR_API_WITH_RTTI Multiset : public Array {
+struct RUMUR_API_WITH_RTTI Multiset : public Array, public IExtNode<Array> {
 
-  Ptr<Expr>& size() const;
+  const Ptr<Expr>& size() const;
+  // const Ptr<TypeExpr>& element_type;
 
   Multiset(const Ptr<Expr>& size_, const Ptr<TypeExpr>& element_type_, const location& loc_);
   Multiset *clone() const;
@@ -51,8 +60,11 @@ struct RUMUR_API_WITH_RTTI Multiset : public Array {
   void visit(BaseTraversal& visitor);
   void visit(ConstBaseTraversal& visitor) const;
 
-  void validate() const;
-  std::string to_string() const;  
+  void validate() const override;
+  void update() override;
+  std::string to_string() const;
+
+  Ptr<Array> make_legacy() const override;
 };
 
 } //namespace ext

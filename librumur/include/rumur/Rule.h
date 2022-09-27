@@ -6,6 +6,7 @@
 #include <memory>
 #include <rumur/Decl.h>
 #include <rumur/Expr.h>
+#include <rumur/ext/Expr.h>
 #include <rumur/Node.h>
 #include <rumur/Property.h>
 #include <rumur/Ptr.h>
@@ -24,6 +25,8 @@ struct RUMUR_API_WITH_RTTI Rule : public Node {
   std::string name;
   std::vector<Quantifier> quantifiers;
   std::vector<Ptr<AliasDecl>> aliases;
+  /// for supporting multiset choose rules, legacy systems can ignore
+  std::vector<MultisetQuantifier> ms_quantifiers;
 
   Rule(const std::string &name_, const location &loc_);
 

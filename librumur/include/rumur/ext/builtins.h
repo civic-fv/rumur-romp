@@ -17,10 +17,9 @@
 
 #pragma once
 
-#include <rumur/ext/TypeExpt.h>
+#include <rumur/ext/TypeExpr.h>
 #include <rumur/ext/Function.h>
 #include <rumur/ext/Expr.h>
-#include <rumur/ext/Stmt.h>
 
 
 #ifndef RUMUR_API_WITH_RTTI
@@ -30,7 +29,22 @@
 namespace rumur {
 namespace ext {
 
-  // nothing to see here, yet..
+// struct RUMUR_API_WITH_RTTI MultisetCountFunction : public IBuiltInFunction {
+//
+//   const std::string index_var;
+//   Ptr<Expr> designator;
+//   Ptr<Expr> condition;
+//
+//   MultisetCount(const std::string& index_var_, const Ptr<Expr>& designator_, const Ptr<Expr>& condition_);
+//   MultisetCount *clone() const override;
+//   ~MultisetCount() = default;
+//
+//   visit(BaseTraversal& visitor) override;
+//   visit(ConstBaseTraversal& visitor) const override;
+//
+//   void validate() const override;
+//   void update() override;
+// };
 
 } //namespace ext
 } //namespace rumur

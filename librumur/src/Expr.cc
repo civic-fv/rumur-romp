@@ -16,6 +16,7 @@
 #include <rumur/TypeExpr.h>
 #include <rumur/except.h>
 #include <rumur/traverse.h>
+#include <rumur/ext/Expr.h>
 #include <string>
 #include <utility>
 #include <vector>

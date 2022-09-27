@@ -31,7 +31,7 @@ void ScalarsetUnion::visit(BaseTraversal &visitor) { visitor.visit_scalarsetunio
 void ScalarsetUnion::visit(ConstBaseTraversal &visitor) const { visitor.visit_scalarsetunion(*this); }
 
 void ScalarsetUnion::validate() const { 
-  for (const auto _m : members) {
+  for (const auto _m : decl_list) {
     const auto m = _m.value->resolve();
     if (isa<Enum>(m)) {
       if (m->count() <= 0)
@@ -45,7 +45,7 @@ void ScalarsetUnion::validate() const {
 }
 bool ScalarsetUnion::is_useful() const {
   bool useful = false;
-  for (const auto m : members)
+  for (const auto m : decl_list)
     if (isa<Scalarset>(m.value)) {
       if (isa<ScalarsetUnion>(m.value))
         useful |= m.value->is_useful();
@@ -53,6 +53,7 @@ bool ScalarsetUnion::is_useful() const {
   return (useful && count() > 1_mpz); // @Smattr you might want to tweak this comparison, too
 }
 void ScalarsetUnion::update() {
+  //TODO clean this function up
   mpz_class count;
   auto try_insert [&](name,value) -> bool {
     if (members.find(name) != members.end()) 
@@ -99,51 +100,56 @@ std::string ScalarsetUnion::to_string() const {
 }
 
 bool ScalarsetUnion::contains(const TypeExpr& n) const {
-    struct Contain : public ConstExtTypeTraversal {
-      bool result = false;
-      const ScalarsetUnion& u;
-      Contain(const ScalarsetUnion& u_) : u(u_) {} 
-      void visit_array(const Array &n) final { result = false; }
+  struct Contain : public ConstExtTypeTraversal {
+    bool result = false;
+    const ScalarsetUnion& u;
+    Contain(const ScalarsetUnion& u_) : u(u_) {} 
+    void visit_array(const Array &n) final { result = false; }
 
-      void visit_enum(const Enum &n) final {
-        auto _ui = u.members.find("_enum_"+n.members[0].first);
-        if (_ui == u.members.end() || not n.coerces_to(*_ui->second.value))
-          // not a member of the union or comes from a different enum
+    void visit_enum(const Enum &n) final {
+      auto _ui = u.members.find("_enum_"+n.members[0].first);
+      if (_ui == u.members.end() || not n.coerces_to(*_ui->second.value))
+        // not a member of the union or comes from a different enum
+        return; // result defaults to false
+      result = true; // "enum set" is in union
+    }
+
+    void visit_multiset(const Multiset& n) { result = false; }
+    void visit_range(const Range &n) final { result = false; }
+    void visit_record(const Record &n) final { result = false; }
+
+    void visit_scalarset(const Scalarset &n) final {
+      if (n.name == "") // unnamed scalarsets can never be in a union
           return; // result defaults to false
-        result = true; // "enum set" is in union
-      }
+      auto _ui = u.members.find(n.name);
+      if (_ui == u.members.end())
+        return; // result defaults to false
+      // the scalarset in the union and `n` are the same if ...
+      result = ((n.name == _ui->second.value->name) // names match
+                && (n.bound->constant_fold()        // and bounds match
+                    == _ui->second.value->bound->constant_fold()));
+    }
 
-      void visit_multiset(const Multiset& n) { result = false; }
-      void visit_range(const Range &n) final { result = false; }
-      void visit_record(const Record &n) final { result = false; }
+    void visit_scalarsetunion(const ScalarsetUnion& n) {
+      // a union `this` can only contain another scalarset union `n`...
+      //  IF it meets the same conditions as a scalarset to be contained in this union
+      //  AND `this` contains ALL of the children of `n`
+      visit_scalarset(n);
+      if (not result) return; // failed scalarset test
+      for (const auto m : n.decl_list)
+        result &= u.contains(*m);
+    }
 
-      void visit_scalarset(const Scalarset &n) final {
-        if (n.name == "") // unnamed scalarsets can never be in a union
-           return; // result defaults to false
-        auto _ui = u.members.find(n.name);
-        if (_ui == u.members.end())
-          return; // result defaults to false
-        // the scalarset in the union and `n` are the same if ...
-        result = ((n.name == _ui->second.value->name) // names match
-                  && (n.bound->constant_fold()        // and bounds match
-                      == _ui->second.value->bound->constant_fold()));
-      }
+    void visit_typeexprid(const TypeExprID &n) final { dispatch(*n.referent); }
+  };
+  Contain c(*this);
+  c.dispatch(n);
+  return c.result;
+}
 
-      void visit_scalarsetunion(const ScalarsetUnion& n) {
-        // a union `this` can only contain another scalarset union `n`...
-        //  IF it meets the same conditions as a scalarset to be contained in this union
-        //  AND `this` contains ALL of the children of `n`
-        visit_scalarset(n);
-        if (not result) return; // failed scalarset test
-        for (const auto m : n.decl_list)
-          result &= u.contains(*m);
-      }
-
-      void visit_typeexprid(const TypeExprID &n) final { dispatch(*n.referent); }
-    };
-    Contain c(*this);
-    c.dispatch(n);
-    return c.result;
+Ptr<Scalarset> ScalarsetUnion::make_legacy() const {
+  assert(bound != nullptr && "ScalarsetUnion was not updated before converted to Legacy!");
+  return Ptr<Scalarset>(clone());
 }
 
 // << ------------------------------------------------------------------------------------------ >> 
@@ -156,16 +162,27 @@ Multiset::Multiset(const Ptr<Expr> size_, const Ptr<TypeExpr> element_type_, con
 
 Multiset* Multiset::clone() const { return new Multiset(*this); }
 
-Ptr<Expr>& size() const {
+const Ptr<Expr>& size() const {
   if (auto _r = dynamic_cast<Range*>(index_type.get())) {
-
-  } else
-    assert(false && "multiset index type was not a Range as expected!")
+    assert(_r->min->constant_fold() != 1_mpz 
+            && "DEV ERROR : multiset index type did not conform to expectations");
+    return _r->max;
+  } //else
+  assert(false && "multiset index type was not a Range as expected!");
 }
 
 void Multiset::visit(BaseTraversal& visitor) { visitor.visit_multiset(*this); }
 void Multiset::visit(ConstBaseTraversal& visitor) const { visitor.visit_multiset(*this); }
 
+void Multiset::update() {
+  if (auto _r = dynamic_cast<Range*>(index_type.get())) {
+    if (_r->min->constant_fold() != 1_mpz)
+      index_type = Ptr<Range>::make(Ptr<Number>::make(1_mpz,location()),
+                                    Ptr<Sub>::make(_r->max,_r->min,location()), 
+                                    _r->loc);
+  } else
+    assert(false && "multiset index type was not a Range as expected!");
+}
 void Multiset::validate() const {
   if (size->is_boolean())
     throw Error("Multiset size constraint must be a number not a boolean!",size->loc);
@@ -174,6 +191,8 @@ void Multiset::validate() const {
 std::string Multiset::to_string() const {
   return "multiset [" + size->to_string() + "] of " + element_type->to_string();
 }
+
+Ptr<Array> Multiset::make_legacy() const { return Ptr<Array>(clone()); }
 
 
 } //namespace ext

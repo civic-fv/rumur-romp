@@ -37,11 +37,11 @@ struct RUMUR_API_WITH_RTTI AliasStmt : public Stmt {
 
   AliasStmt(const std::vector<Ptr<AliasDecl>> &aliases_,
             const std::vector<Ptr<Stmt>> &body_, const location &loc_);
-  AliasStmt *clone() const final;
+  AliasStmt *clone() const override;
   virtual ~AliasStmt() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor) override;
+  void visit(ConstBaseTraversal &visitor) const override;
 };
 
 struct RUMUR_API_WITH_RTTI PropertyStmt : public Stmt {

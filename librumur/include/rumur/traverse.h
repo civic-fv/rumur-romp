@@ -10,6 +10,9 @@
 
 #include <rumur/ext/Expr.h>
 #include <rumur/ext/TypeExpr.h>
+#include <rumur/ext/Stmt.h>
+#include <rumur/ext/Rule.h>
+#include <rumur/ext/builtins.h>
 
 #ifndef RUMUR_API_WITH_RTTI
 #define RUMUR_API_WITH_RTTI __attribute__((visibility("default")))
@@ -99,12 +102,19 @@ public:
   //  but would still like to be able to support Murphi models written with them.
   //  WARNING: assumes extended syntax nodes have had symbol resolution, 
   //           & finalization/conversion before called, unless overriden.
-  void visit_ismember(ext::IsMember& n);
-  void visit_multiset(ext::Multiset& n);
-  void visit_scalarsetunion(ext::ScalarsetUnion& n);
-  void visit_sucast(ext::SUCast& n);
+  virtual void visit_chooserule(ext::ChooseRule& n);
+  virtual void visit_ismember(ext::IsMember& n);
+  virtual void visit_multiset(ext::Multiset& n);
+  virtual void visit_multisetadd(ext::MultisetAdd& n);
+  virtual void visit_multisetelement(ext::MultisetCount& n);
+  virtual void visit_multisetelement(ext::MultisetElement& n);
+  virtual void visit_multisetremove(ext::MultisetRemove& n); 
+  virtual void visit_multisetremovepred(ext::MultisetRemovePred& n); 
+  virtual void visit_multisetquantifier(ext::MultisetQuantifier& n); 
+  virtual void visit_scalarsetunion(ext::ScalarsetUnion& n);
+  virtual void visit_sucast(ext::SUCast& n);
 
-  void visit_BuiltInFunction(ext::IBuiltInFunction& n); 
+  virtual void visit_BuiltInFunction(ext::IBuiltInFunction& n); //only visited for anon builtin's
 
 
   /* Visitation dispatch. This simply determines the type of the Node argument
@@ -272,12 +282,19 @@ public:
   virtual void visit_xor(const Xor &n) = 0;
 
   // extended syntax nodes
-  void visit_ismember(const ext::IsMember& n);
-  void visit_multiset(const ext::Multiset& n);
-  void visit_scalarsetunion(const ext::ScalarsetUnion& n);
-  void visit_sucast(const ext::SUCast& n);
+  virtual void visit_chooserule(const ext::ChooseRule& n);
+  virtual void visit_ismember(const ext::IsMember& n);
+  virtual void visit_multiset(const ext::MultisetAdd& n);
+  virtual void visit_multisetadd(const ext::MultisetCount& n);
+  virtual void visit_multisetcount(const ext::MultisetCount& n);
+  virtual void visit_multisetelement(const ext::MultisetElement& n);
+  virtual void visit_multisetremove(const ext::MultisetRemove& n);
+  virtual void visit_multisetremovepred(const ext::MultisetRemovePred& n);
+  virtual void visit_multisetquantifier(const ext::MultisetQuantifier& n); 
+  virtual void visit_scalarsetunion(const ext::ScalarsetUnion& n);
+  virtual void visit_sucast(const ext::SUCast& n);
 
-  void visit_BuiltInFunction(const ext::IBuiltInFunction& n);
+  virtual void visit_BuiltInFunction(const ext::IBuiltInFunction& n); //only visited for anon builtin's
 
 
   void dispatch(const Node &n);
