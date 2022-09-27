@@ -363,6 +363,116 @@ void MultisetElement::update() {
 
 Ptr<Element> MultisetElement::make_legacy() const { return Ptr<Element>(clone()); }
 
+// << ------------------------------------------------------------------------------------------ >> 
+
+/**
+ * Check to see if a MultisetElement swap is valid
+ */
+bool valid_ms_access(const MultisetQuantifier& mq, const Element& e) {
+  if (mq.designator->type()->equal_to(e->array->type())) {
+    if (const auto _i = dynamic_cast<const ExprID*>(e->index.get())) {
+      return (_i->name == mq.name && mq.decl->type->equal_to(_i->type())
+          /* && mq.designator->to_string() == e->array->to_string() */); // <-- if nothing else works uncomment this
+      // this logic needs to be improved 
+      //  to ensure you don't access a multiset that hasn't been checked for a defined value 
+      //  at the specified location.
+    }
+    throw Error("you can only access a multiset element with a current scope specific location specifier", e->index->loc);
+  }
+  return false;
+}
+
+Ptr<Expr> MultisetElement::convert_elements(const MultisetQuantifier& mq, const Ptr<Expr>& expr) const {
+  // would have loved to do this with a traverser but recursively rebuilding with a traverser is convoluted
+  //  therefore this solution is preferable. (this solution is to dynamic_cast for all direct descendents of Expr)
+  //  this operates blindly 
+  auto convert = [&](const Ptr<Expr>& _n) -> Ptr<Expr> {
+    if (_n == nullptr) return Ptr<Expr>(nullptr);
+    if (const auto _me = dynamic_cast<const MultisetElement*>(_n.get())) {
+      // if it's an already handled MultisetElement just convert internal elements as needed
+      return Ptr<MultisetElement>::make(_me->ms_quantifier,
+                                        convert(_me->array),
+                                        convert(_me->index),
+                                        _me->loc);
+    }
+    if (const auto _e = dynamic_cast<const Element*>(_n.get())) {
+      auto e = Ptr<Element>::make(convert(_e->array),
+                                  convert(_e->index),
+                                  _e->loc);
+      if (valid_ms_access(mq, *e))
+        return Ptr<MultisetElement>::make(mq,e->array,e->index,_n->loc);
+      return e;
+    }
+    if (const auto _t = dynamic_cast<const Ternary*>(_n.get())) {
+      return Ptr<Ternary>::make(convert(_t->cond),
+                                convert(_t->lhs),
+                                convert(_t->rhs),
+                                _t->loc);
+    }
+    if (const auto _b = dynamic_cast<const BinaryExpr*>(_n.get())) {
+      Ptr<BinaryExpr> b(_b->clone());
+      b->lhs = convert(_b->lhs);
+      b->rhs = convert(_b->rhs);
+      return b;
+    }
+    if (const auto _u = dynamic_cast<const UnaryExpr*>(_n.get())) {
+      Ptr<UnaryExpr> u(_u->clone());
+      u->lhs = convert(_u->lhs);
+      u->rhs = convert(_u->rhs);
+      return u;
+    }
+    if (const auto _id = dynamic_cast<const ExprID*>(_n.get())) {
+      //NOTE: might need to deal with alias decls here, but we can probs ignore
+      return Ptr<Expr>(_fid->clone());
+    }
+    if (const auto _fid = dynamic_cast<const Field*>(_n.get())) {
+      return Ptr<Expr>(_fid->clone());
+    }
+    if (const auto _fc = dynamic_cast<const FunctionCall*>(_n.get())) {
+      Ptr<FunctionCall> fc(_fc->clone());
+      for (size_t i=0; i<fc->arguments.size(); ++i)
+        fc->arguments[i] = convert(_fc->arguments[i]);
+      return fc;
+    }
+    if (const auto _ex = dynamic_cast<const Exists*>(_n.get())) {
+      Quantifier ex_q = *_ex->quantifier.clone();
+      ex_q.type = convert(ex_q.type);
+      ex_q.from = convert(ex_q.from);
+      ex_q.to = convert(ex_q.to);
+      ex_q.step = convert(ex_q.step);
+      return Ptr<Exists>::make(ex_q,
+                               convert(_ex->expr),
+                               _ex->loc);
+    }
+    if (const auto _fa = dynamic_cast<const Forall*>(_n.get())) {
+      Quantifier fa_q = *_fa->quantifier.clone();
+      fa_q.type = convert(fa_q.type);
+      fa_q.from = convert(fa_q.from);
+      fa_q.to = convert(fa_q.to);
+      fa_q.step = convert(fa_q.step);
+      return Ptr<Forall>::make(fa_q,
+                               convert(_fa->expr),
+                               _fa->loc);
+    }
+    if (const auto _mc = dynamic_cast<const MultisetCount*>(_n.get())) {
+      MultisetQuantifier mc_mq = *_mc->ms_quantifier.clone();
+      mc_mq.multiset = convert(mc_mq.multiset);
+      mc_mq.update();
+      return Ptr<MultisetCount>::make(mc_mq,
+                                      convert(_mc->condition),
+                                      _mc->loc);
+    }
+    if (const auto _im = dynamic_cast<const IsMember*>(_n.get())) {
+      return Ptr<IsMember>::make(convert(_im->designator),
+                                  _im->type,
+                                  _im->loc);
+    }
+    assert(false && "DEV ERROR : should be unreachable "
+                    "(if reachable then a direct decedent of Expr was added, but not handled)");
+  };
+  return convert(expr);
+}
+
 
 // << ------------------------------------------------------------------------------------------ >> 
 
@@ -413,7 +523,7 @@ void MultisetCount::validate() const {
     throw Error("expression is not pure", pred->loc);
 }
 void MultisetCount::update() {
-  // nothing to do here
+  //do nothing
 }
 void MultisetCount::type() const {
   if (const auto ms = dynamic_cast<const Multiset*>(ms_quantifier.multiset->type().get()))
@@ -428,7 +538,45 @@ std::string MultisetCount::to_string() const {
 }
 
 Ptr<Add> MultisetCount::make_legacy() const {
-  //TODO
+  auto _make_exprid = ;
+  auto _convert = [&](Ptr<Add>& add, mpz_class i=1_mpz) -> void {
+    if (i > ms_quantifier.type->count()) { // base case end of assets
+      // add->rhs = Ptr<Number>::make(0_mpz,location());
+      return;
+    }
+    add->rhs = Ptr<Add>::make(
+                Ptr<Ternary>::make(
+                    Ptr<IsUndefined>::make(
+                      Ptr<MultisetElement>::make(
+                        ms_quantifier.designator,
+                        Ptr<Number>(i,location()),
+                        loc),
+                      loc),
+                    Ptr<Number>::make(0_mpz,location()),
+                    Ptr<Ternary>::make(
+                      Ptr<Exists>::make(
+                        ms_quantifier.make_legacy(),
+                        Ptr<And>::make(
+                          Ptr<Eq>::make(
+                            Ptr<ExprID>::make(ms_quantifier.name, ms_quantifier.decl, loc),
+                            Ptr<Number>::make(i,location()),
+                            loc),
+                          condition,
+                          loc),
+                        loc),
+                      Ptr<Number>::make(1_mpz,location()),
+                      Ptr<Number>::make(0_mpz,location()),
+                      loc),
+                    loc),
+                  Ptr<Number>::make(0_mpz,location());
+                  loc);
+    _convert(add->rhs,++i);
+  };
+  auto res = Ptr<Add>::make(Ptr<Number>::make(0_mpz,location()),
+                            Ptr<Number>::make(0_mpz,location()),
+                            loc);
+  _convert(res);
+  return res; 
 }
 
 

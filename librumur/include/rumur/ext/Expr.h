@@ -79,26 +79,6 @@ protected:
   void pre_validate() const;
 };
 
-/**
- * @brief The only way to access an element of a multiset.
- *        NOTE: this AST node can't be inserted into  
- */
-struct RUMUR_API_WITH_RTTI MultisetElement : public Element, public IExtNode<Element> {
-
-  MultisetElement(const Ptr<Expr>& designator_, const Ptr<Expr> index_, const location& loc_);
-  MultisetElement *clone() const override;
-  ~MultisetElement() = default;
-
-  void visit(BaseTraversal& visitor) override;
-  void visit(ConstBaseTraversal& visitor) const override;
-
-  void validate() const override;
-  void update() override;
-
-  // std::string to_string() const override;
-
-  Ptr<Element> make_legacy() const override;
-};
 
 struct RUMUR_API_WITH_RTTI MultisetQuantifier : public Quantifier, public IExtNode<Quantifier> {
 
@@ -116,6 +96,32 @@ struct RUMUR_API_WITH_RTTI MultisetQuantifier : public Quantifier, public IExtNo
   std::string to_string() const override;
 
   Ptr<Quantifier> make_legacy() const override;
+};
+
+
+/**
+ * @brief The only way to access an element of a multiset.
+ *        NOTE: this AST node can't be inserted into  
+ */
+struct RUMUR_API_WITH_RTTI MultisetElement : public Element, public IExtNode<Element> {
+
+  MultisetQuantifier ms_quantifier;
+
+  MultisetElement(const MultisetQuantifier& ms_quant_, const Ptr<Expr>& designator_, 
+                  const Ptr<Expr> index_, const location& loc_);
+  MultisetElement *clone() const override;
+  ~MultisetElement() = default;
+
+  void visit(BaseTraversal& visitor) override;
+  void visit(ConstBaseTraversal& visitor) const override;
+
+  void validate() const override;
+  void update() override;
+
+  // std::string to_string() const override;
+
+  Ptr<Element> make_legacy() const override;
+  static Ptr<Expr> convert_elements(const MultisetQuantifier& mq, const Ptr<Expr>& expr) const;
 };
 
 
