@@ -12,7 +12,6 @@
 #include <rumur/ext/TypeExpr.h>
 #include <rumur/ext/Stmt.h>
 #include <rumur/ext/Rule.h>
-#include <rumur/ext/builtins.h>
 
 #ifndef RUMUR_API_WITH_RTTI
 #define RUMUR_API_WITH_RTTI __attribute__((visibility("default")))
@@ -113,8 +112,6 @@ public:
   virtual void visit_multisetquantifier(ext::MultisetQuantifier& n); 
   virtual void visit_scalarsetunion(ext::ScalarsetUnion& n);
   virtual void visit_sucast(ext::SUCast& n);
-
-  virtual void visit_BuiltInFunction(ext::IBuiltInFunction& n); //only visited for anon builtin's
 
 
   /* Visitation dispatch. This simply determines the type of the Node argument
@@ -293,8 +290,6 @@ public:
   virtual void visit_multisetquantifier(const ext::MultisetQuantifier& n); 
   virtual void visit_scalarsetunion(const ext::ScalarsetUnion& n);
   virtual void visit_sucast(const ext::SUCast& n);
-
-  virtual void visit_BuiltInFunction(const ext::IBuiltInFunction& n); //only visited for anon builtin's
 
 
   virtual void dispatch(const Node &n);

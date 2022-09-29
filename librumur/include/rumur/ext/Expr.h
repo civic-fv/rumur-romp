@@ -2,7 +2,6 @@
 
 #include <rumur/ext/make_legacy.h>
 #include <rumur/Expr.h>
-#include <rumur/ext/Function.h>
 #include <functional>
 
 #ifndef RUMUR_API_WITH_RTTI

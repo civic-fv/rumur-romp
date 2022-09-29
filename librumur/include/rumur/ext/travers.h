@@ -3,8 +3,8 @@
 #include <rumur/ext/IExtTraverse.h>
 #include <rumur/traverse.h>
 #include <rumur/ext/Expr.h>
-#include <rumur/ext/Function.h>
 #include <rumur/ext/TypeExpr.h>
+#include <rumur/ext/Stmt.h>
 
 #ifndef RUMUR_API_WITH_RTTI
 #define RUMUR_API_WITH_RTTI __attribute__((visibility("default")))
@@ -27,8 +27,6 @@ public:
   void visit_scalarsetunion(ScalarsetUnion& n) override;
   void visit_sucast(SUCast& n) override;
 
-  void visit_BuiltInFunction(IBuiltInFunction& n) override; //only visited for anon builtin's
-
 };
 
 class RUMUR_API_WITH_RTTI ExtTraversal : public Traversal {
@@ -44,8 +42,6 @@ public:
   void visit_multisetquantifier(MultisetQuantifier& n) override; 
   void visit_scalarsetunion(ScalarsetUnion& n) override;
   void visit_sucast(SUCast& n) override;
-
-  void visit_BuiltInFunction(IBuiltInFunction& n) override; //only visited for anon builtin's
 
 };
 
@@ -63,8 +59,6 @@ public:
   void visit_scalarsetunion(const ScalarsetUnion& n) override;
   void visit_sucast(const SUCast& n) override;
 
-  void visit_BuiltInFunction(const IBuiltInFunction& n) override; //only visited for anon builtin's
-
 };
 
 class RUMUR_API_WITH_RTTI ConstExtTraversal : public ConstTraversal {
@@ -80,8 +74,6 @@ public:
   void visit_multisetquantifier(const MultisetQuantifier& n) override; 
   void visit_scalarsetunion(const ScalarsetUnion& n) override;
   void visit_sucast(const SUCast& n) override;
-
-  void visit_BuiltInFunction(const IBuiltInFunction& n) override; //only visited for anon builtin's
 
 };
 

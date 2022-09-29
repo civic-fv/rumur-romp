@@ -40,14 +40,13 @@
   #include <cstddef>
   #include <memory>
   #include <rumur/Decl.h>
-  #include <rumur/ext/Expr.h>
-  #include <rumur/ext/Function.h>
   #include <rumur/Model.h>
   #include <rumur/Node.h>
   #include <rumur/Number.h>
   #include <rumur/Ptr.h>
   #include <rumur/Rule.h>
   #include <rumur/Stmt.h>
+  #include <rumur/ext/Expr.h>
   #include <rumur/ext/TypeExpr.h>
   #include <rumur/ext/Stmt.h>
 
