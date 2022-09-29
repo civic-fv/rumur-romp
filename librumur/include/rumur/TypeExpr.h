@@ -109,7 +109,7 @@ struct RUMUR_API_WITH_RTTI Scalarset : public TypeExpr {
   void validate() const;
 
   std::string lower_bound() const final;
-  std::string upper_bound() const final;
+  std::string upper_bound() const;
   std::string to_string() const;
   bool constant() const final;
   bool is_useful() const;

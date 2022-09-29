@@ -3,7 +3,7 @@
 #include <rumur/Stmt.h>
 #include <rumur/ext/TypeExpr.h>
 #include <rumur/ext/Expr.h>
-#include <rumur/est/un-ext.h>
+#include <rumur/est/make_legacy.h>
 
 #ifndef RUMUR_API_WITH_RTTI
 #define RUMUR_API_WITH_RTTI __attribute__((visibility("default")))

@@ -392,7 +392,7 @@ void ExtBaseTraversal::visit_scalarsetunion(ScalarsetUnion& n) {
                   "(from: rumur::ext::ExtBaseTraversal)");
 }
 void ExtTraversal::visit_scalarsetunion(ScalarsetUnion& n) {
-  for (auto m : n.decl_list) 
+  for (auto m : n.members) 
     dispatch(*m);
 }
 void ConstExtBaseTraversal::visit_scalarsetunion(const ScalarsetUnion& n) {
@@ -400,15 +400,15 @@ void ConstExtBaseTraversal::visit_scalarsetunion(const ScalarsetUnion& n) {
                   "(from: rumur::ext::ConstExtBaseTraversal)");
 }
 void ConstExtTraversal::visit_scalarsetunion(const ScalarsetUnion& n) {
-  for (const auto m : n.decl_list) 
+  for (const auto m : n.members) 
     dispatch(*m);
 }
 void ConstExtExprTraversal::visit_scalarsetunion(const ScalarsetUnion& n) {
-  for (const auto m : n.decl_list) 
+  for (const auto m : n.members) 
     dispatch(*m);
 }
 void ConstExtStmtTraversal::visit_scalarsetunion(const ScalarsetUnion& n) {
-  for (const auto m : n.decl_list) 
+  for (const auto m : n.members) 
     dispatch(*m);
 }
 void ConstExtTypeTraversal::visit_scalarsetunion(const ScalarsetUnion& n) {  //not used for a type expr

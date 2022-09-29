@@ -122,7 +122,7 @@ public:
    * because we do not anticipate use cases where this behaviour needs to
    * change.
    */
-  void dispatch(Node &n);
+  virtual void dispatch(Node &n);
 
   // Unlike the other visitation methods, we provide an implementation for
   // the ambiguous nodes because they only exist in an unresolved AST. We assume
@@ -297,7 +297,7 @@ public:
   virtual void visit_BuiltInFunction(const ext::IBuiltInFunction& n); //only visited for anon builtin's
 
 
-  void dispatch(const Node &n);
+  virtual void dispatch(const Node &n);
 
   virtual void visit_ambiguousamp(const AmbiguousAmp &n);
   virtual void visit_ambiguouspipe(const AmbiguousPipe &n);

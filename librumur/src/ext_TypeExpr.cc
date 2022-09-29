@@ -21,16 +21,29 @@ namespace rumur {
 namespace ext {
 
 
-ScalarsetUnion::ScalarsetUnion(const std::vector<Ptr<TypeExpr>>& decl_list_, const location &loc_) 
+ScalarsetUnion::ScalarsetUnion(const std::vector<Ptr<TypeExpr>>& members_, const location &loc_) 
   : Scalarset(Ptr<TypeExprID>::make("_union_none_",nullptr,loc), loc), 
-    decl_list(decl_list_), _useful(false) {}
-ScalarsetUnion* ScalarsetUnion::clone() const { return new ScalarsetUnion(members,loc); }
+    members(members_), _useful(false) {}
+ScalarsetUnion* ScalarsetUnion::clone() const { return new ScalarsetUnion(members_exp,loc); }
 
 void ScalarsetUnion::visit(BaseTraversal &visitor) { visitor.visit_scalarsetunion(*this); }
 void ScalarsetUnion::visit(ConstBaseTraversal &visitor) const { visitor.visit_scalarsetunion(*this); }
 
+mpz_class ScalarsetUnion::count() const {
+  mpz_class count = 0_mpz;
+  for (const Ptr<TypeExpr> m : members)
+    count += m->count() - 1; //remove undefined from considerations of each union member
+  return count + 1;  // add in undefined value for the scalarset
+}
+std::string ScalarsetUnion::upper_bound() const {
+  mpz_class size = count() - 1; // -1 to remove undefined value added in count 
+  if (size > 0)
+    --size; // & -1 to slide range down to start at 0 if it contains anything
+  return "VALUE_C(" + size + ")";
+}
+
 void ScalarsetUnion::validate() const { 
-  for (const auto _m : decl_list) {
+  for (const auto _m : members) {
     const auto m = _m.value->resolve();
     if (isa<Enum>(m)) {
       if (m->count() <= 0)
@@ -44,7 +57,7 @@ void ScalarsetUnion::validate() const {
 }
 bool ScalarsetUnion::is_useful() const {
   bool useful = false;
-  for (const auto m : decl_list)
+  for (const auto m : members)
     if (isa<Scalarset>(m.value)) {
       if (isa<ScalarsetUnion>(m.value))
         useful |= m.value->is_useful();
@@ -55,26 +68,26 @@ void ScalarsetUnion::update() {
   //TODO clean this function up
   mpz_class count;
   auto try_insert [&](name,value) -> bool {
-    if (members.find(name) != members.end()) 
+    if (members_exp.find(name) != members_exp.end()) 
       return false;
     members[name] = value;
     return true;
   };
-  auto _union_enum [&](Enum& e, mpz_class _sum=0_mpz) -> mpz_class {
+  auto _union_enum [&](Enum& e) -> mpz_class {
     for (auto m : e.members)
         if (try_insert("_enum_"+m.first,ScalarsetUnionMember(_m,_sum,_sum)))
           _sum++;
     return sum;
   };
-  auto _union [&](ScalarsetUnion& ssu, mpz_class sum=0_mpz) -> mpz_class {
-    for (auto _m : ssu.decl_list) {
+  auto _union [&](ScalarsetUnion& ssu, mpz_class sum=1_mpz) -> mpz_class { // start at 1 to include undefined
+    for (auto _m : ssu.members) {
       auto _res_t = _m->resolve();
       if (auto _e = dynamic_cast<Enum*>(_res_t.get()))
         _union_enum(*_e,sum);
       if (auto _ssu = dynamic_cast<ScalarsetUnion*>(_res_t.get()))
           _union(*_ssu,sum);  // recursively explore and add members of contained scalarset union with this one.
       if (auto _tid = dynamic_cast<TypeExprID*>(_m.get())) { 
-        count = _m->count();
+        count = _m->count()-1; // remove undefined from this entries considerations
         if (try_insert(_tid->referent->name,ScalarsetUnionMember(_m,sum,sum+count-1_mpz)))
           sum += count;
         continue;
@@ -82,8 +95,8 @@ void ScalarsetUnion::update() {
       throw Error("union only operates on Enum and NAMED scalarset types!", _m->loc);
     }
   };
-  members.clear();
-  bound = Ptr<Number>::make(_union(*this),loc);
+  members_exp.clear();
+  _union(*this);
 }
 
 std::string ScalarsetUnion::to_string() const {
@@ -106,8 +119,8 @@ bool ScalarsetUnion::contains(const TypeExpr& n) const {
     void visit_array(const Array &n) final { result = false; }
 
     void visit_enum(const Enum &n) final {
-      auto _ui = u.members.find("_enum_"+n.members[0].first);
-      if (_ui == u.members.end() || not n.coerces_to(*_ui->second.value))
+      auto _ui = u.members_exp.find("_enum_"+n.members[0].first);
+      if (_ui == u.members_exp.end() || not n.coerces_to(*_ui->second.value))
         // not a member of the union or comes from a different enum
         return; // result defaults to false
       result = true; // "enum set" is in union
@@ -120,8 +133,8 @@ bool ScalarsetUnion::contains(const TypeExpr& n) const {
     void visit_scalarset(const Scalarset &n) final {
       if (n.name == "") // unnamed scalarsets can never be in a union
           return; // result defaults to false
-      auto _ui = u.members.find(n.name);
-      if (_ui == u.members.end())
+      auto _ui = u.members_exp.find(n.name);
+      if (_ui == u.members_exp.end())
         return; // result defaults to false
       // the scalarset in the union and `n` are the same if ...
       result = ((n.name == _ui->second.value->name) // names match
@@ -135,7 +148,7 @@ bool ScalarsetUnion::contains(const TypeExpr& n) const {
       //  AND `this` contains ALL of the children of `n`
       visit_scalarset(n);
       if (not result) return; // failed scalarset test
-      for (const auto m : n.decl_list)
+      for (const auto m : n.members)
         result &= u.contains(*m);
     }
 
@@ -155,26 +168,26 @@ Ptr<Scalarset> ScalarsetUnion::make_legacy() const {
 
 Ptr<Add> ScalarsetUnion::gen_legacy_bound(std::unordered_set<std::string>& handled) const {
   auto _extend = [&](Ptr<Add>& add, int i=0) -> void {
-    if (i<decl_list.size()) { // base case end of assets
+    if (i<members.size()) { // base case end of assets
       // add->rhs = Ptr<Number>::make(0_mpz,location());
       return;
     }
     Ptr<Expr> _bound = nullptr; 
-    if (const auto _u = dynamic_cast<const ScalarSetUnion*>(decl_list[i])) {
+    if (const auto _u = dynamic_cast<const ScalarSetUnion*>(members[i])) {
       if (_u->name == "")
         throw Error("A union can't contain an unnamed union",_u->loc);
       if (handled.find(_u->name) != handled.end()) {
         handled.insert(_u->name);
         _bound = _u->gen_legacy_bound(handled);
       }
-    } else if (const auto _e = dynamic_cast<const Enum*>(decl_list[i])) {
+    } else if (const auto _e = dynamic_cast<const Enum*>(members[i])) {
       mpz_class count = 0_mpz;
       for (const auto m : _e->members)
         if (handled.find("_enum_"+m.first) != handled.end()) {
           handled.insert("_enum_"+m.first);
           ++count;
       _bound = Ptr<Number>::make(count,_e->loc);
-    } else if (const auto _s = dynamic_cast<const Scalarset*>(decl_list[i])) {
+    } else if (const auto _s = dynamic_cast<const Scalarset*>(members[i])) {
       if (_s->name == "")
         throw Error("A union can't contain an unnamed scalarset",_u->loc);
       handled.insert(_s->name);

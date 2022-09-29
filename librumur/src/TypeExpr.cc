@@ -294,8 +294,7 @@ std::string Scalarset::to_string() const {
   return "scalarset(" + bound->to_string() + ")";
 }
 
-bool Scalarset::constant() const { return bound->constant(); }
-bool Scalarset::is_useful() const { return count() > 1_mpz; }  // @Smattr you might want to tweak this comparison
+bool Scalarset::constant() const { return (bound->c bound->constant_fold() > 1_mpz); }  // @Smattr you might want to tweak this comparison
 
 
 Enum::Enum(const std::vector<std::pair<std::string, location>> &members_,

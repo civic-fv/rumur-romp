@@ -1,7 +1,7 @@
 #pragma once
 
 #include <rumur/Rule.h>
-#include <rumur/ext/un-ext.h>
+#include <rumur/ext/make_legacy.h>
 #include <rumur/ext/TypeExpr.h>
 #include <rumur/ext/Expr.h>
 

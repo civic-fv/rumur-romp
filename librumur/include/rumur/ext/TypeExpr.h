@@ -1,6 +1,6 @@
 #pragma once
 
-#include <rumur/ext/un-ext.h>
+#include <rumur/ext/make_legacy.h>
 #include <rumur/TypeExpr.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -22,22 +22,17 @@ struct RUMUR_API_WITH_RTTI ScalarsetUnionMember {
 struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset, public IExtNode<Scalarset> {
 
   // the list of types to union
-  std::vector<Ptr<TypeExpr>> decl_list;
-  /// map of the NAME of a scalarset or single Enum value in this union
-  /// NOTE: this only has a value after symbol-resolution and a call to `update()`
-  /// WARNING: meant for implementing legacy code adaptations and the contains method ONLY!
-  ///          do not use in your implementation unless you know what you are doing,
-  ///          it gets overwritten every time `update()` is called.
-  std::unordered_map<std::string,ScalarsetUnionMember> members;
+  std::vector<Ptr<TypeExpr>> members;
 
-  ScalarsetUnion(const std::vector<Ptr<TypeExpr>>& decl_list_, const location& loc_);
+  ScalarsetUnion(const std::vector<Ptr<TypeExpr>>& members_, const location& loc_);
   ScalarsetUnion *clone() const;
   virtual ~ScalarsetUnion() = default;
 
   void visit(BaseTraversal& visitor);
   void visit(ConstBaseTraversal& visitor) const;
 
-  void count() const override;
+  mpz_class count() const override;
+  std::string upper_bound() const override;
 
   void update() override;
   void validate() const override;
@@ -48,6 +43,20 @@ struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset, public IExtNode<Sc
   Ptr<Scalarset> make_legacy() const override;
 private:
   Ptr<Add> gen_legacy_bound(std::unordered_set<std::string>& handled) const;
+  /// map of the NAME of a scalarset or single Enum value in this union
+  /// NOTE: this only has a value after symbol-resolution and a call to `update()`
+  /// WARNING: meant for implementing legacy code adaptations and the contains method ONLY!
+  ///          do not use in your implementation unless you know what you are doing,
+  ///          it gets overwritten every time `update()` is called.
+  std::unordered_map<std::string,ScalarsetUnionMember> members_exp;
+  friend rumur::ext::SUCast;
+  friend rumur::ext::IsMember;
+  // some helpful tools for converting to legacy AST
+  static mpz_class get_conv_modifier(const TypeExpr& from, const TypeExpr& to);
+  static mpz_class get_conv_modifier_su(const Scalarset& from, const ScalarsetUnion& to);
+  static mpz_class get_conv_modifier_us(const ScalarsetUnion& from, const Scalarset& to);
+  static mpz_class get_conv_modifier_eu(const Enum& from, const ScalarsetUnion& to);
+  static mpz_class get_conv_modifier_ue(const ScalarsetUnion& from, const Enum& to);
 };
 
 

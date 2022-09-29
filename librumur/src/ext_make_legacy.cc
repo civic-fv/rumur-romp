@@ -1,5 +1,5 @@
 
-#include <rumur/ext/un-ext.h>
+#include <rumur/ext/make_legacy.h>
 #include <rumur/ext/traverse.h>
 
 
@@ -26,19 +26,23 @@ struct MakeLegacy : public ConstBaseTraversal {
 
   void visit_aliasrule(const AliasRule &n) final {
     Ptr<AliasRule> _n(n.clone());
+    _n->aliases.clear();
     for (auto &a : n.aliases)
-      dispatch(*a);
+      _n->aliases.push_back(un_ext(a));
+    _n->rules.clear();
     for (auto &r : n.rules)
-      dispatch(*r);
+      _n->rules.push_back(un_ext(r));
     result = _n;
   }
 
   void visit_aliasstmt(const AliasStmt &n) final {
     Ptr<AliasStmt> _n(n.clone());
+    _n->aliases.clear();
     for (auto &a : n.aliases)
-      dispatch(*a);
+      _n->aliases.push_back(un_ext(a));
+    _n->body.clear();
     for (auto &s : n.body)
-      dispatch(*s);
+      _n->body.push_back(un_ext(s));
     result = _n;
   }
 
@@ -124,7 +128,9 @@ struct MakeLegacy : public ConstBaseTraversal {
   }
 
   void visit_enum(const Enum &n) final {
-    Ptr<Enum> _n(n.clone()); result = _n; }
+    Ptr<Enum> _n(n.clone()); 
+    result = _n; 
+  }
 
   void visit_eq(const Eq &n) final {
     Ptr<Eq> _n(n.clone());
@@ -134,11 +140,13 @@ struct MakeLegacy : public ConstBaseTraversal {
   }
 
   void visit_errorstmt(const ErrorStmt &n) final {
-    Ptr<ErrorStmt> _n(n.clone()); result = _n; }
+    Ptr<ErrorStmt> _n(n.clone()); 
+    result = _n; 
+  }
 
   void visit_exists(const Exists &n) final {
     Ptr<Exists> _n(n.clone());
-    _n->quantifier = un_ext(n.quantifier);
+    _n->quantifier = *un_ext(Ptr<Node>(&n.quantifier));
     _n->expr = un_ext(n.expr);
     result = _n;
   }
@@ -158,36 +166,41 @@ struct MakeLegacy : public ConstBaseTraversal {
 
   void visit_for(const For &n) final {
     Ptr<For> _n(n.clone());
-    _n->quantifier = un_ext(n.quantifier);
+    _n->quantifier = *un_ext(Ptr<Node>(&n.quantifier));
+    _n->body.clear();
     for (auto &s : n.body)
-      dispatch(*s);
+      _n->body.push_back(un_ext(s));
     result = _n;
   }
 
   void visit_forall(const Forall &n) final {
     Ptr<Forall> _n(n.clone());
-    _n->quantifier = un_ext(n.quantifier);
+    _n->quantifier = *un_ext(Ptr<Node>(&n.quantifier));
     _n->expr = un_ext(n.expr);
     result = _n;
   }
 
   void visit_function(const Function &n) final {
     Ptr<Function> _n(n.clone());
+    _n->parameters.clear();
     for (auto &p : n.parameters)
-      dispatch(*p);
+      _n->parameters.push_back(un_ext(p));
     if (n.return_type != nullptr)
       _n->return_type = un_ext(n.return_type);
+    _n->decls.clear();
     for (auto &d : n.decls)
-      dispatch(*d);
+      _n->decls.push_back(un_ext(d));
+    _n->body.clear();
     for (auto &s : n.body)
-      dispatch(*s);
+      _n->body.push_back(un_ext(s));
     result = _n;
   }
 
   void visit_functioncall(const FunctionCall &n) final {
     Ptr<FunctionCall> _n(n.clone());
+    _n->arguments.clear();
     for (auto &a : n.arguments)
-      dispatch(*a);
+      _n->arguments.push_back(un_ext(a));
     result = _n;
   }
 
@@ -207,8 +220,9 @@ struct MakeLegacy : public ConstBaseTraversal {
 
   void visit_if(const If &n) final {
     Ptr<If> _n(n.clone());
+    _n->clauses.clear();
     for (const IfClause &c : n.clauses)
-      dispatch(c);
+      _n->clauses.push_back(*un_ext(Ptr<Node>(&c)));
     result = _n;
   }
 
@@ -216,8 +230,9 @@ struct MakeLegacy : public ConstBaseTraversal {
     Ptr<IfClause> _n(n.clone());
     if (n.condition != nullptr)
       _n->condition = un_ext(n.condition);
+    _n->body.clear();
     for (auto &s : n.body)
-      dispatch(*s);
+      _n->body.push_back(un_ext(s));
     result = _n;
   }
 
@@ -264,8 +279,9 @@ struct MakeLegacy : public ConstBaseTraversal {
 
   void visit_model(const Model &n) final {
     Ptr<Model> _n(n.clone());
+    _n->children.clear();
     for (const Ptr<Node> &c : n.children)
-      dispatch(*c);
+      _n->children.push_back(un_ext(c));
     result = _n;
   }
 
@@ -319,8 +335,9 @@ struct MakeLegacy : public ConstBaseTraversal {
 
   void visit_propertyrule(const PropertyRule &n) final {
     Ptr<PropertyRule> _n(n.clone());
+    _n->quantifiers.clear();
     for (const Quantifier &q : n.quantifiers)
-      dispatch(q);
+      _n->quantifiers.push_back(*un_ext(Ptr<Node>(&q)));
     _n->property = un_ext(n.property);
     result = _n;
   }
@@ -360,8 +377,9 @@ struct MakeLegacy : public ConstBaseTraversal {
 
   void visit_record(const Record &n) final {
     Ptr<Record> _n(n.clone());
+    _n->fields.clear();
     for (auto &f : n.fields)
-      dispatch(*f);
+      _n->fields.push_back(un_ext(f));
     result = _n;
   }
 
@@ -381,10 +399,12 @@ struct MakeLegacy : public ConstBaseTraversal {
 
   void visit_ruleset(const Ruleset &n) final {
     Ptr<Ruleset> _n(n.clone());
+    _n->quantifiers.clear();
     for (const Quantifier &q : n.quantifiers)
-      dispatch(q);
+      _n->quantifiers.push_back(*un_ext(Ptr<Node>(&q)));
+    _n->rules.clear();
     for (auto &r : n.rules)
-      dispatch(*r);
+      _n->rules.push_back(un_ext(r));
     result = _n;
   }
 
@@ -396,25 +416,31 @@ struct MakeLegacy : public ConstBaseTraversal {
 
   void visit_simplerule(const SimpleRule &n) final {
     Ptr<SimpleRule> _n(n.clone());
+    _n->quantifiers.clear();
     for (const Quantifier &q : n.quantifiers)
-      dispatch(q);
+      _n->quantifiers.push_back(un_ext(q));
     if (n.guard != nullptr)
       _n->guard = un_ext(n.guard);
+    _n->decls.clear();
     for (auto &d : n.decls)
-      dispatch(*d);
+      _n->decls.push_back(un_ext(d));
+    _n->body.clear();
     for (auto &s : n.body)
-      dispatch(*s);
+      _n->body.push_back(un_ext(s));
     result = _n;
   }
 
   void visit_startstate(const StartState &n) final {
     Ptr<StartState> _n(n.clone());
+    _n->quantifiers.clear();
     for (const Quantifier &q : n.quantifiers)
-      dispatch(q);
+      _n->quantifiers.push_back(un_ext(q));
+    _n->decls.clear();
     for (auto &d : n.decls)
-      dispatch(*d);
+      _n->decls.push_back(un_ext(d));
+    _n->body.clear();
     for (auto &s : n.body)
-      dispatch(*s);
+      _n->body.push_back(un_ext(s));
     result = _n;
   }
 
@@ -428,17 +454,20 @@ struct MakeLegacy : public ConstBaseTraversal {
   void visit_switch(const Switch &n) final {
     Ptr<Switch> _n(n.clone());
     _n->expr = un_ext(n.expr);
+    _n->cases.clear();
     for (const SwitchCase &c : n.cases)
-      dispatch(c);
+      _n->cases.push_back(un_ext(c));
     result = _n;
   }
 
   void visit_switchcase(const SwitchCase &n) final {
     Ptr<SwitchCase> _n(n.clone());
+    _n->matches.clear();
     for (auto &m : n.matches)
-      dispatch(*m);
+      _n->matches.push_back(un_ext(m));
+    _n->body.clear();
     for (auto &s : n.body)
-      dispatch(*s);
+      _n->body.push_back(un_ext(s));
     result = _n;
   }
 
@@ -479,8 +508,9 @@ struct MakeLegacy : public ConstBaseTraversal {
   void visit_while(const While &n) final {
     Ptr<While> _n(n.clone());
     _n->condition = un_ext(n.condition);
+    _n->body.clear();
     for (auto &s : n.body)
-      dispatch(*s);
+      _n->body.push_back(un_ext(s));
     result = _n;
   }
 
@@ -492,24 +522,34 @@ struct MakeLegacy : public ConstBaseTraversal {
   }
 
 
-  void visit_chooserule(const ext::ChooseRule& n) final { result = un_ext(n.make_legacy()); }
-  void visit_ismember(const ext::IsMember& n) final { result = un_ext(n.make_legacy()); }
-  void visit_multiset(const ext::Multiset& n) final { result = un_ext(n.make_legacy()); }
-  void visit_multisetadd(const ext::MultisetCount& n) final { result = un_ext(n.make_legacy()); }
-  void visit_multisetcount(const ext::MultisetCount& n) final { result = un_ext(n.make_legacy()); }
-  void visit_multisetelement(const ext::MultisetElement& n) final { result = n.make_legacy(); } // will cause infinite loop if called with un_ext
-  void visit_multisetremove(const ext::MultisetRemove& n) final { result = un_ext(n.make_legacy()); }
-  void visit_multisetremovepred(const ext::MultisetRemovePred& n) final { result = un_ext(n.make_legacy()); }
-  void visit_multisetquantifier(const ext::MultisetQuantifier& n) final { result = un_ext(n.make_legacy()); } 
-  void visit_scalarsetunion(const ext::ScalarsetUnion& n) final { result = un_ext(n.make_legacy()); }
-  void visit_sucast(const ext::SUCast& n) final { result = un_ext(n.make_legacy()); }
+  // void visit_chooserule(const ext::ChooseRule& n) final { result = un_ext(n.make_legacy()); }
+  // void visit_ismember(const ext::IsMember& n) final { result = un_ext(n.make_legacy()); }
+  // void visit_multiset(const ext::Multiset& n) final { result = un_ext(n.make_legacy()); }
+  // void visit_multisetadd(const ext::MultisetCount& n) final { result = un_ext(n.make_legacy()); }
+  // void visit_multisetcount(const ext::MultisetCount& n) final { result = un_ext(n.make_legacy()); }
+  // void visit_multisetelement(const ext::MultisetElement& n) final { result = n.make_legacy(); } // will cause infinite loop if called with un_ext
+  // void visit_multisetremove(const ext::MultisetRemove& n) final { result = un_ext(n.make_legacy()); }
+  // void visit_multisetremovepred(const ext::MultisetRemovePred& n) final { result = un_ext(n.make_legacy()); }
+  // void visit_multisetquantifier(const ext::MultisetQuantifier& n) final { result = un_ext(n.make_legacy()); } 
+  // void visit_scalarsetunion(const ext::ScalarsetUnion& n) final { result = un_ext(n.make_legacy()); }
+  // void visit_sucast(const ext::SUCast& n) final { result = un_ext(n.make_legacy()); }
 };
 
-} //namespace
-
-
-Ptr<Node> rumur::ext::un_ext(const rumur::Ptr<rumur::Node> &n) {
+Ptr<Node> un_ext(const Ptr<Node> &n) {
+  if (const auto _en = dynamic_cast<const IExtNode<Node>>(n.get())) {
+    return un_ext(_en->make_legacy());
+  }
   MakeLegacy ml();
   ml.dispatch(*n);
   return ml.result;
 }
+} //namespace
+
+#include <rumur/validate.h>
+
+rumur::Ptr<rumur::Node> make_legacy(const rumur::Ptr<rumur::Node> &n) {
+  Ptr<Node> _n = un_ext(n);
+  rumur::validate(*_n);
+  return _n; 
+}
+

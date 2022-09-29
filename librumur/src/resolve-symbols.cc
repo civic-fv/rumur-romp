@@ -392,7 +392,7 @@ public:
   }
 
   void visit_scalarsetunion(ScalarsetUnion &n) final {
-    for (auto m : n.decl_list) 
+    for (auto m : n.members) 
       dispatch(*m);
     // n.update();          // not needed with new update design
     // disambiguate(n.bound);
@@ -555,7 +555,7 @@ public:
     // declarations (primarily enum members) as these will be duplicated in
     // when we descend into decl below
     symtab.open_scope();
-    for (Ptr<TypeExpr> t : n.decl_list)
+    for (Ptr<TypeExpr> t : n.members)
       dispatch(*t);
     symtab.close_scope();
     //bound is nullptr until update is called

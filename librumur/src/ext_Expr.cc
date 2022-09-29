@@ -92,8 +92,8 @@ SubRangeSet make_ranges(const ScalarsetUnion* u, const TypeExpr& type) {
     const Ptr<ScalarsetUnion> _u;
     make_ranges(const ScalarsetUnion*_u_) : _u(_u_), ranges({0_mpz,_u->count()}) {}
     bool _try_insert(std::string name) {
-      auto _m = _u->members.find(name);
-      if (_m != _u->members.end()) {
+      auto _m = _u->members_exp.find(name);
+      if (_m != _u->members_exp.end()) {
         ranges.insert(_m->second.min,_m->second.max)
         return true;
       }
@@ -101,7 +101,7 @@ SubRangeSet make_ranges(const ScalarsetUnion* u, const TypeExpr& type) {
     }
     visit_array(const Array& n) { assert(false && "Array should be unreachable"); }
     visit_enum(const Enum& n) {
-      for (const auto mp : n.members)
+      for (const auto mp : n.members_exp)
           _try_insert("_enum_"+mp.first);
     }
     visit_multiset(const Multiset& n) { assert(false && "Multiset should be unreachable"); }
@@ -111,7 +111,7 @@ SubRangeSet make_ranges(const ScalarsetUnion* u, const TypeExpr& type) {
       throw Error("scalarsets must be defined with a name to be a member of a union!",n.loc); 
     }
     visit_scalarsetunion(const ScalarsetUnion& n) {
-      for (const auto m : n.decl_list)
+      for (const auto m : n.members)
         dispatch(*m);
     }
     visit_typeexprid(const TypeExprID& n) {
@@ -172,7 +172,7 @@ void IsMember::validate_types() const {
     Ptr<ScalarsetUnion> _u;
     make_ranges(ScalarsetUnion*_u_) : _u(_u_), ranges({0_mpz,_u->count()}) {}
     bool _contains(std::string name) {
-      return (_u->members.find(name) != _u->members.end())
+      return (_u->members_exp.find(name) != _u->members_exp.end())
     }
     visit_array(const Array& n) { throw Error("Arrays cant be members of scalarset unions!",n.loc); }
     visit_enum(const Enum& n) {
@@ -184,7 +184,7 @@ void IsMember::validate_types() const {
     visit_record(const Record& n) { throw Error("Records's cant be members of scalarset unions!",n.loc); }
     visit_scalarset(const Scalarset& n) { throw Error("scalarsets must be defined with a name to be a member of a union!",n.loc); }
     visit_scalarsetunion(const ScalarsetUnion& n) {
-      for (const auto m : n.decl_list)
+      for (const auto m : n.members)
         dispatch(*m);
     }
     visit_typeexprid(const TypeExprID& n) {
@@ -272,37 +272,41 @@ void SUCast::validate() const {
   assert(rhs != nullptr && "DEV ERROR : did not create cast conversion!");
 }
 
-mpz_class get_conv_modifier_su(const Scalarset& from, const ScalarsetUnion& to) {
-  return to.members[from.name].min;
+mpz_class ScalarsetUnion::get_conv_modifier_su(const Scalarset& from, const ScalarsetUnion& to) {
+  assert(to.members_exp.find(from.name) != to.members_exp.end()
+         && "DEV ERROR : assert valid cast (should be checked with contains call before)");
+  return to.members_exp[from.name].min;
 }
-mpz_class get_conv_modifier_us(const ScalarsetUnion& from, const Scalarset& to) {
-  return -1_mpz * get_conv_modifier_su(to,from);
+mpz_class ScalarsetUnion::get_conv_modifier_us(const ScalarsetUnion& from, const Scalarset& to) {
+  return -1_mpz * ScalarsetUnion::get_conv_modifier_su(to,from);
 }
-mpz_class get_conv_modifier_eu(const Enum& from, const ScalarsetUnion& to) {
-  return to.members["_enum_"+from.members[0].first].min;
+mpz_class ScalarsetUnion::get_conv_modifier_eu(const Enum& from, const ScalarsetUnion& to) {
+  assert(to.members_exp.find("_enum_"+from.members[0].first) != to.members_exp.end()
+         && "DEV ERROR : assert valid cast (should be checked with contains call before)");
+  return to.members_exp["_enum_"+from.members[0].first].min;
 }
-mpz_class get_conv_modifier_ue(const ScalarsetUnion& from, const Enum& to) {
-  return -1_mpz * get_conv_modifier_eu(to,from);
+mpz_class ScalarsetUnion::get_conv_modifier_ue(const ScalarsetUnion& from, const Enum& to) {
+  return -1_mpz * ScalarsetUnion::get_conv_modifier_eu(to,from);
 }
-mpz_class get_conv_modifier(const TypeExpr& from, const TypeExpr& to) {
+mpz_class ScalarsetUnion::get_conv_modifier(const TypeExpr& from, const TypeExpr& to) {
   if (const auto to_u = dynamic_cast<const ScalarsetUnion*>(&to)) {
     if (const auto from_s = dynamic_cast<const Scalarset*>(&from)) {
       // thanks to the coercion check in pre_validate, 
       //  we can treat scalarsets and unions the same for the from parameter,
       //  when the to property is know to be a union type.
-      return get_conv_modifier_su(*from_s, *to_u);
+      return ScalarsetUnion::get_conv_modifier_su(*from_s, *to_u);
     } else if (const auto from_e = dynamic_cast<const Enum*>(&from)) {
-      return get_conv_modifier_eu(*from_e, *to_u);
+      return ScalarsetUnion::get_conv_modifier_eu(*from_e, *to_u);
     } // else 
       assert(false && "DEV ERROR : SUCast coming from incompatible type AND not caught earlier! (1)");
   } else if (const auto to_s = dynamic_cast<const Scalarset*>(&to)) {
     if (const auto from_u = dynamic_cast<const ScalarsetUnion*>(&from)) {
-      return get_conv_modifier_us(*from_u, *to_s);
+      return ScalarsetUnion::get_conv_modifier_us(*from_u, *to_s);
     } // else
       assert(false && "DEV ERROR : SUCast coming from incompatible type AND not caught earlier! (2)")
   } else if (const auto to_e = dynamic_cast<const Enum*>(&to)) {
     if (const auto from_u = dynamic_cast<const ScalarsetUnion*>(&from)) {
-      return get_conv_modifier_ue(*from_u, *to_e);
+      return ScalarsetUnion::get_conv_modifier_ue(*from_u, *to_e);
     } // else
       assert(false && "DEV ERROR : SUCast coming from incompatible type AND not caught earlier! (3)")
   }
@@ -344,7 +348,7 @@ void MultisetElement::visit(ConstBaseTraversal& visitor) const { visitor.visit_m
 void MultisetElement::validate() const {
   const Ptr<TypeExpr> t = array->type()->resolve();
 
-  if (!isa<Multiset>(t))
+  if (not isa<Multiset>(t))
     throw rumur::Error("multiset index on an expression that is not a multiset", loc);
 
   auto a = dynamic_cast<const Array &>(*t);
