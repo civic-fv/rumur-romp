@@ -105,9 +105,7 @@ struct RUMUR_API_WITH_RTTI MultisetQuantifier : public Quantifier, public IExtNo
  */
 struct RUMUR_API_WITH_RTTI MultisetElement : public Element, public IExtNode<Element> {
 
-  MultisetQuantifier ms_quantifier;
-
-  MultisetElement(const MultisetQuantifier& ms_quant_, const Ptr<Expr>& designator_, 
+  MultisetElement(const Ptr<Expr>& designator_, 
                   const Ptr<Expr> index_, const location& loc_);
   MultisetElement *clone() const override;
   ~MultisetElement() = default;

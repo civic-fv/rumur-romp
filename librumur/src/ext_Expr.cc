@@ -361,7 +361,9 @@ void MultisetElement::update() {
 //   return array->to_string() + "[" + index->to_string() + "]";
 // }
 
-Ptr<Element> MultisetElement::make_legacy() const { return Ptr<Element>(clone()); }
+Ptr<Element> MultisetElement::make_legacy() const {
+  return Ptr<Element>::make(array, index, loc);
+}
 
 // << ------------------------------------------------------------------------------------------ >> 
 
@@ -369,7 +371,7 @@ Ptr<Element> MultisetElement::make_legacy() const { return Ptr<Element>(clone())
  * Check to see if a MultisetElement swap is valid
  */
 bool valid_ms_access(const MultisetQuantifier& mq, const Element& e) {
-  if (mq.designator->type()->equal_to(e->array->type())) {
+  if (mq.designator->type()->equal_to(e->array->type())) { // if it's appropriate to convert at this time types will be equal
     if (const auto _i = dynamic_cast<const ExprID*>(e->index.get())) {
       return (_i->name == mq.name && mq.decl->type->equal_to(_i->type())
           /* && mq.designator->to_string() == e->array->to_string() */); // <-- if nothing else works uncomment this
@@ -390,8 +392,7 @@ Ptr<Expr> MultisetElement::convert_elements(const MultisetQuantifier& mq, const 
     if (_n == nullptr) return Ptr<Expr>(nullptr);
     if (const auto _me = dynamic_cast<const MultisetElement*>(_n.get())) {
       // if it's an already handled MultisetElement just convert internal elements as needed
-      return Ptr<MultisetElement>::make(_me->ms_quantifier,
-                                        convert(_me->array),
+      return Ptr<MultisetElement>::make(convert(_me->array),
                                         convert(_me->index),
                                         _me->loc);
     }
@@ -400,7 +401,7 @@ Ptr<Expr> MultisetElement::convert_elements(const MultisetQuantifier& mq, const 
                                   convert(_e->index),
                                   _e->loc);
       if (valid_ms_access(mq, *e))
-        return Ptr<MultisetElement>::make(mq,e->array,e->index,_n->loc);
+        return Ptr<MultisetElement>::make(e->array,e->index,_n->loc);
       return e;
     }
     if (const auto _t = dynamic_cast<const Ternary*>(_n.get())) {
@@ -492,6 +493,7 @@ void MultisetQuantifier::update() {
     assert(ms->index_type != nullptr
             && "DEV ERROR : MultisetQuantifier's multiset has not been updated as expected yet");
     type = ms->index_type;
+    decl->type = ms->index_type;
   }
 }
 
@@ -523,7 +525,7 @@ void MultisetCount::validate() const {
     throw Error("expression is not pure", pred->loc);
 }
 void MultisetCount::update() {
-  //do nothing
+  condition = MultisetElement::convert_elements(ms_quantifier,condition);
 }
 void MultisetCount::type() const {
   if (const auto ms = dynamic_cast<const Multiset*>(ms_quantifier.multiset->type().get()))
@@ -538,7 +540,7 @@ std::string MultisetCount::to_string() const {
 }
 
 Ptr<Add> MultisetCount::make_legacy() const {
-  auto _make_exprid = ;
+  // auto _condition = MultisetElement::convert_elements(ms_quantifier,condition);
   auto _convert = [&](Ptr<Add>& add, mpz_class i=1_mpz) -> void {
     if (i > ms_quantifier.type->count()) { // base case end of assets
       // add->rhs = Ptr<Number>::make(0_mpz,location());
@@ -555,10 +557,13 @@ Ptr<Add> MultisetCount::make_legacy() const {
                     Ptr<Number>::make(0_mpz,location()),
                     Ptr<Ternary>::make(
                       Ptr<Exists>::make(
-                        ms_quantifier.make_legacy(),
+                        *ms_quantifier.make_legacy(),
                         Ptr<And>::make(
                           Ptr<Eq>::make(
-                            Ptr<ExprID>::make(ms_quantifier.name, ms_quantifier.decl, loc),
+                            Ptr<ExprID>::make(
+                              ms_quantifier.name, 
+                              ms_quantifier.decl, 
+                              ms_quantifier.loc),
                             Ptr<Number>::make(i,location()),
                             loc),
                           condition,
@@ -568,7 +573,7 @@ Ptr<Add> MultisetCount::make_legacy() const {
                       Ptr<Number>::make(0_mpz,location()),
                       loc),
                     loc),
-                  Ptr<Number>::make(0_mpz,location());
+                  Ptr<Number>::make(0_mpz,location()),
                   loc);
     _convert(add->rhs,++i);
   };

@@ -25,7 +25,7 @@ public:
   void visit_multisetremovepred(MultisetRemovePred& n) override;
   void visit_multisetquantifier(MultisetQuantifier& n) override; 
   void visit_scalarsetunion(ScalarsetUnion& n) override;
-  void void visit_sucast(SUCast& n) override;
+  void visit_sucast(SUCast& n) override;
 
   void visit_BuiltInFunction(IBuiltInFunction& n) override; //only visited for anon builtin's
 
@@ -43,7 +43,7 @@ public:
   void visit_multisetremovepred(MultisetRemovePred& n) override;
   void visit_multisetquantifier(MultisetQuantifier& n) override; 
   void visit_scalarsetunion(ScalarsetUnion& n) override;
-  void void visit_sucast(SUCast& n) override;
+  void visit_sucast(SUCast& n) override;
 
   void visit_BuiltInFunction(IBuiltInFunction& n) override; //only visited for anon builtin's
 

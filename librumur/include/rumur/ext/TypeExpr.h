@@ -3,6 +3,7 @@
 #include <rumur/ext/un-ext.h>
 #include <rumur/TypeExpr.h>
 #include <unordered_map>
+#include <unordered_set>
 
 #ifndef RUMUR_API_WITH_RTTI
 #define RUMUR_API_WITH_RTTI __attribute__((visibility("default")))
@@ -45,13 +46,17 @@ struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset, public IExtNode<Sc
   std::string to_string() const override;
 
   Ptr<Scalarset> make_legacy() const override;
+private:
+  Ptr<Add> gen_legacy_bound(std::unordered_set<std::string>& handled) const;
 };
 
 
 struct RUMUR_API_WITH_RTTI Multiset : public Array, public IExtNode<Array> {
 
-  const Ptr<Expr>& size() const;
-  // const Ptr<TypeExpr>& element_type;
+  Ptr<Expr>& size;
+  //NOTE: Multiset's by default have nullptr as their index_type, 
+  //      make_legacy will return an Array that has a proper index_type
+  // Ptr<TypeExpr>& element_type;
 
   Multiset(const Ptr<Expr>& size_, const Ptr<TypeExpr>& element_type_, const location& loc_);
   Multiset *clone() const;

@@ -257,7 +257,7 @@ public:
      */
     bool ok = true;
 
-    for (Ptr<Node> &c : n.children) {
+    for (Ptr<Node> &c : n.children) final {
       dispatch(*c);
 
       /* if this was a variable declaration, we now know enough to determine its
@@ -446,7 +446,7 @@ public:
       disambiguate(m);
   }
 
-  void visit_ternary(Ternary &n) {
+  void visit_ternary(Ternary &n) final {
     dispatch(*n.cond);
     dispatch(*n.lhs);
     dispatch(*n.rhs);
@@ -481,17 +481,106 @@ public:
 
   void visit_xor(Xor &n) final { visit_bexpr(n); }
 
+
+  void visit_chooserule(ext::ChooseRule& n) final {
+    symtab.open_scope();
+    for (MultisetQuantifier &mq : n.ms_quantifiers)
+      dispatch(mq);
+    for (auto &r : n.rules)
+      dispatch(*r);
+    symtab.close_scope();
+  }
+  
+  void visit_ismember(ext::IsMember& n) final {
+    dispatch(*n.designator);
+    // wrap symbol resolution within the type in a dummy scope to suppress any
+    // declarations (primarily enum members) as these will be duplicated in
+    // when we descend into decl below
+    symtab.open_scope();
+    dispatch(*n.type);
+    symtab.close_scope();
+    disambiguate(*n.designator);
+  }
+  
+  void visit_multiset(ext::Multiset& n) final {
+    dispatch(*n.size); // index_type should be nullptr
+    dispatch(*n.element_type);
+    disambiguate(*n.size);
+  }
+  
+  void visit_multisetadd(ext::MultisetAdd& n) final {
+    dispatch(*n.value);
+    dispatch(*n.multiset);
+    disambiguate(*n.value);
+    disambiguate(*n.multiset);
+  }
+  
+  void visit_multisetcount(ext::MultisetCount& n) final {
+    symtab.open_scope();
+    dispatch(n.ms_quantifier);
+    dispatch(*n.condition);
+    disambiguate(*n.condition);
+    symtab.close_scope();
+  }
+  
+  void visit_multisetelement(ext::MultisetElement& n) final {
+    dispatch(*n.array);
+    dispatch(*n.index);
+    disambiguate(*n.array);
+    disambiguate(*n.index);
+  }
+  
+  void visit_multisetremove(ext::MultisetRemove& n) final {
+    dispatch(*n.index);
+    dispatch(*n.multiset);
+    disambiguate(*n.index);
+    disambiguate(*n.multiset);
+  }
+  
+  void visit_multisetremovepred(ext::MultisetRemovePred& n) final {
+    symtab.open_scope();
+    dispatch(n.ms_quantifier);
+    dispatch(*n.pred);
+    disambiguate(*n.pred);
+    symtab.close_scope();
+  }
+  
+  void visit_multisetquantifier(ext::MultisetQuantifier& n) final {
+    dispatch(*n.multiset);
+    disambiguate(*n.multiset);
+  } 
+  
+  void visit_scalarsetunion(ext::ScalarsetUnion& n) final {
+    // wrap symbol resolution within the type in a dummy scope to suppress any
+    // declarations (primarily enum members) as these will be duplicated in
+    // when we descend into decl below
+    symtab.open_scope();
+    for (Ptr<TypeExpr> t : n.decl_list)
+      dispatch(*t);
+    symtab.close_scope();
+    //bound is nullptr until update is called
+  }
+  
+  void visit_sucast(ext::SUCast& n) final {
+    dispatch(*n.target);
+    dispatch(*n.lhs);
+    if (n.rhs != nullptr) dispatch(*n.rhs);
+    disambiguate(*n.target);
+    disambiguate(*n.lhs);
+    if (n.rhs != nullptr) disambiguate(*n.rhs);
+  }
+
   virtual ~Resolver() = default;
 
 private:
-  void visit_bexpr(BinaryExpr &n) {
+  void visit_bexpr(BinaryExpr &n) final {
     dispatch(*n.lhs);
     dispatch(*n.rhs);
     disambiguate(n.lhs);
     disambiguate(n.rhs);
   }
 
-  void visit_uexpr(UnaryExpr &n) {
+  void visit_uexpr(UnaryExpr &n) final {
     dispatch(*n.rhs);
     disambiguate(n.rhs);
   }

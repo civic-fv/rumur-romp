@@ -284,8 +284,8 @@ public:
   // extended syntax nodes
   virtual void visit_chooserule(const ext::ChooseRule& n);
   virtual void visit_ismember(const ext::IsMember& n);
-  virtual void visit_multiset(const ext::MultisetAdd& n);
-  virtual void visit_multisetadd(const ext::MultisetCount& n);
+  virtual void visit_multiset(const ext::Multiset& n);
+  virtual void visit_multisetadd(const ext::MultisetAdd& n);
   virtual void visit_multisetcount(const ext::MultisetCount& n);
   virtual void visit_multisetelement(const ext::MultisetElement& n);
   virtual void visit_multisetremove(const ext::MultisetRemove& n);

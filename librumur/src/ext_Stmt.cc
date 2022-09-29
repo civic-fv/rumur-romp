@@ -6,7 +6,7 @@ namespace rumur {
 namespace ext {
 
 MultisetAdd::MultisetAdd(const Ptr<Expr>& value_, const Ptr<Exp>& multiset_, const location& loc_)
-  : multiset(multiset_), value(value_), loc(loc_) {}
+  : Node(loc_), multiset(multiset_), value(value_) {}
 MultisetAdd *MultisetAdd::clone() const { return new MultisetAdd(*this); }
 
 void MultisetAdd::visit(BaseTraversal &visitor) { visitor.visit_multisetadd(*this); }
@@ -21,16 +21,54 @@ void MultisetAdd::validate() const {
     throw Error("not of a multiset type as expected", multiset->loc);
 }
 void MultisetAdd::update() {
-  //TODO
+  // nothing to do here
 }
 Ptr<AliasStmt> MultisetAdd::make_legacy() const {
-  //TODO
+  std::vector<IfClause> clauses;
+  if (const auto _m = dynamic_cast<const Multiset*>(multiset->type().get())) {
+    auto msq_mc = MultisetQuantifier("__ms_i__", multiset, loc);
+    msq_mc.update();
+    mpz_class max = _m->size()->constant_fold();
+    for (mpz_class i=1_mpz; i<=max; ++i) {
+      auto ms_el = Ptr<MultisetElement>::make(msq_mc, multiset, Ptr<Number>::make(i,location()), loc);
+      clauses.push_back(
+        IfClause(
+          Ptr<IsUndefined>::make(ms_el, loc),
+          std::vector<Ptr<Stmt>>{
+            Ptr<Assignment>::make(
+              ms_el,
+              value,
+              loc)
+            },
+          loc)
+        );
+    }
+    return Ptr<AliasStmt>::make(
+      std::vector<Ptr<AliasDecl>>{},
+      std::vector<Ptr<Stmt>>{
+        Ptr<If>::make(
+          std::vector<IfClause>{
+            IfClause(
+              Ptr<Not>::make(
+                Ptr<IsUndefined>::make(
+                  value,
+                  loc)
+                loc),
+              std::vector<Ptr<Stmt>>{
+                Ptr<If>::make(
+                  clauses,
+                  loc)},
+              loc),},
+          loc)}, 
+      loc);
+  }
+  throw Error("not a multiset", multiset->loc);
 }
 
 // << ------------------------------------------------------------------------------------------ >> 
 
 MultisetRemove::MultisetRemove(const Ptr<Expr>& index_, const Ptr<Expr>& multiset_, const location& loc_)
-  : index(index_), multiset(multiset_), loc(loc_) {}
+  : Node(loc_), index(index_), multiset(multiset_) {}
 MultisetRemove *MultisetRemove::clone() const { return new MultisetRemove(*this); }
 
 void MultisetRemove::visit(BaseTraversal &visitor) { visitor.visit_multisetremove(*this); }
@@ -44,7 +82,7 @@ void MultisetRemove::validate() const {
     throw Error("not of a multiset type as expected", multiset->loc);
 }
 void MultisetRemove::update() {
-  //TODO
+  // nothing to do here with current design
 }
 
 Ptr<AliasStmt> MultisetRemove::make_legacy() const {
@@ -54,7 +92,7 @@ Ptr<AliasStmt> MultisetRemove::make_legacy() const {
 // << ------------------------------------------------------------------------------------------ >> 
 
 MultisetRemovePred::MultisetRemovePred(const MultisetQuantifier& ms_quantifier_, const Ptr<Expr>& pred_, const location& loc_)
-  : ms_quantifier(ms_quantifier_), pred(pred_), loc(loc_) {}
+  : Node(loc_), ms_quantifier(ms_quantifier_), pred(pred_) {}
 MultisetRemovePred *MultisetRemovePred::clone() const { return new MultisetRemovePred(*this); }
 
 void MultisetRemovePred::visit(BaseTraversal &visitor) { visitor.visit_multisetremovepred(*this); }
@@ -67,11 +105,44 @@ void MultisetRemovePred::validate() const {
     throw Error("expression is not pure", pred->loc);
 }
 void MultisetRemovePred::update() {
-  //TODO
+  pred = MultisetElement::convert_elements(ms_quantifier,pred);
 }
 
 Ptr<AliasStmt> MultisetRemovePred::make_legacy() const {
-  //TODO
+  // auto _pred = MultisetElement::convert_elements(ms_quantifier,pred);
+  auto ms_el = Ptr<MultisetElement>::make(ms_quantifier,
+                                          ms_quantifier.multiset,
+                                          Ptr<ExprID>::make(ms_quantifier.name, 
+                                                            ms_quantifier.decl, 
+                                                            loc),
+                                          loc);
+  return Ptr<AliasStmt>::make(
+    std::vector<Ptr<AliasDecl>>{},
+    std::vector<Ptr<Stmt>>{
+      Ptr<For>::make(
+        *ms_quantifier.make_legacy(),
+        std::vector<Ptr<Stmt>>{
+          Ptr<If>::make(
+            std::vector<IfClause>{
+              IfClause(
+                Ptr<And>::make(
+                  Ptr<Not>::make(
+                    Ptr<IsUndefined>::make(
+                      ms_el,
+                      loc),
+                    loc),
+                  pred,
+                  loc),
+              std::vector<Ptr<Stmt>>{
+                Ptr<Undefine>::make(
+                  ms_el
+                  loc)
+                }, loc)
+            }, loc)
+          }, 
+        loc)
+      }
+    loc);
 }
 
 

@@ -14,7 +14,7 @@ namespace ext {
  * @brief Convert a model with extended (ext) AST nodes to a legacy AST.
  *        This allows older model checkers to easily support newer Murphi syntax.
  */
-void un_ext(Model &m);
+Ptr<Node> un_ext(const Ptr<Node> &n);
 
 /**
  * @brief abstract interface for extended AST nodes to allow for them to be easily replaced by 

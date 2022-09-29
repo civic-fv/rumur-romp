@@ -13,7 +13,6 @@
 #include <rumur/except.h>
 #include <rumur/ext/traverse.h>
 #include <string>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 #include <sstream>
@@ -148,51 +147,79 @@ bool ScalarsetUnion::contains(const TypeExpr& n) const {
 }
 
 Ptr<Scalarset> ScalarsetUnion::make_legacy() const {
-  assert(bound != nullptr && "ScalarsetUnion was not updated before converted to Legacy!");
-  return Ptr<Scalarset>(clone());
+  std::unordered_set<std::string> handled{name,""}; // ignore self and never add unnamed
+  auto res = Ptr<Scalarset>(gen_legacy_bound(handled),loc);
+  res->name = name;
+  return res;
+}
+
+Ptr<Add> ScalarsetUnion::gen_legacy_bound(std::unordered_set<std::string>& handled) const {
+  auto _extend = [&](Ptr<Add>& add, int i=0) -> void {
+    if (i<decl_list.size()) { // base case end of assets
+      // add->rhs = Ptr<Number>::make(0_mpz,location());
+      return;
+    }
+    Ptr<Expr> _bound = nullptr; 
+    if (const auto _u = dynamic_cast<const ScalarSetUnion*>(decl_list[i])) {
+      if (_u->name == "")
+        throw Error("A union can't contain an unnamed union",_u->loc);
+      if (handled.find(_u->name) != handled.end()) {
+        handled.insert(_u->name);
+        _bound = _u->gen_legacy_bound(handled);
+      }
+    } else if (const auto _e = dynamic_cast<const Enum*>(decl_list[i])) {
+      mpz_class count = 0_mpz;
+      for (const auto m : _e->members)
+        if (handled.find("_enum_"+m.first) != handled.end()) {
+          handled.insert("_enum_"+m.first);
+          ++count;
+      _bound = Ptr<Number>::make(count,_e->loc);
+    } else if (const auto _s = dynamic_cast<const Scalarset*>(decl_list[i])) {
+      if (_s->name == "")
+        throw Error("A union can't contain an unnamed scalarset",_u->loc);
+      handled.insert(_s->name);
+      _bound = _s->bound;
+    }
+    add->rhs = Ptr<Add>::make(
+                  _bound,
+                  Ptr<Number>::make(0_mpz,location()),
+                  loc);
+    _extend(add->rhs,++i);
+  };
+  auto bound = Ptr<Add>::make(Ptr<Number>::make(0_mpz,location()),
+                              Ptr<Number>::make(0_mpz,location()),
+                              loc);
+  _extend(bound);
+  return bound;
 }
 
 // << ------------------------------------------------------------------------------------------ >> 
 
 Multiset::Multiset(const Ptr<Expr> size_, const Ptr<TypeExpr> element_type_, const location loc_)
-  : Array(Ptr<Range>::make(Ptr<Number>::make(1_mpz,location()),
-                            size_, size_->loc),
-          element_type_,loc_)
-  {}
+  : Array(nullptr, element_type_, loc), size(size_) {}
 
 Multiset* Multiset::clone() const { return new Multiset(*this); }
-
-const Ptr<Expr>& size() const {
-  if (auto _r = dynamic_cast<Range*>(index_type.get())) {
-    assert(_r->min->constant_fold() != 1_mpz 
-            && "DEV ERROR : multiset index type did not conform to expectations");
-    return _r->max;
-  } //else
-  assert(false && "multiset index type was not a Range as expected!");
-}
 
 void Multiset::visit(BaseTraversal& visitor) { visitor.visit_multiset(*this); }
 void Multiset::visit(ConstBaseTraversal& visitor) const { visitor.visit_multiset(*this); }
 
 void Multiset::update() {
-  if (auto _r = dynamic_cast<Range*>(index_type.get())) {
-    if (_r->min->constant_fold() != 1_mpz)
-      index_type = Ptr<Range>::make(Ptr<Number>::make(1_mpz,location()),
-                                    Ptr<Sub>::make(_r->max,_r->min,location()), 
-                                    _r->loc);
-  } else
-    assert(false && "multiset index type was not a Range as expected!");
+  // nothing to do here (moved to make legacy)
 }
 void Multiset::validate() const {
   if (size->is_boolean())
-    throw Error("Multiset size constraint must be a number not a boolean!",size->loc);
-  Array::validate();
+    throw Error("Multiset size constraint must be a number not a boolean!", size->loc);
+  if (not size->constant())
+    throw Error("Multiset size constraint must be constant and inferable at compile time!", size->loc);
 }
 std::string Multiset::to_string() const {
   return "multiset [" + size->to_string() + "] of " + element_type->to_string();
 }
 
-Ptr<Array> Multiset::make_legacy() const { return Ptr<Array>(clone()); }
+Ptr<Array> Multiset::make_legacy() const { 
+  return Ptr<Array>(Ptr<Range>::make(Ptr<Number>::make(1_mpz,location()), size, size->loc),
+                    element_type, loc);
+}
 
 
 } //namespace ext
