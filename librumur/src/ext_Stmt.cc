@@ -105,7 +105,7 @@ void MultisetRemovePred::validate() const {
     throw Error("expression is not pure", pred->loc);
 }
 void MultisetRemovePred::update() {
-  pred = MultisetElement::convert_elements(ms_quantifier,pred);
+  // pred = MultisetElement::convert_elements(ms_quantifier,pred); // moved to symbol-resolver disambiguate
 }
 
 Ptr<AliasStmt> MultisetRemovePred::make_legacy() const {

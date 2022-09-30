@@ -26,7 +26,7 @@ struct RUMUR_API_WITH_RTTI Rule : public Node {
   std::vector<Quantifier> quantifiers;
   std::vector<Ptr<AliasDecl>> aliases;
   /// for supporting multiset choose rules, legacy systems can ignore
-  std::vector<MultisetQuantifier> ms_quantifiers;
+  std::vector<ext::MultisetQuantifier> ms_quantifiers;
 
   Rule(const std::string &name_, const location &loc_);
 
@@ -67,6 +67,7 @@ struct RUMUR_API_WITH_RTTI SimpleRule : public Rule {
   virtual ~SimpleRule() = default;
   SimpleRule *clone() const override;
   void validate() const final;
+  void update() final;
 
   void visit(BaseTraversal &visitor) final;
   void visit(ConstBaseTraversal &visitor) const final;
@@ -95,6 +96,8 @@ struct RUMUR_API_WITH_RTTI PropertyRule : public Rule {
                const location &loc_);
   virtual ~PropertyRule() = default;
   PropertyRule *clone() const final;
+
+  void update() final;
 
   void visit(BaseTraversal &visitor) final;
   void visit(ConstBaseTraversal &visitor) const final;

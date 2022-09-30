@@ -26,14 +26,12 @@ using namespace rumur;
 
 namespace {
 
-using child_iter_t = std::vector<Node>::iterator;
 
-class Resolver : public ExtTraversal {
+class Resolver : public BaseExtTraversal {
 
 private:
   Symtab symtab;
-  child_iter_t cur;
-  std::queue<std::pair<child_iter_t,Ptr<Node>>> to_emit;
+  Symtab ms_quantifiers;
 
 public:
   Resolver() {
@@ -484,10 +482,12 @@ public:
 
   void visit_chooserule(ext::ChooseRule& n) final {
     symtab.open_scope();
+    ms_quantifiers.open_scope();
     for (MultisetQuantifier &mq : n.ms_quantifiers)
       dispatch(mq);
     for (auto &r : n.rules)
       dispatch(*r);
+    ms_quantifiers.close_scope();
     symtab.close_scope();
   }
   
@@ -499,55 +499,61 @@ public:
     symtab.open_scope();
     dispatch(*n.type);
     symtab.close_scope();
-    disambiguate(*n.designator);
+    disambiguate(n.designator);
   }
   
   void visit_multiset(ext::Multiset& n) final {
     dispatch(*n.size); // index_type should be nullptr
     dispatch(*n.element_type);
-    disambiguate(*n.size);
+    disambiguate(n.size);
   }
   
   void visit_multisetadd(ext::MultisetAdd& n) final {
     dispatch(*n.value);
     dispatch(*n.multiset);
-    disambiguate(*n.value);
-    disambiguate(*n.multiset);
+    disambiguate(n.value);
+    disambiguate(n.multiset);
   }
   
   void visit_multisetcount(ext::MultisetCount& n) final {
     symtab.open_scope();
+    ms_quantifiers.open_scope();
     dispatch(n.ms_quantifier);
     dispatch(*n.condition);
-    disambiguate(*n.condition);
+    disambiguate(n.condition);
+    ms_quantifiers.close_scope();
     symtab.close_scope();
   }
   
   void visit_multisetelement(ext::MultisetElement& n) final {
     dispatch(*n.array);
     dispatch(*n.index);
-    disambiguate(*n.array);
-    disambiguate(*n.index);
+    disambiguate(n.array);
+    disambiguate(n.index);
   }
   
   void visit_multisetremove(ext::MultisetRemove& n) final {
     dispatch(*n.index);
     dispatch(*n.multiset);
-    disambiguate(*n.index);
-    disambiguate(*n.multiset);
+    disambiguate(n.index);
+    disambiguate(n.multiset);
   }
   
   void visit_multisetremovepred(ext::MultisetRemovePred& n) final {
     symtab.open_scope();
+    ms_quantifiers.open_scope();
     dispatch(n.ms_quantifier);
     dispatch(*n.pred);
-    disambiguate(*n.pred);
+    disambiguate(n.pred);
+    ms_quantifiers.close_scope();
     symtab.close_scope();
   }
   
   void visit_multisetquantifier(ext::MultisetQuantifier& n) final {
     dispatch(*n.multiset);
-    disambiguate(*n.multiset);
+    disambiguate(n.multiset);
+    n.update();
+    ms_quantifiers.declare(n.name, Ptr<MultisetQuantifier>(n));
   } 
   
   void visit_scalarsetunion(ext::ScalarsetUnion& n) final {
@@ -565,8 +571,8 @@ public:
     dispatch(*n.target);
     dispatch(*n.lhs);
     if (n.rhs != nullptr) dispatch(*n.rhs);
-    disambiguate(*n.target);
-    disambiguate(*n.lhs);
+    disambiguate(n.target);
+    disambiguate(n.lhs);
     if (n.rhs != nullptr) disambiguate(*n.rhs);
   }
 
@@ -651,6 +657,22 @@ private:
       e = replacement;
 
       return;
+    }
+
+    if (not isa<MultisetElement>(e)) {
+      if (auto _e = dynamic_cast<const Element*>(e.get())) {
+        if (auto _ms = dynamic_cast<const Multiset*>(_e->array->type().get())) {
+          if (auto _eid = dynamic_cast<const ExprID*>(_e->index.get())) { // must be unmodified var referring to a multiset quantifier
+            auto st_vd = symtab.lookup<VarDecl>(_eid->id);
+            auto msq = ms_quantifiers.lookup<MultisetQuantifier>(_eid->id);
+            if ((st_vd != nullptr && msq != nullptr)
+                && _ms.equal_to(msq->multiset->type())
+                && msq->decl->type.equal_to(st_vd->type)) {
+              e = Ptr<MultisetElement>::make(e->array, e->index, e->loc);
+            }
+          }
+        }
+      }
     }
   }
 };

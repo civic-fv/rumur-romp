@@ -3,7 +3,7 @@
 #include <rumur/Stmt.h>
 #include <rumur/ext/TypeExpr.h>
 #include <rumur/ext/Expr.h>
-#include <rumur/est/make_legacy.h>
+#include <rumur/ext/make_legacy.h>
 
 #ifndef RUMUR_API_WITH_RTTI
 #define RUMUR_API_WITH_RTTI __attribute__((visibility("default")))
@@ -12,7 +12,7 @@
 namespace rumur {
 namespace ext {
 
-struct RUMUR_API_WITH_RTTI MultisetAdd : public Stmt, public IExtNode<AliasStmt> {
+struct RUMUR_API_WITH_RTTI MultisetAdd : public Stmt, IExtNode/*<AliasStmt>*/ {
 
   Ptr<Expr> value;
   Ptr<Expr> multiset;
@@ -27,11 +27,11 @@ struct RUMUR_API_WITH_RTTI MultisetAdd : public Stmt, public IExtNode<AliasStmt>
   void validate() const override;
   void update() override;
 
-  Ptr<AliasStmt> make_legacy() const override;
+  Ptr<AliasStmt> make_legacy() const;
 };
 
 
-struct RUMUR_API_WITH_RTTI MultisetRemove : public Stmt, public IExtNode<AliasStmt> {
+struct RUMUR_API_WITH_RTTI MultisetRemove : public Stmt, IExtNode/*<AliasStmt>*/ {
 
   Ptr<Expr> index;
   Ptr<Expr> multiset;
@@ -46,11 +46,11 @@ struct RUMUR_API_WITH_RTTI MultisetRemove : public Stmt, public IExtNode<AliasSt
   void validate() const override;
   void update() override;
 
-  Ptr<AliasStmt> make_legacy() const override;
+  Ptr<AliasStmt> make_legacy() const;
 };
 
 
-struct RUMUR_API_WITH_RTTI MultisetRemovePred : public Stmt, public IExtNode<AliasStmt> {
+struct RUMUR_API_WITH_RTTI MultisetRemovePred : public Stmt, IExtNode/*<AliasStmt>*/ {
 
   MultisetQuantifier ms_quantifier;
   Ptr<Expr> pred;
@@ -65,7 +65,7 @@ struct RUMUR_API_WITH_RTTI MultisetRemovePred : public Stmt, public IExtNode<Ali
   void validate() const override;
   void update() override;
 
-  Ptr<AliasStmt> make_legacy() const override;
+  Ptr<AliasStmt> make_legacy() const;
 };
 
 

@@ -76,7 +76,6 @@ add_library(librumur
   src/TypeExpr.cc
   src/validate.cc
   src/ext_Expr.cc
-  src/ext_Function.cc
   src/ext_traverse.cc
   src/ext_TypeExpr.cc
   src/ext_Stmt.cc

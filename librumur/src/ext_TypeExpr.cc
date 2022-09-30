@@ -65,7 +65,6 @@ bool ScalarsetUnion::is_useful() const {
   return (useful && count() > 1_mpz); // @Smattr you might want to tweak this comparison, too
 }
 void ScalarsetUnion::update() {
-  //TODO clean this function up
   mpz_class count;
   auto try_insert [&](name,value) -> bool {
     if (members_exp.find(name) != members_exp.end()) 

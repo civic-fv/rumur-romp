@@ -576,13 +576,13 @@ struct RUMUR_API_WITH_RTTI Element : public Expr {
   virtual ~Element() = default;
   Element *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool constant() const final;
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
-  void validate() const final;
+  void validate() const;
   bool is_lvalue() const final;
   bool is_readonly() const final;
   std::string to_string() const;
@@ -638,8 +638,8 @@ struct RUMUR_API_WITH_RTTI Quantifier : public Node {
              const location &loc_);
   virtual ~Quantifier() = default;
   Quantifier *clone() const;
-  void validate() const final;
-  std::string to_string() const;
+  void validate() const;
+  virtual std::string to_string() const;
 
   void visit(BaseTraversal &visitor);
   void visit(ConstBaseTraversal &visitor) const;

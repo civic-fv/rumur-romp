@@ -49,6 +49,7 @@
   #include <rumur/ext/Expr.h>
   #include <rumur/ext/TypeExpr.h>
   #include <rumur/ext/Stmt.h>
+  #include <rumur/ext/Rule.h>
 
   /* Forward declare the scanner class that Flex will produce for us. */
   namespace rumur {
@@ -197,7 +198,7 @@
 
 %type <rumur::Ptr<rumur::AliasRule>>                         aliasrule
 %type <std::shared_ptr<rumur::Property::Category>>           category
-%type <rumur::Ptr<ChooseRule>>                               chooserule
+%type <rumur::Ptr<rumur::ext::ChooseRule>>                   chooserule
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 decl
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 decls
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 decls_header
@@ -212,7 +213,7 @@
 %type <rumur::Ptr<rumur::Expr>>                              guard_opt
 %type <std::vector<std::pair<std::string, rumur::location>>> id_list
 %type <std::vector<std::pair<std::string, rumur::location>>> id_list_opt
-%type <rumur::shared_ptr<rumur::ext::MultisetQuantifier>>    multisetquantifier
+%type <std::shared_ptr<rumur::ext::MultisetQuantifier>>    multisetquantifier
 %type <std::vector<rumur::ext::MultisetQuantifier>>          multisetquantifiers
 %type <std::vector<rumur::Ptr<rumur::Node>>>                 nodes
 %type <std::vector<rumur::Ptr<rumur::VarDecl>>>              parameter
@@ -236,8 +237,8 @@
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 typedecl
 %type <std::vector<rumur::Ptr<rumur::Decl>>>                 typedecls
 %type <rumur::Ptr<rumur::TypeExpr>>                          typeexpr
-%type <std::vector<rumur::ScalarsetUnionMember>>             union_list
-%type <rumur::ScalarsetUnionMember>                          union_list_item
+%type <std::vector<rumur::Ptr<rumur::TypeExpr>>>             union_list
+%type <rumur::Ptr<rumur::TypeExpr>>                          union_list_item
 %type <std::vector<rumur::Ptr<rumur::VarDecl>>>              vardecl
 %type <std::vector<rumur::Ptr<rumur::VarDecl>>>              vardecls
 %type <std::shared_ptr<bool>>                                var_opt
@@ -566,7 +567,7 @@ startstate: STARTSTATE string_opt decls_header stmts endstartstate {
 };
 
 chooserule: CHOOSE multisetquantifiers DO rules endchoose {
-  $$ = rumur::Ptr<rumur::ChooseRule>::make($2, $4, @$);
+  $$ = rumur::Ptr<rumur::ext::ChooseRule>::make($2, $4, @$);
 };
 
 stmt: category STRING expr {
@@ -670,17 +671,17 @@ typedecls: typedecls typedecl semi_opt {
 
 /* addition of optional union list */
 union_list_item: ID {
-  $$ = rumur::ScalarsetUnionMember(rumur::Ptr<rumur::TypeExprID>::make($1, nullptr, @$));
+  $$ = rumur::Ptr<rumur::TypeExprID>::make($1, nullptr, @$);
 } | ENUM '{' id_list_opt '}' {
-  $$ = rumur::ScalarsetUnionMember(rumur::Ptr<rumur::Enum>::make($3, @$));
+  $$ = rumur::Ptr<rumur::Enum>::make($3, @$);
 };
 
 /* addition of optional union list */
 union_list: union_list ',' union_list_item {
   $$ = $1;
-  $$.emplace_back($2);
+  $$.emplace_back($3);
 } | union_list_item ',' union_list_item { /* at least 2 is required */
-  $$ = std::vector<rumur::ScalarsetUnionMember>{$1,$2};
+  $$ = std::vector<rumur::Ptr<rumur::TypeExpr>>{$1,$3};
 } | %empty {
   /* do nothing and check size later */ 
 };
@@ -705,9 +706,9 @@ typeexpr: BOOLEAN {
   $$ = rumur::Ptr<rumur::Scalarset>::make($3, @$);
 // extended types ...
 } | UNION '{' union_list '}' {
-  $$ = rumur::Ptr<ScalarsetUnion>::make($3,@$);
+  $$ = rumur::Ptr<rumur::ext::ScalarsetUnion>::make($3,@$);
 } | MULTISET '[' expr ']' OF typeexpr {
-  $$ = rumur::Ptr<Multiset>::make($3, $6, @$);
+  $$ = rumur::Ptr<rumur::ext::Multiset>::make($3, $6, @$);
 };
 
 vardecl: id_list_opt ':' typeexpr {

@@ -90,6 +90,12 @@ SimpleRule *SimpleRule::clone() const { return new SimpleRule(*this); }
 
 void SimpleRule::validate() const { ReturnChecker::check(*this); }
 
+void SimpleRule::update() {
+  // for (ext::MultisetQuantifier mq : ms_quantifiers) // moved to resolve-symbol disambiguate
+  //   guard = MultisetElement::convert_element(mq, guard);
+  // body = MultisetElement::convert_element(ms_quantifiers, body);
+}
+
 void SimpleRule::visit(BaseTraversal &visitor) {
   visitor.visit_simplerule(*this);
 }
@@ -128,6 +134,11 @@ void PropertyRule::visit(BaseTraversal &visitor) {
 
 void PropertyRule::visit(ConstBaseTraversal &visitor) const {
   visitor.visit_propertyrule(*this);
+}
+
+void PropertyRule::update() {
+  // for (ext::MultisetQuantifier mq : ms_quantifiers) // moved to resolve-symbol disambiguate
+  //   guard = MultisetElement::convert_element(mq, guard);
 }
 
 Ruleset::Ruleset(const std::vector<Quantifier> &quantifiers_,

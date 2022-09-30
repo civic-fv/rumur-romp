@@ -11,7 +11,7 @@
 namespace rumur {
 namespace ext {
 
-struct RUMUR_API_WITH_RTTI IsMember : public Expr, public IExtNode<Or> {
+struct RUMUR_API_WITH_RTTI IsMember : public Expr, IExtNode/*<Or>*/ {
 
   Ptr<Expr> designator;
   Ptr<TypeExpr> type;
@@ -23,12 +23,13 @@ struct RUMUR_API_WITH_RTTI IsMember : public Expr, public IExtNode<Or> {
   void visit(BaseTraversal& visitor) override;
   void visit(ConstBaseTraversal& visitor) const override;
 
+  Ptr<TypeExpr> type() const override;
   void validate() const override;
   void update() override;
 
   std::string to_string() const override;
 
-  Ptr<Or> make_legacy() const override;
+  Ptr<Or> make_legacy() const;
 protected:
   void validate_types() const;
 };
@@ -49,7 +50,7 @@ protected:
  *                all extended syntax by: bounds checking rhs of an Assignment Stmt,
  *                and the index value in an Element Expr).
  */
-struct RUMUR_API_WITH_RTTI SUCast : public UnaryExpr, public IExtNode<Add> {
+struct RUMUR_API_WITH_RTTI SUCast : public UnaryExpr, IExtNode/*<Add>*/ {
 
   Ptr<TypeExpr> target; // expected to have it's symbols resolved already (HACKY)
 
@@ -73,13 +74,13 @@ struct RUMUR_API_WITH_RTTI SUCast : public UnaryExpr, public IExtNode<Add> {
 
   std::string to_string() const override;
 
-  Ptr<Add> make_legacy() const override;
+  Ptr<Add> make_legacy() const;
 protected:
   void pre_validate() const;
 };
 
 
-struct RUMUR_API_WITH_RTTI MultisetQuantifier : public Quantifier, public IExtNode<Quantifier> {
+struct RUMUR_API_WITH_RTTI MultisetQuantifier : public Quantifier, IExtNode/*<Quantifier>*/ {
 
   Ptr<Expr> multiset;
 
@@ -91,10 +92,10 @@ struct RUMUR_API_WITH_RTTI MultisetQuantifier : public Quantifier, public IExtNo
   void visit(ConstBaseTraversal& visitor) const override;
 
   void validate() const override;
-  void update() override;
+  void update();
   std::string to_string() const override;
 
-  Ptr<Quantifier> make_legacy() const override;
+  Ptr<Quantifier> make_legacy() const;
 };
 
 
@@ -102,9 +103,9 @@ struct RUMUR_API_WITH_RTTI MultisetQuantifier : public Quantifier, public IExtNo
  * @brief The only way to access an element of a multiset.
  *        NOTE: this AST node can't be inserted into  
  */
-struct RUMUR_API_WITH_RTTI MultisetElement : public Element, public IExtNode<Element> {
+struct RUMUR_API_WITH_RTTI MultisetElement : public Element, IExtNode/*<Element>*/ {
 
-  MultisetElement(const Ptr<Expr>& designator_, 
+  MultisetElement(const Ptr<Expr>& multiset_, 
                   const Ptr<Expr> index_, const location& loc_);
   MultisetElement *clone() const override;
   ~MultisetElement() = default;
@@ -112,13 +113,15 @@ struct RUMUR_API_WITH_RTTI MultisetElement : public Element, public IExtNode<Ele
   void visit(BaseTraversal& visitor) override;
   void visit(ConstBaseTraversal& visitor) const override;
 
+  Ptr<TypeExpr> type() const override;
   void validate() const override;
   void update() override;
 
   // std::string to_string() const override;
 
-  Ptr<Element> make_legacy() const override;
-  static Ptr<Expr> convert_elements(const MultisetQuantifier& mq, const Ptr<Expr>& expr) const;
+  Ptr<Element> make_legacy() const;
+  // static Ptr<Expr> convert_elements(const MultisetQuantifier& mq, const Ptr<Expr>& expr);
+  // static std::vector<Ptr<Stmt>> convert_elements(const std::vector<MultisetQuantifier>& mq, const std::vector<Ptr<Stmt>>& body);
 };
 
 
@@ -136,11 +139,11 @@ struct RUMUR_API_WITH_RTTI MultisetCount : public Expr, public IExtExpr<Add> {
 
   void validate() const override;
   void update() override;
-  void type() const override;
+  Ptr<TypeExpr> type() const override;
 
   std::string to_string() const override;
 
-  Ptr<Add> make_legacy() const override;
+  Ptr<Add> make_legacy() const;
 };
 
 } //namespace ext

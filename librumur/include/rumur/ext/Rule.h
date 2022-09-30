@@ -13,7 +13,7 @@ namespace rumur {
 namespace ext {
 
 
-struct RUMUR_API_WITH_RTTI ChooseRule : public Rule, public IExtNode<Ruleset> {
+struct RUMUR_API_WITH_RTTI ChooseRule : public Rule, IExtNode/*<Ruleset>*/ {
 
   std::vector<Ptr<Rule>> rules;
 

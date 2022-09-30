@@ -64,7 +64,7 @@ public:
   }
 
   /// are the upcoming characters the given string?
-  bool next/is(const std::string &expectation) {
+  bool next_is(const std::string &expectation) {
     return peek(expectation.size()) == expectation;
   }
 
@@ -94,21 +94,21 @@ std::vector<Comment> rumur::parse_comments(std::istream &input) {
 
     // string?
     {
-      bool is_quote = in.next/is("\"");
-      bool is_smart_quote = in.next/is("“");
+      bool is_quote = in.next_is("\"");
+      bool is_smart_quote = in.next_is("“");
       if (is_quote || is_smart_quote) {
         // discard the quote starter
         (void)in.read(strlen(is_quote ? "\"" : "“"));
         // swallow the quote itself
         while (!in.eof()) {
-          if (in.next/is("\\\"")) {
+          if (in.next_is("\\\"")) {
             (void)in.read(strlen("\\\""));
-          } else if (in.next/is("\\”")) {
+          } else if (in.next_is("\\”")) {
             (void)in.read(strlen("\\”"));
-          } else if (in.next/is("\"")) {
+          } else if (in.next_is("\"")) {
             (void)in.read(strlen("\""));
             break;
-          } else if (in.next/is("”")) {
+          } else if (in.next_is("”")) {
             (void)in.read(strlen("”"));
             break;
           } else {
@@ -119,26 +119,26 @@ std::vector<Comment> rumur::parse_comments(std::istream &input) {
       }
     }
 
-    if (in.next/is("--")) { // single line comment?
+    if (in.next_is("--")) { // single line comment?
       position begin = in.get_position();
       // discard the comment starter
       (void)in.read(strlen("--"));
       // consume the comment body
       std::ostringstream content;
-      while (!in.eof() && !in.next/is("\n"))
+      while (!in.eof() && !in.next_is("\n"))
         content << in.getchar();
       result.push_back(
           Comment{content.str(), false, location(begin, in.get_position())});
       continue;
 
-    } else if (in.next/is("/*")) { // multiline comment?
+    } else if (in.next_is("/*")) { // multiline comment?
       position begin = in.get_position();
       // discard the comment starter
       (void)in.read(strlen("/*"));
       // consume the comment body;
       std::ostringstream content;
       while (!in.eof()) {
-        if (in.next/is("*/")) {
+        if (in.next_is("*/")) {
           (void)in.read(strlen("*/"));
           break;
         }

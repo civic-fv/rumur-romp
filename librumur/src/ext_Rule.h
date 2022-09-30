@@ -35,7 +35,7 @@ std::vector<Ptr<Rule>> ChooseRule::flatten() const {
   return rs;
 }
 
-Ptr<Ruleset> make_legacy() const { throw Error("`choose` is not supported for legacy model-checkers!", loc); }
+Ptr<Ruleset> ChooseRule::make_legacy() const { throw Error("`choose` is not supported for legacy model-checkers!", loc); }
 
 } //namespace ext
 } //namespace rumur

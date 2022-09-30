@@ -1,10 +1,10 @@
 #pragma once
 
-#include <rumur/ext/IExtTraverse.h>
 #include <rumur/traverse.h>
 #include <rumur/ext/Expr.h>
 #include <rumur/ext/TypeExpr.h>
 #include <rumur/ext/Stmt.h>
+#include <rumur/ext/Rule.h>
 
 #ifndef RUMUR_API_WITH_RTTI
 #define RUMUR_API_WITH_RTTI __attribute__((visibility("default")))

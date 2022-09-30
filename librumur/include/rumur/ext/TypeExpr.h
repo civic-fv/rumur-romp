@@ -19,7 +19,7 @@ struct RUMUR_API_WITH_RTTI ScalarsetUnionMember {
 };
 
 
-struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset, public IExtNode<Scalarset> {
+struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset, public IExtNode/* <Scalarset> */ {
 
   // the list of types to union
   std::vector<Ptr<TypeExpr>> members;
@@ -40,7 +40,7 @@ struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset, public IExtNode<Sc
   bool contains(const TypeExpr &other) const;
   std::string to_string() const override;
 
-  Ptr<Scalarset> make_legacy() const override;
+  Ptr<Scalarset> make_legacy() const;
 private:
   Ptr<Add> gen_legacy_bound(std::unordered_set<std::string>& handled) const;
   /// map of the NAME of a scalarset or single Enum value in this union
@@ -60,7 +60,7 @@ private:
 };
 
 
-struct RUMUR_API_WITH_RTTI Multiset : public Array, public IExtNode<Array> {
+struct RUMUR_API_WITH_RTTI Multiset : public Array, IExtNode/*<Array>*/ {
 
   Ptr<Expr>& size;
   //NOTE: Multiset's by default have nullptr as their index_type, 
@@ -78,7 +78,7 @@ struct RUMUR_API_WITH_RTTI Multiset : public Array, public IExtNode<Array> {
   void update() override;
   std::string to_string() const;
 
-  Ptr<Array> make_legacy() const override;
+  Ptr<Array> make_legacy() const;
 };
 
 } //namespace ext
