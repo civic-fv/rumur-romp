@@ -82,15 +82,15 @@ struct SubRangeSet {
     friend bool operator == (const iterator& l, const iterator& r) { return l.iter == r.iter; }
     friend bool operator != (const iterator& l, const iterator& r) { return l.iter != r.iter; }
   };
-  iterator* begin() { return iterator{range_head}; }
-  iterator* end() { return iterator{nullptr}; }
+  iterator begin() { return iterator{range_head}; }
+  iterator end() { return iterator{nullptr}; }
 };
 
 SubRangeSet make_ranges(const ScalarsetUnion* u, const TypeExpr& type) {
   struct MakeRanges : public ConstExtTypeTraversal {
     SubRangeSet ranges;
     const Ptr<ScalarsetUnion> _u;
-    make_ranges(const ScalarsetUnion*_u_) : _u(_u_), ranges({0_mpz,_u->count()}) {}
+    MakeRanges(const ScalarsetUnion*_u_) : _u(_u_), ranges(0_mpz,_u->count()) {}
     bool _try_insert(std::string name) {
       auto _m = _u->members_exp.find(name);
       if (_m != _u->members_exp.end()) {
@@ -99,22 +99,22 @@ SubRangeSet make_ranges(const ScalarsetUnion* u, const TypeExpr& type) {
       }
       return false;
     }
-    visit_array(const Array& n) { assert(false && "Array should be unreachable"); }
-    visit_enum(const Enum& n) {
+    void visit_array(const Array& n) { assert(false && "Array should be unreachable"); }
+    void visit_enum(const Enum& n) {
       for (const auto mp : n.members_exp)
           _try_insert("_enum_"+mp.first);
     }
-    visit_multiset(const Multiset& n) { assert(false && "Multiset should be unreachable"); }
-    visit_range(const Range& n) { assert(false && "Range should be unreachable"); }
-    visit_record(const Record& n) { assert(false && "Record should be unreachable"); }
-    visit_scalarset(const Scalarset& n) { 
+    void visit_multiset(const Multiset& n) { assert(false && "Multiset should be unreachable"); }
+    void visit_range(const Range& n) { assert(false && "Range should be unreachable"); }
+    void visit_record(const Record& n) { assert(false && "Record should be unreachable"); }
+    void visit_scalarset(const Scalarset& n) { 
       throw Error("scalarsets must be defined with a name to be a member of a union!",n.loc); 
     }
-    visit_scalarsetunion(const ScalarsetUnion& n) {
+    void visit_scalarsetunion(const ScalarsetUnion& n) {
       for (const auto m : n.members)
         dispatch(*m);
     }
-    visit_typeexprid(const TypeExprID& n) {
+    void visit_typeexprid(const TypeExprID& n) {
       if (not _try_insert(n.referent->name))
         dispatch(*n.resolve());
     }
@@ -128,8 +128,8 @@ SubRangeSet make_ranges(const ScalarsetUnion* u, const TypeExpr& type) {
 // << ------------------------------------------------------------------------------------------ >> 
 
 
-IsMember::IsMember(Ptr<Expr> designator_, Ptr<TypeExpr> type_, location loc_)
-  : Or(nullptr,nullptr,loc_), designator(designator_), type(type_) {}
+IsMember::IsMember(Ptr<Expr> designator_, Ptr<TypeExpr> type_value_, location loc_)
+  : Node(loc_), designator(designator_), type_value(type_value_) {}
 IsMember* IsMember::clone() { return new IsMember(*this); }
 
 void IsMember::visit(BaseTraversal& visitor) { visitor.visit_ismember(*this); }
@@ -169,26 +169,26 @@ void IsMember::update() {
 Ptr<TypeExpr> IsMember::type() const { return rumur::Boolean; }
 
 void IsMember::validate_types() const {
-  struct validate_types : public ConstExtTypeTraversal {
+  struct ValidateTypes : public ConstExtTypeTraversal {
     Ptr<ScalarsetUnion> _u;
-    make_ranges(ScalarsetUnion*_u_) : _u(_u_), ranges({0_mpz,_u->count()}) {}
+    ValidateTypes(ScalarsetUnion*_u_) : _u(_u_) {}
     bool _contains(std::string name) {
-      return (_u->members_exp.find(name) != _u->members_exp.end())
+      return (_u->members_exp.find(name) != _u->members_exp.end());
     }
-    visit_array(const Array& n) { throw Error("Arrays cant be members of scalarset unions!",n.loc); }
-    visit_enum(const Enum& n) {
+    void visit_array(const Array& n) { throw Error("Arrays cant be members of scalarset unions!",n.loc); }
+    void visit_enum(const Enum& n) {
       for (const auto mp : e.members)
           _contains("_enum_"+mp.first);
     }
-    visit_multiset(const Multiset& n) { throw Error("Multisets cant be members of scalarset unions!",n.loc); }
-    visit_range(const Range& n) { throw Error("Ranges's cant be members of scalarset unions!",n.loc); }
-    visit_record(const Record& n) { throw Error("Records's cant be members of scalarset unions!",n.loc); }
-    visit_scalarset(const Scalarset& n) { throw Error("scalarsets must be defined with a name to be a member of a union!",n.loc); }
-    visit_scalarsetunion(const ScalarsetUnion& n) {
+    void visit_multiset(const Multiset& n) { throw Error("Multisets cant be members of scalarset unions!",n.loc); }
+    void visit_range(const Range& n) { throw Error("Ranges's cant be members of scalarset unions!",n.loc); }
+    void visit_record(const Record& n) { throw Error("Records's cant be members of scalarset unions!",n.loc); }
+    void visit_scalarset(const Scalarset& n) { throw Error("scalarsets must be defined with a name to be a member of a union!",n.loc); }
+    void visit_scalarsetunion(const ScalarsetUnion& n) {
       for (const auto m : n.members)
         dispatch(*m);
     }
-    visit_typeexprid(const TypeExprID& n) {
+    void visit_typeexprid(const TypeExprID& n) {
       if (n.referent == nullptr)
         throw Error(n.name+" was not resolved \t[dev-error]",n.loc)
       if (not _contains(n.referent->name))
@@ -196,8 +196,8 @@ void IsMember::validate_types() const {
     }
   };
   if (const auto _u = dynamic_cast<const ScalarsetUnion*>(designator.type().get())) {
-    validate_types _vt(_u);
-    _vt.dispatch(*type);
+    ValidateTypes _vt(_u);
+    _vt.dispatch(*type_value);
   } else 
     throw Error("IsMember use error : `" + designator->to_string() 
                 + "` is not of type scalarset union, as IsMember expects", 
@@ -205,10 +205,7 @@ void IsMember::validate_types() const {
 }
 // this needs to be called after symbol resolution and a call to update()
 void IsMember::validate() const {
-  pre_validate();
-  if (lhs == nullptr || rhs == nullptr)
-    throw Error("IsMember was not updated! \t[dev-error]",loc);
-  And::validate();
+  validate_types();
 }
 
 std::string IsMember::to_string() const {

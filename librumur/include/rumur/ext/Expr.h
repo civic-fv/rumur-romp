@@ -14,9 +14,9 @@ namespace ext {
 struct RUMUR_API_WITH_RTTI IsMember : public Expr, IExtNode/*<Or>*/ {
 
   Ptr<Expr> designator;
-  Ptr<TypeExpr> type;
+  Ptr<TypeExpr> type_value;
 
-  IsMember(const Ptr<Expr>& designator_, const Ptr<TypeExpr>& type_, const location& loc_);
+  IsMember(const Ptr<Expr>& designator_, const Ptr<TypeExpr>& type_value_, const location& loc_);
   IsMember* clone() const override;
   ~IsMember() = default;
 
