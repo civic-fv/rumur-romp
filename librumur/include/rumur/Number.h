@@ -28,10 +28,10 @@ struct RUMUR_API_WITH_RTTI Number : public Expr {
   Number &operator=(const Number &) = default;
   Number &operator=(Number &&) = default;
   virtual ~Number() = default;
-  Number *clone() const final;
+  Number *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool constant() const final;
   Ptr<TypeExpr> type() const final;

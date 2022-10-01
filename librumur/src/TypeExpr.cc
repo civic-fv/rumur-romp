@@ -65,7 +65,7 @@ bool TypeExpr::constant() const {
 // operator== because its semantics are not exactly what you would expect from
 // operator== and we do not want to expose it to other files.
 static bool equal(const TypeExpr &t1, const TypeExpr &t2) {
-
+  using namespace ::rumur::ext;
   class Equater : public ConstExtTypeTraversal {
 
   private:
@@ -175,9 +175,9 @@ bool TypeExpr::coerces_to(const TypeExpr &other) const {
   const Ptr<TypeExpr> t1 = resolve();
   const Ptr<TypeExpr> t2 = other.resolve();
 
-  if (const auto _t1 = dynamic_cast<const ScalarsetUnion *>(t1.get()))
+  if (const auto _t1 = dynamic_cast<const ext::ScalarsetUnion *>(t1.get()))
     return _t1->contains(*t2);
-  if (const auto _t2 = dynamic_cast<const ScalarsetUnion *>(t2.get()))
+  if (const auto _t2 = dynamic_cast<const ext::ScalarsetUnion *>(t2.get()))
     return _t2->contains(*t1);
 
   if (isa<Range>(t1) && isa<Range>(t2))
@@ -189,8 +189,6 @@ bool TypeExpr::coerces_to(const TypeExpr &other) const {
 bool TypeExpr::equal_to(const TypeExpr &other) const {
   return equal(*this, other);
 }
-bool TypeExpr::operator == (const TypeExpr &other) const { return equal_to(other); }
-bool TypeExpr::operator != (const TypeExpr &other) const { return not equal_to(other); }
 
 
 
@@ -294,7 +292,7 @@ std::string Scalarset::to_string() const {
   return "scalarset(" + bound->to_string() + ")";
 }
 
-bool Scalarset::constant() const { return (bound->c bound->constant_fold() > 1_mpz); }  // @Smattr you might want to tweak this comparison
+bool Scalarset::is_useful() const { return (bound->constant_fold() > 1_mpz); }  // @Smattr you might want to tweak this comparison (just copied from CMurphi)
 
 
 Enum::Enum(const std::vector<std::pair<std::string, location>> &members_,
@@ -498,7 +496,7 @@ void TypeExprID::validate() const {
 bool TypeExprID::is_useful() const {
   if (referent == nullptr)
     throw Error("unresolved type symbol \"" + name + "\"", loc);
-  return referent->is_useful();
+  return referent->value->is_useful();
 }
 
 std::string TypeExprID::lower_bound() const {

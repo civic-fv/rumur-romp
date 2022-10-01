@@ -26,82 +26,84 @@ namespace rumur {
 namespace ext {
 
 struct SubRangeSet {
-  mpz_class abs_min;
-  mpz_class abs_max;
-  _Range* range_head = nullptr;
-  void insert(mpz_class min, mpz_class max) {
-    auto _insert [&](_Range* r) -> _Range* { // forward (r never null)
-      if (min > r->max) { // case: r comes before range
-        auto _r = new _Range{r,min,max,r->next};
-        r->next = _r;
-        return _r;
-      }
-      if (min >= r->min) {  // case: r overlaps with range // also case: r->max == min
-        if (r->max >= max) // sub-case: r contains all of our range
-          max = r->max;   // update max
-        return r;
-      }
-      if (r->next == nullptr)
-        return new _Range{r,min,max,nullptr};
-      return _insert(r->next);
-    };
-    min = ((min <= abs_min) ? abs_min : min);
-    max = ((max >= abs_max) ? abs_max : max);
-    if (range_head == nullptr) {  // base case: empty
-      range_head = new _Range{nullptr, min, max, nullptr};
-      return;
-    }
-    _Range* range = _insert(range_head);
-    auto _span [&](_Range* r) -> void { // forward (r can be null); !! trims ALL nodes it explores !!
-      if (r == nullptr) // base case: END OF RANGE LIST
-        return;
-      if (max < r->min) // base case: NO OVERLAP
-        return;  // do not trim r
-      if (max >= r->min) { // case: r overlaps with range
-        range->max = r->max; // update with current range with values from this overlapping range
-        range->next = r->next;
-      }
-      if (max > r->max) // case: range completely overlaps with r
-        _span(r->next);  // check next range for overlap
-      delete r; // trim r
-    };
-    _span(range->next);  // never call with a node you don't want to loose!!
-  }
   struct _Range {
     _Range* prev;
     mpz_class min;
     mpz_class max;
     _Range* next;
   };
+  SubRangeSet(const mpz_class& abs_min_,const mpz_class& abs_max_)
+    : abs_min(abs_min_), abs_max(abs_max_), range_head(nullptr) {}
+  mpz_class abs_min;
+  mpz_class abs_max;
+  _Range* range_head = nullptr;
+  void insert(mpz_class min, mpz_class max) {
+    min = ((min <= abs_min) ? abs_min : min);
+    max = ((max >= abs_max) ? abs_max : max);
+    if (range_head == nullptr) {  // base case: empty
+      range_head = new _Range{nullptr, min, max, nullptr};
+      return;
+    }
+    _Range* range = _insert(range_head, min,max);
+    _span(range->next, min,max, range);  // never call with a node you don't want to loose!!
+  }
   struct iterator {
     _Range* iter;
     _Range& operator*() const { return *iter; }
     _Range* operator->() const { return iter; }
-    friend iterator& operator ++ (iterator& i) { i.iter = i.iter.next; return i; }
+    friend iterator& operator ++ (iterator& i) { i.iter = i.iter->next; return i; }
     friend iterator operator ++ (iterator& i, int v) { iterator cpy{i.iter}; ++i; return cpy; }
     friend bool operator == (const iterator& l, const iterator& r) { return l.iter == r.iter; }
     friend bool operator != (const iterator& l, const iterator& r) { return l.iter != r.iter; }
   };
   iterator begin() { return iterator{range_head}; }
   iterator end() { return iterator{nullptr}; }
+protected:
+  auto _insert(_Range* r, mpz_class& min, mpz_class& max) -> _Range* { // forward (r never null)
+    if (min > r->max) { // case: r comes before range
+      auto _r = new _Range{r,min,max,r->next};
+      r->next = _r;
+      return _r;
+    }
+    if (min >= r->min) {  // case: r overlaps with range // also case: r->max == min
+      if (r->max >= max) // sub-case: r contains all of our range
+        max = r->max;   // update max
+      return r;
+    }
+    if (r->next == nullptr)
+      return new _Range{r,min,max,nullptr};
+    return _insert(r->next, min,max);
+  }
+  auto _span(_Range* r, mpz_class& min, mpz_class& max, _Range* range) -> void { // forward (r can be null); !! trims ALL nodes it explores !!
+    if (r == nullptr) // base case: END OF RANGE LIST
+      return;
+    if (max < r->min) // base case: NO OVERLAP
+      return;  // do not trim r
+    if (max >= r->min) { // case: r overlaps with range
+      range->max = r->max; // update with current range with values from this overlapping range
+      range->next = r->next;
+    }
+    if (max > r->max) // case: range completely overlaps with r
+      _span(r->next, min,max, range);  // check next range for overlap
+    delete r; // trim r
 };
 
 SubRangeSet make_ranges(const ScalarsetUnion* u, const TypeExpr& type) {
   struct MakeRanges : public ConstExtTypeTraversal {
     SubRangeSet ranges;
     const Ptr<ScalarsetUnion> _u;
-    MakeRanges(const ScalarsetUnion*_u_) : _u(_u_), ranges(0_mpz,_u->count()) {}
+    MakeRanges(const ScalarsetUnion& _u_) : _u(_u_), ranges(0_mpz,_u->count()) {}
     bool _try_insert(std::string name) {
       auto _m = _u->members_exp.find(name);
       if (_m != _u->members_exp.end()) {
-        ranges.insert(_m->second.min,_m->second.max)
+        ranges.insert(_m->second.min,_m->second.max);
         return true;
       }
       return false;
     }
     void visit_array(const Array& n) { assert(false && "Array should be unreachable"); }
     void visit_enum(const Enum& n) {
-      for (const auto mp : n.members_exp)
+      for (const auto mp : n.members)
           _try_insert("_enum_"+mp.first);
     }
     void visit_multiset(const Multiset& n) { assert(false && "Multiset should be unreachable"); }
@@ -119,7 +121,7 @@ SubRangeSet make_ranges(const ScalarsetUnion* u, const TypeExpr& type) {
         dispatch(*n.resolve());
     }
   };
-  MakeRanges r(u);
+  MakeRanges r(*u);
   r.dispatch(type);
   return r.ranges;
 }
@@ -167,6 +169,8 @@ void IsMember::update() {
 }
 
 Ptr<TypeExpr> IsMember::type() const { return rumur::Boolean; }
+mpz_class SUCast::constant_fold() const { throw Error("not a constant value", loc); }
+bool SUCast::constant() const { return false; };
 
 void IsMember::validate_types() const {
   struct ValidateTypes : public ConstExtTypeTraversal {
@@ -265,6 +269,8 @@ void SUCast::pre_validate() const {
     throw Error("Can't cast/convert expr=`"
                 + rhs->to_string() + "` --to-> type=`" + target->to_string() "`", loc);
 }
+mpz_class SUCast::constant_fold() const { throw Error("not a constant value", loc); }
+bool SUCast::constant() const { return false; };
 void SUCast::validate() const {
   pre_validate();
   assert(rhs != nullptr && "DEV ERROR : did not create cast conversion!");
@@ -564,6 +570,8 @@ Ptr<TypeExpr> MultisetCount::type() const {
   // else
     assert(false && "DEV ERROR : MultisetQuantifier did not refer to a multiset!");
 }
+mpz_class MultisetCount::constant_fold() const { throw Error("not a constant value", loc); }
+bool MultisetCount::constant() const { return false; };
 
 std::string MultisetCount::to_string() const {
   return "MultisetCount(" + ms_quantifier.to_string() + ", " + condition->to_string() + ")";
@@ -605,7 +613,7 @@ Ptr<Add> MultisetCount::make_legacy() const {
                     loc),
                   Ptr<Number>::make(0_mpz,location()),
                   loc);
-    _convert(add->rhs,++i);
+    _convert(add->rhs,i+1);
   };
   auto res = Ptr<Add>::make(Ptr<Number>::make(0_mpz,location()),
                             Ptr<Number>::make(0_mpz,location()),

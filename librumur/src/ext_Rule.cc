@@ -1,5 +1,9 @@
 
+#include "../../common/isa.h"
+#include <rumur/Rule.h>
 #include <rumur/ext/Rule.h>
+#include <rumur/except.h>
+#include <rumur/traverse.h>
 
 
 namespace rumur {
@@ -8,7 +12,7 @@ namespace ext {
 
 ChooseRule::ChooseRule(const std::vector<MultisetQuantifier> &ms_quantifiers_,
             const std::vector<Ptr<Rule>>& rules_, const location& loc_)
-  : ms_quantifiers(ms_quantifiers_), rules(rules_), loc(loc_) {}
+  : Rule("",loc_), rules(rules_) { ms_quantifiers = ms_quantifiers_; }
 ChooseRule *ChooseRule::clone() const { return new ChooseRule(*this); }
 
 
@@ -17,7 +21,7 @@ void ChooseRule::visit(ConstBaseTraversal &visitor) const { visitor.visit_choose
 
 void ChooseRule::validate() const {
   for (const auto q : quantifiers)
-    if (not isa<const MultisetQuantifier>(q))
+    if (not isa<MultisetQuantifier>(q))
       throw Error("choose is only valid for multiset quantifiers", q.loc);
 }
 

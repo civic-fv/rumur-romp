@@ -12,6 +12,11 @@
 namespace rumur {
 namespace ext {
 
+//predecl
+struct IsMember;
+struct SUCast;
+
+
 struct RUMUR_API_WITH_RTTI ScalarsetUnionMember {
   Ptr<TypeExpr> value;
   mpz_class min;
@@ -19,7 +24,7 @@ struct RUMUR_API_WITH_RTTI ScalarsetUnionMember {
 };
 
 
-struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset, public IExtNode/* <Scalarset> */ {
+struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset, public IExtNode<Scalarset> {
 
   // the list of types to union
   std::vector<Ptr<TypeExpr>> members;
@@ -41,26 +46,28 @@ struct RUMUR_API_WITH_RTTI ScalarsetUnion : public Scalarset, public IExtNode/* 
   std::string to_string() const override;
 
   Ptr<Scalarset> make_legacy() const;
-private:
-  Ptr<Add> gen_legacy_bound(std::unordered_set<std::string>& handled) const;
+
+// private:
   /// map of the NAME of a scalarset or single Enum value in this union
   /// NOTE: this only has a value after symbol-resolution and a call to `update()`
   /// WARNING: meant for implementing legacy code adaptations and the contains method ONLY!
   ///          do not use in your implementation unless you know what you are doing,
   ///          it gets overwritten every time `update()` is called.
   std::unordered_map<std::string,ScalarsetUnionMember> members_exp;
-  friend rumur::ext::SUCast;
-  friend rumur::ext::IsMember;
+  // friend ::rumur::ext::SUCast;
+  // friend ::rumur::ext::IsMember;
   // some helpful tools for converting to legacy AST
   static mpz_class get_conv_modifier(const TypeExpr& from, const TypeExpr& to);
   static mpz_class get_conv_modifier_su(const Scalarset& from, const ScalarsetUnion& to);
   static mpz_class get_conv_modifier_us(const ScalarsetUnion& from, const Scalarset& to);
   static mpz_class get_conv_modifier_eu(const Enum& from, const ScalarsetUnion& to);
   static mpz_class get_conv_modifier_ue(const ScalarsetUnion& from, const Enum& to);
+protected:
+  Ptr<Add> gen_legacy_bound(std::unordered_set<std::string>& handled) const;
 };
 
 
-struct RUMUR_API_WITH_RTTI Multiset : public Array, IExtNode/*<Array>*/ {
+struct RUMUR_API_WITH_RTTI Multiset : public Array, IExtNode<Array> {
 
   Ptr<Expr>& size;
   //NOTE: Multiset's by default have nullptr as their index_type, 

@@ -76,11 +76,11 @@ struct RUMUR_API_WITH_RTTI Range : public TypeExpr {
   Ptr<Expr> max;
 
   Range(const Ptr<Expr> &min_, const Ptr<Expr> &max_, const location &loc_);
-  Range *clone() const final;
+  Range *clone() const;
   virtual ~Range() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class count() const final;
   bool is_simple() const final;
@@ -101,8 +101,8 @@ struct RUMUR_API_WITH_RTTI Scalarset : public TypeExpr {
   Scalarset *clone() const;
   virtual ~Scalarset() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class count() const;
   bool is_simple() const final;
@@ -126,11 +126,11 @@ struct RUMUR_API_WITH_RTTI Enum : public TypeExpr {
 
   Enum(const std::vector<std::pair<std::string, location>> &members_,
        const location &loc_);
-  Enum *clone() const final;
+  Enum *clone() const;
   virtual ~Enum() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class count() const final;
   bool is_simple() const final;
@@ -148,11 +148,11 @@ struct RUMUR_API_WITH_RTTI Record : public TypeExpr {
   std::vector<Ptr<VarDecl>> fields;
 
   Record(const std::vector<Ptr<VarDecl>> &fields_, const location &loc_);
-  Record *clone() const final;
+  Record *clone() const;
   virtual ~Record() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class width() const final;
   mpz_class count() const final;
@@ -166,11 +166,11 @@ struct RUMUR_API_WITH_RTTI Array : public TypeExpr {
 
   Array(const Ptr<TypeExpr> &index_type_, const Ptr<TypeExpr> &element_type_,
         const location &loc_);
-  Array *clone() const final;
+  Array *clone() const;
   virtual ~Array() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class width() const final;
   mpz_class count() const final;
@@ -186,11 +186,11 @@ struct RUMUR_API_WITH_RTTI TypeExprID : public TypeExpr {
 
   TypeExprID(const std::string &name_, const Ptr<TypeDecl> &referent_,
              const location &loc_);
-  TypeExprID *clone() const final;
+  TypeExprID *clone() const;
   virtual ~TypeExprID() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class width() const final;
   mpz_class count() const final;

@@ -914,7 +914,7 @@ void Element::validate() const {
 
   const Ptr<TypeExpr> t = array->type()->resolve();
   ;
-  if (isa<Multiset>(t))
+  if (isa<ext::Multiset>(t))
     throw Error("you cannot access elements of a multiset directly in this context", loc);
 
   if (!isa<Array>(t))
@@ -941,7 +941,7 @@ void Element::update() {
     auto it = _a->index_type->resolve();
     if (not index->type()->equal_to(*it)) {
       if (isa<Scalarset>(it) || isa<Enum>(it)) // scalarset+union or enum
-        index = Ptr<SUCast>::make(it, index, index->loc);
+        index = Ptr<ext::SUCast>::make(it, index, index->loc);
         // SUCast will also throw an error if the cast can't be done
     }
   }

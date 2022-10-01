@@ -23,11 +23,12 @@
 #include <utility>
 
 using namespace rumur;
+// using namespace rumur::ext;
 
 namespace {
 
 
-class Resolver : public BaseExtTraversal {
+class Resolver : public ext::ExtBaseTraversal {
 
 private:
   Symtab symtab;
@@ -255,7 +256,7 @@ public:
      */
     bool ok = true;
 
-    for (Ptr<Node> &c : n.children) final {
+    for (Ptr<Node> &c : n.children) {
       dispatch(*c);
 
       /* if this was a variable declaration, we now know enough to determine its
@@ -389,13 +390,6 @@ public:
     disambiguate(n.bound);
   }
 
-  void visit_scalarsetunion(ScalarsetUnion &n) final {
-    for (auto m : n.members) 
-      dispatch(*m);
-    // n.update();          // not needed with new update design
-    // disambiguate(n.bound);
-  }
-
   void visit_simplerule(SimpleRule &n) final {
     symtab.open_scope();
     for (Quantifier &q : n.quantifiers)
@@ -483,7 +477,7 @@ public:
   void visit_chooserule(ext::ChooseRule& n) final {
     symtab.open_scope();
     ms_quantifiers.open_scope();
-    for (MultisetQuantifier &mq : n.ms_quantifiers)
+    for (ext::MultisetQuantifier &mq : n.ms_quantifiers)
       dispatch(mq);
     for (auto &r : n.rules)
       dispatch(*r);
@@ -497,7 +491,7 @@ public:
     // declarations (primarily enum members) as these will be duplicated in
     // when we descend into decl below
     symtab.open_scope();
-    dispatch(*n.type);
+    dispatch(*n.type_value);
     symtab.close_scope();
     disambiguate(n.designator);
   }
@@ -553,7 +547,7 @@ public:
     dispatch(*n.multiset);
     disambiguate(n.multiset);
     n.update();
-    ms_quantifiers.declare(n.name, Ptr<MultisetQuantifier>(n));
+    ms_quantifiers.declare(n.name, Ptr<ext::MultisetQuantifier>(n));
   } 
   
   void visit_scalarsetunion(ext::ScalarsetUnion& n) final {
@@ -579,14 +573,14 @@ public:
   virtual ~Resolver() = default;
 
 private:
-  void visit_bexpr(BinaryExpr &n) final {
+  void visit_bexpr(BinaryExpr &n) {
     dispatch(*n.lhs);
     dispatch(*n.rhs);
     disambiguate(n.lhs);
     disambiguate(n.rhs);
   }
 
-  void visit_uexpr(UnaryExpr &n) final {
+  void visit_uexpr(UnaryExpr &n) {
     dispatch(*n.rhs);
     disambiguate(n.rhs);
   }
@@ -659,16 +653,16 @@ private:
       return;
     }
 
-    if (not isa<MultisetElement>(e)) {
+    if (not isa<ext::MultisetElement>(e)) {
       if (auto _e = dynamic_cast<const Element*>(e.get())) {
-        if (auto _ms = dynamic_cast<const Multiset*>(_e->array->type().get())) {
+        if (auto _ms = dynamic_cast<const ext::Multiset*>(_e->array->type().get())) {
           if (auto _eid = dynamic_cast<const ExprID*>(_e->index.get())) { // must be unmodified var referring to a multiset quantifier
             auto st_vd = symtab.lookup<VarDecl>(_eid->id);
             auto msq = ms_quantifiers.lookup<MultisetQuantifier>(_eid->id);
             if ((st_vd != nullptr && msq != nullptr)
                 && _ms.equal_to(msq->multiset->type())
                 && msq->decl->type.equal_to(st_vd->type)) {
-              e = Ptr<MultisetElement>::make(e->array, e->index, e->loc);
+              e = Ptr<ext::MultisetElement>::make(e->array, e->index, e->loc);
             }
           }
         }

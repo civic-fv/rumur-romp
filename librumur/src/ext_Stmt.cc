@@ -1,12 +1,14 @@
 
 #include <rumur/ext/Stmt.h>
+#include <rumur/traverse.h>
+#include <rumur/except.h>
 
 
 namespace rumur {
 namespace ext {
 
-MultisetAdd::MultisetAdd(const Ptr<Expr>& value_, const Ptr<Exp>& multiset_, const location& loc_)
-  : Node(loc_), multiset(multiset_), value(value_) {}
+MultisetAdd::MultisetAdd(const Ptr<Expr>& value_, const Ptr<Expr>& multiset_, const location& loc_)
+  : Stmt(loc_), multiset(multiset_), value(value_) {}
 MultisetAdd *MultisetAdd::clone() const { return new MultisetAdd(*this); }
 
 void MultisetAdd::visit(BaseTraversal &visitor) { visitor.visit_multisetadd(*this); }
@@ -28,7 +30,7 @@ Ptr<AliasStmt> MultisetAdd::make_legacy() const {
   if (const auto _m = dynamic_cast<const Multiset*>(multiset->type().get())) {
     auto msq_mc = MultisetQuantifier("__ms_i__", multiset, loc);
     msq_mc.update();
-    mpz_class max = _m->size()->constant_fold();
+    mpz_class max = _m->size->constant_fold();
     for (mpz_class i=1_mpz; i<=max; ++i) {
       auto ms_el = Ptr<MultisetElement>::make(msq_mc, multiset, Ptr<Number>::make(i,location()), loc);
       clauses.push_back(
@@ -68,7 +70,7 @@ Ptr<AliasStmt> MultisetAdd::make_legacy() const {
 // << ------------------------------------------------------------------------------------------ >> 
 
 MultisetRemove::MultisetRemove(const Ptr<Expr>& index_, const Ptr<Expr>& multiset_, const location& loc_)
-  : Node(loc_), index(index_), multiset(multiset_) {}
+  : Stmt(loc_), index(index_), multiset(multiset_) {}
 MultisetRemove *MultisetRemove::clone() const { return new MultisetRemove(*this); }
 
 void MultisetRemove::visit(BaseTraversal &visitor) { visitor.visit_multisetremove(*this); }
@@ -92,7 +94,7 @@ Ptr<AliasStmt> MultisetRemove::make_legacy() const {
 // << ------------------------------------------------------------------------------------------ >> 
 
 MultisetRemovePred::MultisetRemovePred(const MultisetQuantifier& ms_quantifier_, const Ptr<Expr>& pred_, const location& loc_)
-  : Node(loc_), ms_quantifier(ms_quantifier_), pred(pred_) {}
+  : Stmt(loc_), ms_quantifier(ms_quantifier_), pred(pred_) {}
 MultisetRemovePred *MultisetRemovePred::clone() const { return new MultisetRemovePred(*this); }
 
 void MultisetRemovePred::visit(BaseTraversal &visitor) { visitor.visit_multisetremovepred(*this); }

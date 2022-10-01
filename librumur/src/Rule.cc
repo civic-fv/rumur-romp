@@ -1,4 +1,5 @@
 #include "location.hh"
+#include "../../common/isa.h"
 #include <cassert>
 #include <cstddef>
 #include <iostream>
@@ -10,7 +11,7 @@
 #include <rumur/Rule.h>
 #include <rumur/Stmt.h>
 #include <rumur/except.h>
-#include <rumur/traverse.h>
+#include <rumur/ext/traverse.h>
 #include <string>
 #include <vector>
 
@@ -20,7 +21,7 @@ namespace {
 /* A traversal pass that checks any return statements within a rule do not
  * have a trailing expression.
  */
-class ReturnChecker : public ConstTraversal {
+class ReturnChecker : public ext::ConstExtTraversal {
 
 public:
   /* Avoid recursing into functions, that may have return statements with an

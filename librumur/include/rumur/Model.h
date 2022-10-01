@@ -27,7 +27,7 @@ struct RUMUR_API_WITH_RTTI Model : public Node {
 
   Model(const std::vector<Ptr<Node>> &children_, const location &loc_);
   virtual ~Model() = default;
-  Model *clone() const final;
+  Model *clone() const;
 
   // Get the size of the state data in bits.
   mpz_class size_bits() const;
@@ -35,8 +35,8 @@ struct RUMUR_API_WITH_RTTI Model : public Node {
   void validate() const final;
 
   // dispatch to the appropriate traversal method (see traverse.h)
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   /* Get the number of global liveness properties in the model. Unlike
    * assumption_count, this considers the "flat" model. That is, a

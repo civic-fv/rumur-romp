@@ -12,19 +12,18 @@
 namespace rumur {
 namespace ext {
 
-
-struct RUMUR_API_WITH_RTTI ChooseRule : public Rule, IExtNode/*<Ruleset>*/ {
+struct RUMUR_API_WITH_RTTI ChooseRule : public Rule, public IExtNode<Ruleset> {
 
   std::vector<Ptr<Rule>> rules;
 
   ChooseRule(const std::vector<MultisetQuantifier> &ms_quantifiers_,
              const std::vector<Ptr<Rule>>& rules_, const location& loc_);
   virtual ~ChooseRule() = default;
-  ChooseRule *clone() const final;
+  ChooseRule *clone() const;
 
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   void validate() const final;
   std::vector<Ptr<Rule>> flatten() const final;

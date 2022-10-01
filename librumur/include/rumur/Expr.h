@@ -79,8 +79,8 @@ struct RUMUR_API_WITH_RTTI Ternary : public Expr {
   virtual ~Ternary() = default;
   Ternary *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool constant() const final;
   Ptr<TypeExpr> type() const final;
@@ -133,8 +133,8 @@ struct RUMUR_API_WITH_RTTI Implication : public BooleanBinaryExpr {
   Implication *clone() const;
   virtual ~Implication() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -147,8 +147,8 @@ struct RUMUR_API_WITH_RTTI Or : public BooleanBinaryExpr {
   virtual ~Or() = default;
   Or *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -161,8 +161,8 @@ struct RUMUR_API_WITH_RTTI And : public BooleanBinaryExpr {
   virtual ~And() = default;
   And *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -178,8 +178,8 @@ struct RUMUR_API_WITH_RTTI AmbiguousAmp : public BinaryExpr {
   virtual ~AmbiguousAmp() = default;
   AmbiguousAmp *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -196,8 +196,8 @@ struct RUMUR_API_WITH_RTTI AmbiguousPipe : public BinaryExpr {
   virtual ~AmbiguousPipe() = default;
   AmbiguousPipe *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -226,8 +226,8 @@ struct RUMUR_API_WITH_RTTI Not : public UnaryExpr {
   virtual ~Not() = default;
   Not *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -253,8 +253,8 @@ struct RUMUR_API_WITH_RTTI Lt : public ComparisonBinaryExpr {
   virtual ~Lt() = default;
   Lt *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -267,8 +267,8 @@ struct RUMUR_API_WITH_RTTI Leq : public ComparisonBinaryExpr {
   virtual ~Leq() = default;
   Leq *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -281,8 +281,8 @@ struct RUMUR_API_WITH_RTTI Gt : public ComparisonBinaryExpr {
   virtual ~Gt() = default;
   Gt *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -295,8 +295,8 @@ struct RUMUR_API_WITH_RTTI Geq : public ComparisonBinaryExpr {
   virtual ~Geq() = default;
   Geq *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -321,8 +321,8 @@ struct RUMUR_API_WITH_RTTI Eq : public EquatableBinaryExpr {
   virtual ~Eq() = default;
   Eq *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -335,8 +335,8 @@ struct RUMUR_API_WITH_RTTI Neq : public EquatableBinaryExpr {
   virtual ~Neq() = default;
   Neq *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -362,8 +362,8 @@ struct RUMUR_API_WITH_RTTI Add : public ArithmeticBinaryExpr {
   virtual ~Add() = default;
   Add *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -375,8 +375,8 @@ struct RUMUR_API_WITH_RTTI Sub : public ArithmeticBinaryExpr {
   virtual ~Sub() = default;
   Sub *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -388,8 +388,8 @@ struct RUMUR_API_WITH_RTTI Negative : public UnaryExpr {
   virtual ~Negative() = default;
   Negative *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -403,8 +403,8 @@ struct RUMUR_API_WITH_RTTI Bnot : public UnaryExpr {
   virtual ~Bnot() = default;
   Bnot *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   Ptr<TypeExpr> type() const final;
   mpz_class constant_fold() const final;
@@ -418,8 +418,8 @@ struct RUMUR_API_WITH_RTTI Mul : public ArithmeticBinaryExpr {
   virtual ~Mul() = default;
   Mul *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -431,8 +431,8 @@ struct RUMUR_API_WITH_RTTI Div : public ArithmeticBinaryExpr {
   virtual ~Div() = default;
   Div *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -444,8 +444,8 @@ struct RUMUR_API_WITH_RTTI Mod : public ArithmeticBinaryExpr {
   virtual ~Mod() = default;
   Mod *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -457,8 +457,8 @@ struct RUMUR_API_WITH_RTTI Lsh : public ArithmeticBinaryExpr {
   virtual ~Lsh() = default;
   Lsh *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -470,8 +470,8 @@ struct RUMUR_API_WITH_RTTI Rsh : public ArithmeticBinaryExpr {
   virtual ~Rsh() = default;
   Rsh *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -484,8 +484,8 @@ struct RUMUR_API_WITH_RTTI Band : public ArithmeticBinaryExpr {
   virtual ~Band() = default;
   Band *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -498,8 +498,8 @@ struct RUMUR_API_WITH_RTTI Bor : public ArithmeticBinaryExpr {
   virtual ~Bor() = default;
   Bor *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -511,8 +511,8 @@ struct RUMUR_API_WITH_RTTI Xor : public ArithmeticBinaryExpr {
   virtual ~Xor() = default;
   Xor *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class constant_fold() const final;
   std::string to_string() const;
@@ -528,8 +528,8 @@ struct RUMUR_API_WITH_RTTI ExprID : public Expr {
   virtual ~ExprID() = default;
   ExprID *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool constant() const final;
   Ptr<TypeExpr> type() const final;
@@ -553,8 +553,8 @@ struct RUMUR_API_WITH_RTTI Field : public Expr {
   virtual ~Field() = default;
   Field *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool constant() const final;
   Ptr<TypeExpr> type() const final;
@@ -605,8 +605,8 @@ struct RUMUR_API_WITH_RTTI FunctionCall : public Expr {
   virtual ~FunctionCall() = default;
   FunctionCall *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool constant() const final;
   Ptr<TypeExpr> type() const final;
@@ -668,8 +668,8 @@ struct RUMUR_API_WITH_RTTI Exists : public Expr {
   virtual ~Exists() = default;
   Exists *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool constant() const final;
   Ptr<TypeExpr> type() const final;
@@ -689,8 +689,8 @@ struct RUMUR_API_WITH_RTTI Forall : public Expr {
   virtual ~Forall() = default;
   Forall *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool constant() const final;
   Ptr<TypeExpr> type() const final;
@@ -706,8 +706,8 @@ struct RUMUR_API_WITH_RTTI IsUndefined : public UnaryExpr {
   virtual ~IsUndefined() = default;
   IsUndefined *clone() const;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool constant() const final;
   Ptr<TypeExpr> type() const final;

@@ -1,7 +1,7 @@
 
 #include <rumur/traverse.h>
 #include <rumur/ext/traverse.h>
-#include <casssert>
+#include <cassert>
 
 namespace rumur {
 
@@ -10,7 +10,7 @@ namespace rumur {
 // << ========================================================================================== >> 
 
 
-void BaseTraversal::visit_ChooseRule(ext::ChooseRule& n) {
+void BaseTraversal::visit_chooserule(ext::ChooseRule& n) {
   visit_ruleset(*n.make_legacy());
 }
 void BaseTraversal::visit_ismember(ext::IsMember& n) {
@@ -49,7 +49,7 @@ void BaseTraversal::visit_BuiltInFunction(ext::IBuiltInFunction& n) {
 // << ------------------------------------------------------------------------------------------ >> 
 
 
-void ConstBaseTraversal::visit_ChooseRule(const ext::ChooseRule& n) {
+void ConstBaseTraversal::visit_chooserule(const ext::ChooseRule& n) {
   visit_ruleset(*n.make_legacy());
 }
 void ConstBaseTraversal::visit_ismember(const ext::IsMember& n) {
@@ -137,7 +137,7 @@ void ExtBaseTraversal::visit_ismember(IsMember& n) {
 }
 void ExtTraversal::visit_ismember(IsMember& n) {
   dispatch(*n.designator);
-  dispatch(*n.type);
+  dispatch(*n.type_value);
 }
 void ConstExtBaseTraversal::visit_ismember(const IsMember& n) {
   assert(false && "`visit_ismember` needs to be overriden in implementing classes! "
@@ -145,7 +145,7 @@ void ConstExtBaseTraversal::visit_ismember(const IsMember& n) {
 }
 void ConstExtTraversal::visit_ismember(const IsMember& n) {
   dispatch(*n.designator);
-  dispatch(*n.type);
+  dispatch(*n.type_value);
 }
 void ConstExtExprTraversal::visit_ismember(const IsMember& n) {
   assert(false && "`visit_ismember` needs to be overriden in implementing classes! "
@@ -153,11 +153,11 @@ void ConstExtExprTraversal::visit_ismember(const IsMember& n) {
 }
 void ConstExtStmtTraversal::visit_ismember(const IsMember& n) {
   dispatch(*n.designator);
-  dispatch(*n.type);
+  dispatch(*n.type_value);
 }
 void ConstExtTypeTraversal::visit_ismember(const IsMember& n) {
   dispatch(*n.designator);
-  dispatch(*n.type);
+  dispatch(*n.type_value);
 }
 
 // << ------------------------------------------------------------------------------------------ >> 

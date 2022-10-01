@@ -22,9 +22,8 @@ namespace ext {
 
 
 ScalarsetUnion::ScalarsetUnion(const std::vector<Ptr<TypeExpr>>& members_, const location &loc_) 
-  : Scalarset(Ptr<TypeExprID>::make("_union_none_",nullptr,loc), loc), 
-    members(members_), _useful(false) {}
-ScalarsetUnion* ScalarsetUnion::clone() const { return new ScalarsetUnion(members_exp,loc); }
+  : Scalarset(nullptr, loc), members(members_) {}
+ScalarsetUnion* ScalarsetUnion::clone() const { return new ScalarsetUnion(*this); }
 
 void ScalarsetUnion::visit(BaseTraversal &visitor) { visitor.visit_scalarsetunion(*this); }
 void ScalarsetUnion::visit(ConstBaseTraversal &visitor) const { visitor.visit_scalarsetunion(*this); }
@@ -39,60 +38,76 @@ std::string ScalarsetUnion::upper_bound() const {
   mpz_class size = count() - 1; // -1 to remove undefined value added in count 
   if (size > 0)
     --size; // & -1 to slide range down to start at 0 if it contains anything
-  return "VALUE_C(" + size + ")";
+  return "VALUE_C(" + size.get_str() + ")";
 }
 
 void ScalarsetUnion::validate() const { 
   for (const auto _m : members) {
-    const auto m = _m.value->resolve();
+    const auto m = _m->resolve();
     if (isa<Enum>(m)) {
       if (m->count() <= 0)
         throw Error("ScalarsetUnions require included enums to define at least 1 member!",_m->loc);
       continue;
-    } else if (isa<TypeExprID>(_m.value) && isa<Scalarset>(m)) {
+    } else if (isa<TypeExprID>(_m) && isa<Scalarset>(m)) {
       continue;
     }
-    throw Error("ScalarsetUnion can only union: enums, and named Scalarsets.", _m.value->loc);
+    throw Error("ScalarsetUnion can only union: enums, and named Scalarsets.", _m->loc);
   }
 }
 bool ScalarsetUnion::is_useful() const {
   bool useful = false;
   for (const auto m : members)
-    if (isa<Scalarset>(m.value)) {
-      if (isa<ScalarsetUnion>(m.value))
-        useful |= m.value->is_useful();
+    if (isa<Scalarset>(m)) {
+      if (isa<ScalarsetUnion>(m))
+        useful |= m->is_useful();
     }
   return (useful && count() > 1_mpz); // @Smattr you might want to tweak this comparison, too
 }
 void ScalarsetUnion::update() {
-  mpz_class count;
-  auto try_insert [&](name,value) -> bool {
+  auto try_insert = [&](std::string& name, ScalarsetUnionMember& value) -> bool {
     if (members_exp.find(name) != members_exp.end()) 
       return false;
     members[name] = value;
     return true;
   };
-  auto _union_enum [&](Enum& e) -> mpz_class {
+  auto _union_enum = [&](Enum& e, mpz_class _sum) -> mpz_class {
     for (auto m : e.members)
         if (try_insert("_enum_"+m.first,ScalarsetUnionMember(_m,_sum,_sum)))
-          _sum++;
-    return sum;
+          ++_sum;
+    return _sum;
   };
-  auto _union [&](ScalarsetUnion& ssu, mpz_class sum=1_mpz) -> mpz_class { // start at 1 to include undefined
-    for (auto _m : ssu.members) {
-      auto _res_t = _m->resolve();
-      if (auto _e = dynamic_cast<Enum*>(_res_t.get()))
-        _union_enum(*_e,sum);
-      if (auto _ssu = dynamic_cast<ScalarsetUnion*>(_res_t.get()))
-          _union(*_ssu,sum);  // recursively explore and add members of contained scalarset union with this one.
-      if (auto _tid = dynamic_cast<TypeExprID*>(_m.get())) { 
-        count = _m->count()-1; // remove undefined from this entries considerations
-        if (try_insert(_tid->referent->name,ScalarsetUnionMember(_m,sum,sum+count-1_mpz)))
-          sum += count;
-        continue;
+  auto _union = [&](ScalarsetUnion& ssu, mpz_class _sum=1_mpz) -> void { // start at 1 to include undefined
+    struct _Union : public ext::ConstExtTypeTraversal {
+      mpz_class sum;
+      _Union(mpz_class sum_) : sum(sum_) {}
+      void visit_array(const Array &n) final { throw Error("arrays are not allowed in unions", n.loc); }
+
+      void visit_enum(const Enum &n) final { sum = _union_enum(n,sum); } // inline enum TypeExpr
+
+      void visit_multiset(const Multiset& n) { throw Error("multisets are not allowed in unions", n.loc); }
+      void visit_range(const Range &n) final { throw Error("ranges are not allowed in unions", n.loc); }
+      void visit_record(const Record &n) final { throw Error("records are not allowed in unions", n.loc); }
+
+      void visit_scalarset(const Scalarset &n) final { throw Error("unnamed scalarsets are not allowed in unions", n.loc); }
+
+      void visit_scalarsetunion(const ScalarsetUnion& n) { // inline union TypeExpr
+        throw Error("unnamed scalarset unions are not allowed in unions", n.loc); 
       }
-      throw Error("union only operates on Enum and NAMED scalarset types!", _m->loc);
-    }
+
+      void visit_typeexprid(const TypeExprID &n) final {
+        if (const auto _u = dynamic_cast<const ScalarsetUnion*>(n.resolve().get())) { // prev decl union
+          _union(*_u,sum);
+        } else if (const auto _e = dynamic_cast<const Enum*>(n.resolve().get())) { // prev decl enum
+          _union_enum(*_e,sum); // don't save resulting sum, going to add that with the count measure below
+        }
+        mpz_class count = n.count()-1; // remove undefined from this entries considerations
+        if (try_insert(n.name,ScalarsetUnionMember(Ptr<TypeExprID>(n),sum,sum+count-1_mpz)))
+          sum += count;
+      }
+    };
+    _Union un(sum);
+    for (auto _m : ssu.members)
+      un.dispatch(*_m);
   };
   members_exp.clear();
   _union(*this);

@@ -12,12 +12,12 @@
 namespace rumur {
 namespace ext {
 
-struct RUMUR_API_WITH_RTTI MultisetAdd : public Stmt, IExtNode/*<AliasStmt>*/ {
+struct RUMUR_API_WITH_RTTI MultisetAdd : public Stmt, public IExtNode<AliasStmt> {
 
   Ptr<Expr> value;
   Ptr<Expr> multiset;
 
-  MultisetAdd(const Ptr<Expr>& value_, const Ptr<Exp>& multiset_, const location& loc_);
+  MultisetAdd(const Ptr<Expr>& value_, const Ptr<Expr>& multiset_, const location& loc_);
   MultisetAdd *clone() const override;
   ~MultisetAdd() = default;
 
@@ -31,7 +31,7 @@ struct RUMUR_API_WITH_RTTI MultisetAdd : public Stmt, IExtNode/*<AliasStmt>*/ {
 };
 
 
-struct RUMUR_API_WITH_RTTI MultisetRemove : public Stmt, IExtNode/*<AliasStmt>*/ {
+struct RUMUR_API_WITH_RTTI MultisetRemove : public Stmt, public IExtNode<AliasStmt> {
 
   Ptr<Expr> index;
   Ptr<Expr> multiset;
@@ -50,7 +50,7 @@ struct RUMUR_API_WITH_RTTI MultisetRemove : public Stmt, IExtNode/*<AliasStmt>*/
 };
 
 
-struct RUMUR_API_WITH_RTTI MultisetRemovePred : public Stmt, IExtNode/*<AliasStmt>*/ {
+struct RUMUR_API_WITH_RTTI MultisetRemovePred : public Stmt, public IExtNode<AliasStmt> {
 
   MultisetQuantifier ms_quantifier;
   Ptr<Expr> pred;

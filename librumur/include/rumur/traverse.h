@@ -25,7 +25,7 @@ namespace rumur {
  * that provides default implementations for the 'visit' methods you don't need
  * to override, inherit from Traversal below.
  */
-class RUMUR_API_WITH_RTTI BaseTraversal : public ext::INonExtTraversal {
+class RUMUR_API_WITH_RTTI BaseTraversal {
 
 public:
   virtual void visit_add(Add &n) = 0;
@@ -105,7 +105,7 @@ public:
   virtual void visit_ismember(ext::IsMember& n);
   virtual void visit_multiset(ext::Multiset& n);
   virtual void visit_multisetadd(ext::MultisetAdd& n);
-  virtual void visit_multisetelement(ext::MultisetCount& n);
+  virtual void visit_multisetcount(ext::MultisetCount& n);
   virtual void visit_multisetelement(ext::MultisetElement& n);
   virtual void visit_multisetremove(ext::MultisetRemove& n); 
   virtual void visit_multisetremovepred(ext::MultisetRemovePred& n); 
@@ -209,7 +209,7 @@ private:
 };
 
 // Read-only equivalent of BaseTraversal.
-class RUMUR_API_WITH_RTTI ConstBaseTraversal : public ConstNonExtTraversal {
+class RUMUR_API_WITH_RTTI ConstBaseTraversal {
 
 public:
   virtual void visit_add(const Add &n) = 0;

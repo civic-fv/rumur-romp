@@ -61,11 +61,11 @@ struct RUMUR_API_WITH_RTTI AliasDecl : public ExprDecl {
 
   AliasDecl(const std::string &name_, const Ptr<Expr> &value_,
             const location &loc_);
-  AliasDecl *clone() const final;
+  AliasDecl *clone() const;
   virtual ~AliasDecl() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool is_lvalue() const final;
   bool is_readonly() const final;
@@ -85,11 +85,11 @@ struct RUMUR_API_WITH_RTTI ConstDecl : public ExprDecl {
             const location &loc_);
   ConstDecl(const std::string &name_, const Ptr<Expr> &value_,
             const Ptr<TypeExpr> &type_, const location &loc_);
-  ConstDecl *clone() const final;
+  ConstDecl *clone() const;
   virtual ~ConstDecl() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   bool is_lvalue() const final;
   bool is_readonly() const final;
@@ -103,11 +103,11 @@ struct RUMUR_API_WITH_RTTI TypeDecl : public Decl {
 
   TypeDecl(const std::string &name, const Ptr<TypeExpr> &value_,
            const location &loc);
-  TypeDecl *clone() const final;
+  TypeDecl *clone() const;
   virtual ~TypeDecl() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   // void validate() const final;
   void update() override;
@@ -130,11 +130,11 @@ struct RUMUR_API_WITH_RTTI VarDecl : public ExprDecl {
 
   VarDecl(const std::string &name_, const Ptr<TypeExpr> &type_,
           const location &loc_);
-  VarDecl *clone() const final;
+  VarDecl *clone() const;
   virtual ~VarDecl() = default;
 
-  void visit(BaseTraversal &visitor) final;
-  void visit(ConstBaseTraversal &visitor) const final;
+  void visit(BaseTraversal &visitor);
+  void visit(ConstBaseTraversal &visitor) const;
 
   mpz_class count() const;
   mpz_class width() const;

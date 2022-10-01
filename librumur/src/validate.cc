@@ -18,7 +18,7 @@ using namespace rumur;
 
 namespace {
 
-class Validator : public ConstExtTraversal {
+class Validator : public ext::ConstExtTraversal {
 
 public:
   // void visit_add(const Add &n) final {
