@@ -55,8 +55,8 @@ struct RUMUR_API_WITH_RTTI TypeExpr : public Node {
   bool coerces_to(const TypeExpr &other) const;
   // is the value of this type the same as the `other` type?
   bool equal_to(const TypeExpr &other) const;
-  inline bool operator == (const TypeExpr& other) const;
-  inline bool operator != (const TypeExpr& other) const;
+  // inline bool operator == (const TypeExpr& other) const;
+  // inline bool operator != (const TypeExpr& other) const;
 
   // Is this the type Boolean? Note that this only returns true for the actual
   // type Boolean, and not for TypeExprIDs that point at Boolean.
@@ -95,24 +95,25 @@ struct RUMUR_API_WITH_RTTI Range : public TypeExpr {
 struct RUMUR_API_WITH_RTTI Scalarset : public TypeExpr {
 
   Ptr<Expr> bound;
-  std::string name; // added durring update of type decl, if ""/empty it is unnamed 
+  std::string name; // added durring update of type decl, if ""/empty it is unnamed/un-declared
 
   Scalarset(const Ptr<Expr> &bound_, const location &loc_);
+  Scalarset(const Ptr<Expr> &bound_, const std::string& name_, const location &loc_);
   Scalarset *clone() const;
   virtual ~Scalarset() = default;
 
   void visit(BaseTraversal &visitor);
   void visit(ConstBaseTraversal &visitor) const;
 
-  mpz_class count() const;
+  mpz_class count() const final;
   bool is_simple() const final;
-  void validate() const;
+  void validate() const final;
 
   std::string lower_bound() const final;
-  std::string upper_bound() const;
-  std::string to_string() const;
+  std::string upper_bound() const final;
+  std::string to_string() const final;
   bool constant() const final;
-  bool is_useful() const;
+  bool is_useful() const final;
 };
 
 struct RUMUR_API_WITH_RTTI Enum : public TypeExpr {

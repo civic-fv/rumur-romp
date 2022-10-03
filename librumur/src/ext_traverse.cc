@@ -11,79 +11,71 @@ namespace rumur {
 
 
 void BaseTraversal::visit_chooserule(ext::ChooseRule& n) {
-  visit_ruleset(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void BaseTraversal::visit_ismember(ext::IsMember& n) {
-  visit_or(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void BaseTraversal::visit_multiset(ext::Multiset& n) {
-  visit_array(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void BaseTraversal::visit_multisetadd(ext::MultisetAdd& n) {
-  visit_aliasstmt(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void BaseTraversal::visit_multisetcount(ext::MultisetCount& n) {
-  visit_add(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void BaseTraversal::visit_multisetelement(ext::MultisetElement& n) {
-  visit_element(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void BaseTraversal::visit_multisetremovepred(ext::MultisetRemovePred& n) {
-  visit_aliasstmt(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void BaseTraversal::visit_multisetquantifier(ext::MultisetQuantifier& n) {
   visit_quantifier(*n.make_legacy());
 }
 void BaseTraversal::visit_scalarsetunion(ext::ScalarsetUnion& n) {
-  visit_scalarset(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void BaseTraversal::visit_sucast(ext::SUCast& n) {
-  visit_add(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 
-void BaseTraversal::visit_BuiltInFunction(ext::IBuiltInFunction& n) {
-  visit_function(*n.make_legacy());
-}
 
 
 // << ------------------------------------------------------------------------------------------ >> 
 
 
 void ConstBaseTraversal::visit_chooserule(const ext::ChooseRule& n) {
-  visit_ruleset(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void ConstBaseTraversal::visit_ismember(const ext::IsMember& n) {
-  visit_or(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void ConstBaseTraversal::visit_multiset(const ext::Multiset& n) {
-  visit_array(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void ConstBaseTraversal::visit_multisetadd(const ext::MultisetAdd& n) {
-  visit_aliasstmt(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void ConstBaseTraversal::visit_multisetcount(const ext::MultisetCount& n) {
-  visit_add(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void ConstBaseTraversal::visit_multisetelement(const ext::MultisetElement& n) {
-  visit_element(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void ConstBaseTraversal::visit_multisetremovepred(const ext::MultisetRemovePred& n) {
-  visit_aliasstmt(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void ConstBaseTraversal::visit_multisetquantifier(const ext::MultisetQuantifier& n) {
-  visit_quantifier(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void ConstBaseTraversal::visit_scalarsetunion(const ext::ScalarsetUnion& n) {
-  visit_scalarset(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void ConstBaseTraversal::visit_sucast(const ext::SUCast& n) {
-  visit_add(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
-
-void ConstBaseTraversal::visit_BuiltInFunction(const ext::IBuiltInFunction& n) {
-  visit_function(*n.make_legacy());
-}
-
 
 
 namespace ext {
@@ -424,7 +416,7 @@ void ExtBaseTraversal::visit_sucast(SUCast& n) {
                   "(from: rumur::ext::ExtBaseTraversal)");
 }
 void ExtTraversal::visit_sucast(SUCast& n) { // OPTIONAL to override
-  visit_add(*n.make_legacy());
+  n.make_legacy()->visit(*this);
 }
 void ConstExtBaseTraversal::visit_sucast(const SUCast& n) {
   assert(false && "`visit_sucast` needs to be overriden in implementing classes! "

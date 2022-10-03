@@ -24,8 +24,8 @@ struct RUMUR_API_WITH_RTTI MultisetAdd : public Stmt, public IExtNode<AliasStmt>
   void visit(BaseTraversal &visitor) override;
   void visit(ConstBaseTraversal &visitor) const override;
 
-  void validate() const override;
-  void update() override;
+  void validate() const final;
+  void update() final;
 
   Ptr<AliasStmt> make_legacy() const;
 };
@@ -43,10 +43,10 @@ struct RUMUR_API_WITH_RTTI MultisetRemove : public Stmt, public IExtNode<AliasSt
   void visit(BaseTraversal &visitor) override;
   void visit(ConstBaseTraversal &visitor) const override;
 
-  void validate() const override;
-  void update() override;
+  void validate() const final;
+  void update() final;
 
-  Ptr<AliasStmt> make_legacy() const;
+  Ptr<AliasStmt> make_legacy() const final;
 };
 
 
@@ -62,10 +62,10 @@ struct RUMUR_API_WITH_RTTI MultisetRemovePred : public Stmt, public IExtNode<Ali
   void visit(BaseTraversal &visitor) override;
   void visit(ConstBaseTraversal &visitor) const override;
 
-  void validate() const override;
-  void update() override;
+  void validate() const final;
+  void update() final;
 
-  Ptr<AliasStmt> make_legacy() const;
+  Ptr<AliasStmt> make_legacy() const final;
 };
 
 

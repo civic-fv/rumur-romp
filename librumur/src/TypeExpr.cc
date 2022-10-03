@@ -156,7 +156,10 @@ static bool equal(const TypeExpr &t1, const TypeExpr &t2) {
 
     void visit_scalarsetunion(const ScalarsetUnion& n) {
       if (auto u = dynamic_cast<const ScalarsetUnion *>(t.get())) {
-        result = (n.contains(*u) && u->contains(n));
+        result = true;
+        for (const auto n_m : n.members)  // order does not matter
+          for (const auto u_n : u->members)
+            result &= (n.contains(*u_n) && u->contains(*n_u));
       } else {
         result = false;
       }
@@ -252,7 +255,9 @@ std::string Range::to_string() const {
 bool Range::constant() const { return min->constant() && max->constant(); }
 
 Scalarset::Scalarset(const Ptr<Expr> &bound_, const location &loc_)
-    : TypeExpr(loc_), bound(bound_) {}
+    : TypeExpr(loc_), bound(bound_), name("") {}
+Scalarset::Scalarset(const Ptr<Expr> &bound_, const std::string& name_, const location &loc_)
+    : TypeExpr(loc_), bound(bound_), name(name_) {}
 
 Scalarset *Scalarset::clone() const { return new Scalarset(*this); }
 

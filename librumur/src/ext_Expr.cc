@@ -59,7 +59,7 @@ struct SubRangeSet {
   iterator begin() { return iterator{range_head}; }
   iterator end() { return iterator{nullptr}; }
 protected:
-  auto _insert(_Range* r, mpz_class& min, mpz_class& max) -> _Range* { // forward (r never null)
+  _Range* _insert(_Range* r, mpz_class& min, mpz_class& max) { // forward (r never null)
     if (min > r->max) { // case: r comes before range
       auto _r = new _Range{r,min,max,r->next};
       r->next = _r;
@@ -74,7 +74,7 @@ protected:
       return new _Range{r,min,max,nullptr};
     return _insert(r->next, min,max);
   }
-  auto _span(_Range* r, mpz_class& min, mpz_class& max, _Range* range) -> void { // forward (r can be null); !! trims ALL nodes it explores !!
+  void _span(_Range* r, mpz_class& min, mpz_class& max, _Range* range) { // forward (r can be null); !! trims ALL nodes it explores !!
     if (r == nullptr) // base case: END OF RANGE LIST
       return;
     if (max < r->min) // base case: NO OVERLAP
@@ -86,6 +86,7 @@ protected:
     if (max > r->max) // case: range completely overlaps with r
       _span(r->next, min,max, range);  // check next range for overlap
     delete r; // trim r
+  }
 };
 
 SubRangeSet make_ranges(const ScalarsetUnion* u, const TypeExpr& type) {
@@ -258,63 +259,58 @@ void SUCast::visit(BaseTraversal& visitor) { visitor.visit_sucast(*this); }
 void SUCast::visit(ConstBaseTraversal& visitor) const { visitor.visit_sucast(*this); }
 
 Ptr<TypeExpr> SUCast::type() const { return target; }
-void SUCast::pre_validate() const {
-  // one of the two types must be a scalarset union that contains the other type
-  result = false;
-  if (const auto _t1 = dynamic_cast<const ScalarsetUnion *>(target->resolve().get()))
-    result |= _t1->contains(*t2);
-  if (const auto _t2 = dynamic_cast<const ScalarsetUnion *>(lhs->type().get()))
-    result |= _t2->contains(*t1);
-  if (not result)
-    throw Error("Can't cast/convert expr=`"
-                + rhs->to_string() + "` --to-> type=`" + target->to_string() "`", loc);
-}
+// void SUCast::pre_validate() const {  
+//   if (not lhs->type()->coerces_to(*target))
+//     throw Error("Can't cast/convert/coerce expr=`"
+//                 + rhs->to_string() + "` --to-> type=`" + target->to_string() "`", loc);
+// }
 mpz_class SUCast::constant_fold() const { throw Error("not a constant value", loc); }
 bool SUCast::constant() const { return false; };
 void SUCast::validate() const {
-  pre_validate();
-  assert(rhs != nullptr && "DEV ERROR : did not create cast conversion!");
+  if (not lhs->type()->coerces_to(*target))
+    throw Error("Can't cast/convert/coerce expr=`"
+                + rhs->to_string() + "` --to-> type=`" + target->to_string() "`", loc);
 }
 
-mpz_class ScalarsetUnion::get_conv_modifier_su(const Scalarset& from, const ScalarsetUnion& to) {
-  assert(to.members_exp.find(from.name) != to.members_exp.end()
-         && "DEV ERROR : assert valid cast (should be checked with contains call before)");
-  return to.members_exp[from.name].min;
-}
-mpz_class ScalarsetUnion::get_conv_modifier_us(const ScalarsetUnion& from, const Scalarset& to) {
-  return -1_mpz * ScalarsetUnion::get_conv_modifier_su(to,from);
-}
-mpz_class ScalarsetUnion::get_conv_modifier_eu(const Enum& from, const ScalarsetUnion& to) {
-  assert(to.members_exp.find("_enum_"+from.members[0].first) != to.members_exp.end()
-         && "DEV ERROR : assert valid cast (should be checked with contains call before)");
-  return to.members_exp["_enum_"+from.members[0].first].min;
-}
-mpz_class ScalarsetUnion::get_conv_modifier_ue(const ScalarsetUnion& from, const Enum& to) {
-  return -1_mpz * ScalarsetUnion::get_conv_modifier_eu(to,from);
-}
-mpz_class ScalarsetUnion::get_conv_modifier(const TypeExpr& from, const TypeExpr& to) {
-  if (const auto to_u = dynamic_cast<const ScalarsetUnion*>(&to)) {
-    if (const auto from_s = dynamic_cast<const Scalarset*>(&from)) {
-      // thanks to the coercion check in pre_validate, 
-      //  we can treat scalarsets and unions the same for the from parameter,
-      //  when the to property is know to be a union type.
-      return ScalarsetUnion::get_conv_modifier_su(*from_s, *to_u);
-    } else if (const auto from_e = dynamic_cast<const Enum*>(&from)) {
-      return ScalarsetUnion::get_conv_modifier_eu(*from_e, *to_u);
-    } // else 
-      assert(false && "DEV ERROR : SUCast coming from incompatible type AND not caught earlier! (1)");
-  } else if (const auto to_s = dynamic_cast<const Scalarset*>(&to)) {
-    if (const auto from_u = dynamic_cast<const ScalarsetUnion*>(&from)) {
-      return ScalarsetUnion::get_conv_modifier_us(*from_u, *to_s);
-    } // else
-      assert(false && "DEV ERROR : SUCast coming from incompatible type AND not caught earlier! (2)")
-  } else if (const auto to_e = dynamic_cast<const Enum*>(&to)) {
-    if (const auto from_u = dynamic_cast<const ScalarsetUnion*>(&from)) {
-      return ScalarsetUnion::get_conv_modifier_ue(*from_u, *to_e);
-    } // else
-      assert(false && "DEV ERROR : SUCast coming from incompatible type AND not caught earlier! (3)")
-  }
-}
+// mpz_class ScalarsetUnion::get_conv_modifier_su(const Scalarset& from, const ScalarsetUnion& to) {
+//   assert(to.members_exp.find(from.name) != to.members_exp.end()
+//          && "DEV ERROR : assert valid cast (should be checked with contains call before)");
+//   return to.members_exp[from.name].min;
+// }
+// mpz_class ScalarsetUnion::get_conv_modifier_us(const ScalarsetUnion& from, const Scalarset& to) {
+//   return -1_mpz * ScalarsetUnion::get_conv_modifier_su(to,from);
+// }
+// mpz_class ScalarsetUnion::get_conv_modifier_eu(const Enum& from, const ScalarsetUnion& to) {
+//   assert(to.members_exp.find("_enum_"+from.members[0].first) != to.members_exp.end()
+//          && "DEV ERROR : assert valid cast (should be checked with contains call before)");
+//   return to.members_exp["_enum_"+from.members[0].first].min;
+// }
+// mpz_class ScalarsetUnion::get_conv_modifier_ue(const ScalarsetUnion& from, const Enum& to) {
+//   return -1_mpz * ScalarsetUnion::get_conv_modifier_eu(to,from);
+// }
+// mpz_class ScalarsetUnion::get_conv_modifier(const TypeExpr& from, const TypeExpr& to) {
+//   if (const auto to_u = dynamic_cast<const ScalarsetUnion*>(&to)) {
+//     if (const auto from_s = dynamic_cast<const Scalarset*>(&from)) {
+//       // thanks to the coercion check in pre_validate, 
+//       //  we can treat scalarsets and unions the same for the from parameter,
+//       //  when the to property is know to be a union type.
+//       return ScalarsetUnion::get_conv_modifier_su(*from_s, *to_u);
+//     } else if (const auto from_e = dynamic_cast<const Enum*>(&from)) {
+//       return ScalarsetUnion::get_conv_modifier_eu(*from_e, *to_u);
+//     } // else 
+//       assert(false && "DEV ERROR : SUCast coming from incompatible type AND not caught earlier! (1)");
+//   } else if (const auto to_s = dynamic_cast<const Scalarset*>(&to)) {
+//     if (const auto from_u = dynamic_cast<const ScalarsetUnion*>(&from)) {
+//       return ScalarsetUnion::get_conv_modifier_us(*from_u, *to_s);
+//     } // else
+//       assert(false && "DEV ERROR : SUCast coming from incompatible type AND not caught earlier! (2)")
+//   } else if (const auto to_e = dynamic_cast<const Enum*>(&to)) {
+//     if (const auto from_u = dynamic_cast<const ScalarsetUnion*>(&from)) {
+//       return ScalarsetUnion::get_conv_modifier_ue(*from_u, *to_e);
+//     } // else
+//       assert(false && "DEV ERROR : SUCast coming from incompatible type AND not caught earlier! (3)")
+//   }
+// }
 
 void SUCast::update() {
   // NOt necessary since change to ExtNode and make_legacy design
@@ -326,17 +322,62 @@ void SUCast::update() {
 }
 
 std::string SUCast::to_string() const { 
-  return "(/*cast*/ " + rhs->to_string() 
+  return "(/*cast*/ " + lhs->to_string() 
           + "/* --to-> `" target->to_string() "`*/)"; 
 }
 
-Ptr<Add> SUCast::make_legacy() const {
-  return Ptr<Add>::make(rhs,
-                        Ptr<Number>::make(get_conv_modifier(
-                                              *rhs->type(), 
-                                              *target->resolve()
-                                          ), loc),
-                        loc);
+Ptr<Expr> _get_bound(const TypeExpr& t) {
+  struct Bound : ConstExtTypeTraversal {
+    Ptr<Expr> res = nullptr;
+    void visit_array(const Array& n) {}
+    void visit_enum(const Enum& n) { res = Ptr<Number>::make(n.count(),location()); }
+    void visit_multiset(const Multiset& n) {}
+    void visit_range(const Range& n) {}
+    void visit_record(const Record& n) {}
+    void visit_scalarset(const Scalarset& n) { res = n.bound; }
+    void visit_scalarsetunion(const ScalarsetUnion& n) {}
+    void visit_typeexprid(const TypeExprID& n) { dispatch(*n.resolve()); }
+  };
+  Bound b;
+  b.dispatch(t);
+  return b.res;
+}
+
+Ptr<Expr> _get_modifier_uu(const ScalarsetUnion& from, const ScalarsetUnion& to, Ptr<Expr>& val) {
+  if (from.abs_equal_to(to))
+    return val;
+  std::function<Ptr<Expr>(typeof(from.members.begin())&, Ptr<Expr>)> _gen;
+  _gen = [&](typeof(from.members.begin())& i, Ptr<Expr> bound) -> Ptr<Expr> {
+    if (i == from.members.end()) return Ptr<Number>(from.count()+1_mpz,loation()); // else make it out of range
+    auto _bound = _get_bound(**i);
+    return Ptr<Ternary>(/* complicated part */,
+                        )
+  }; 
+  return _gen(from.begin(), Ptr<Number>::make(0_mpz,location()));
+}
+Ptr<Expr> _get_modifier_tu(const TypeExpr& from, const ScalarsetUnion& to, Ptr<Expr>& val) {}
+Ptr<Expr> _get_modifier_fu(const ScalarsetUnion& from, const TypeExpr& to, Ptr<Expr>& val) {}
+
+Ptr<Expr> _get_modifier(const TypeExpr& from, const TypeExpr& to, Ptr<Expr>& val) {
+  if (const auto _fu = dynamic_cast<const ScalarsetUnion*>(&from)) {
+    if (const auto _tu = dynamic_cast<const ScalarsetUnion*>(&to))
+      return _get_modifier_uu(*_fu,*_tu, val);
+    return _get_modifier_fu(*_fu,to, val);
+  } else if (const auto _tu = dynamic_cast<const ScalarsetUnion*>(&to)) {
+    return _get_modifier_tu(from,*_tu, val);
+  }
+  assert(false 
+        && "DEV ERROR : SUCast neither type was a union "
+           "(should be unreachable (caught by validate, or before injected into AST))");
+}
+
+Ptr<Ternary> SUCast::make_legacy() const {
+  return Ptr<Ternary>::make(Ptr<IsUndefined>::make(lhs,loc),
+                            Ptr<Number>::make(0_mpz,location()),
+                            Ptr<Add>::make(lhs,
+                                           _get_modifier(lhs->type(),target, lhs)
+                                            loc), 
+                            loc);
 }
 
 
@@ -539,7 +580,7 @@ std::string MultisetQuantifier::to_string() const {
 
 Ptr<Quantifier> MultisetQuantifier::make_legacy() const {
   assert(type != nullptr && "MultisetQuantifier was not ready to convert to Legacy!");
-  return Ptr<Quantifier>(clone());
+  return Ptr<Quantifier>(name,type,loc);
 }
 
 

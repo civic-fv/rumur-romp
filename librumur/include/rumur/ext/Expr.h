@@ -52,7 +52,7 @@ protected:
  *                all extended syntax by: bounds checking rhs of an Assignment Stmt,
  *                and the index value in an Element Expr).
  */
-struct RUMUR_API_WITH_RTTI SUCast : public UnaryExpr, public IExtNode<Add> {
+struct RUMUR_API_WITH_RTTI SUCast : public UnaryExpr, public IExtNode<Ternary> {
 
   Ptr<TypeExpr> target; // expected to have it's symbols resolved already (HACKY)
 
@@ -70,16 +70,16 @@ struct RUMUR_API_WITH_RTTI SUCast : public UnaryExpr, public IExtNode<Add> {
   void visit(BaseTraversal& visitor) override;
   void visit(ConstBaseTraversal& visitor) const override;
 
-  Ptr<TypeExpr> type() const override;
-  void validate() const override;
-  void update() override;  // update is also called from constructor
-  mpz_class constant_fold() const override;
-  bool constant() const override;
-  std::string to_string() const override;
+  Ptr<TypeExpr> type() const final;
+  void validate() const final;
+  void update() final;  // update is also called from constructor
+  mpz_class constant_fold() const final;
+  bool constant() const final;
+  std::string to_string() const final;
 
-  Ptr<Add> make_legacy() const;
-protected:
-  void pre_validate() const;
+  Ptr<Ternary> make_legacy() const final;
+// protected:
+//   void pre_validate() const;
 };
 
 
@@ -94,17 +94,18 @@ struct RUMUR_API_WITH_RTTI MultisetQuantifier : public Quantifier, public IExtNo
   void visit(BaseTraversal& visitor) override;
   void visit(ConstBaseTraversal& visitor) const override;
 
-  void validate() const override;
-  void update();
-  std::string to_string() const override;
+  void validate() const final;
+  void update() final;
+  std::string to_string() const final;
 
-  Ptr<Quantifier> make_legacy() const;
+  Ptr<Quantifier> make_legacy() const final;
 };
 
 
 /**
  * @brief The only way to access an element of a multiset.
- *        NOTE: this AST node can't be inserted into  
+ *        NOTE: this AST node can't produced by parsing an Murphi file, only by code after the fact
+ *              (currently in the disambiguate function of the symbol-resolver)  
  */
 struct RUMUR_API_WITH_RTTI MultisetElement : public Element, IExtNode<Element> {
 
@@ -116,13 +117,13 @@ struct RUMUR_API_WITH_RTTI MultisetElement : public Element, IExtNode<Element> {
   void visit(BaseTraversal& visitor) override;
   void visit(ConstBaseTraversal& visitor) const override;
 
-  // Ptr<TypeExpr> type() const override;
-  void validate() const override;
-  void update() override;
+  Ptr<TypeExpr> type() const final;
+  void validate() const final;
+  void update() final;
 
-  // std::string to_string() const override;
+  std::string to_string() const final;
 
-  Ptr<Element> make_legacy() const;
+  Ptr<Element> make_legacy() const final;
   // static Ptr<Expr> convert_elements(const MultisetQuantifier& mq, const Ptr<Expr>& expr);
   // static std::vector<Ptr<Stmt>> convert_elements(const std::vector<MultisetQuantifier>& mq, const std::vector<Ptr<Stmt>>& body);
 };

@@ -67,7 +67,7 @@ void Assignment::update() {
   const auto target_t = lhs->type();
   const auto expr_t = rhs->type();
   if (not target_t->equal_to(*expr_t) // not the exact same type (therefore might need casting)
-      && (isa<Scalarset>(target_t) || isa<Enum>(target_t))) { // scalarset+union or enum
+      && (isa<ScalarsetUnion>(target_t) || isa<ScalarsetUnion>(expr_t))) { // one side needs to be a union
       rhs = Ptr<ext::SUCast>::make(target_t, rhs, rhs->loc);
     // SUCast will also throw an error if the cast can't be done
   }

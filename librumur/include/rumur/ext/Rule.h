@@ -28,7 +28,7 @@ struct RUMUR_API_WITH_RTTI ChooseRule : public Rule, public IExtNode<Ruleset> {
   void validate() const final;
   std::vector<Ptr<Rule>> flatten() const final;
 
-  Ptr<Ruleset> make_legacy() const;
+  Ptr<Ruleset> make_legacy() const final;
 };
 
 

@@ -119,7 +119,7 @@ public:
    * because we do not anticipate use cases where this behaviour needs to
    * change.
    */
-  virtual void dispatch(Node &n);
+  void dispatch(Node &n);
 
   // Unlike the other visitation methods, we provide an implementation for
   // the ambiguous nodes because they only exist in an unresolved AST. We assume
@@ -292,7 +292,7 @@ public:
   virtual void visit_sucast(const ext::SUCast& n);
 
 
-  virtual void dispatch(const Node &n);
+  void dispatch(const Node &n);
 
   virtual void visit_ambiguousamp(const AmbiguousAmp &n);
   virtual void visit_ambiguouspipe(const AmbiguousPipe &n);
